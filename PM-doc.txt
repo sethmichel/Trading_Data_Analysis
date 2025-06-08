@@ -1,0 +1,35 @@
+Purpose: 
+1) auto gather best/worst exit info to min max trades. 
+2) test any sl/target to see how it would have done.
+
+Components
+headers = ["Date", "Ticker", "Entry Time", "Exit Time", 'Time in trade', "Entry Price", "Exit Price", "Shares", "$ Change", "% Change", 
+           'Total Investment', "Buy/Short", "Technical Type", "Best Exit Price", "Best Exit Percent", 'Worst Exit Price', 
+           'Worst Exit Percent']
+1) DONE convert tos raw csv's into useable format. so each trade
+2) add in best/worst exits.
+    - required: same day of tos raw logs and market data. 
+    - how: once step 1 is done, make 4 new colums in the existing converted csv: price and percent of best and worst exits. Use the 
+    entry and exit times and buy/short to look for the best and worst prices during that time based on the entry. Keep in mind worst exits
+    can be my sl.
+3) add in atr entry data
+    - how: using my step 2 algorithm, add in the atr14 and atr28 data from the market data
+
+End result: all those headers
+
+How to use max effectivly: needs a corresponding sheet where I'll add all my trades from all csv's. set a target/sl for the sheet, 
+import the csv, it should tell you all data you need. The sheet will have 1 general tab with all stocks. and 1 tab for each stock 
+invdidually. each tab will have the following inputs
+-sheet inputs: 
+            - target, stop loss -> shows change using best/worst exits
+            - and it should have a timetable showing trade gains at each time of day
+            - figure out how to find the best target/sl per atr value
+
+
+
+
+Dev time
+
+Impact
+
+Future iterations
