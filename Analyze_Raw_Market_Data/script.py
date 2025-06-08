@@ -108,6 +108,8 @@ def track_crosses(file_path):
     df = df.dropna(subset=['Time'])   # Remove any rows where time parsing failed
     df = df.sort_values('Time')   # Sort by Time to ensure chronological order
     curr_cross_states = {}   # Dictionary to store state for each ticker
+    next_cross_best_worst_holder = {}  # when the next cross is detected and the 1 minute time tracking is going, this 
+                                       # tracks the next trades data and moves it to the curr trade when the new cross is confirmed
     results = {}
 
     # annoying first row edge case stuff
@@ -120,6 +122,7 @@ def track_crosses(file_path):
         row_time = row['Time']
         val = row['Val']
         avg = row['Avg']
+        price = row['Price']
 
         # Initialize state for new tickers
         if ticker not in curr_cross_states:
@@ -127,15 +130,30 @@ def track_crosses(file_path):
             first_row_complete[ticker] = False
             first_cross_confirmed_flag[ticker] = False
 
+            # again, this just tracks the data of the next cross until it's confirmed, then moves it to curr_cross_states
+            next_cross_best_worst_holder[ticker] = {
+                'best_exit_timestamp': None,
+                'best_exit_percent': None,
+                'worst_exit_timestamp': None,
+                'worst_exit_percent': None,
+                'entry_price': None
+            }
+
             curr_cross_states[ticker] = {
                 'start_detected_time': None,  # Time of potential cross start
                 'end_detected_time': None,    # Time of potential cross end
                 'in_cross': False,        # Whether we're in a confirmed cross
-                'direction': None         # 'buy' or 'short'
+                'direction': None,         # 'buy' or 'short'
+                'entry_price': None,
+                'best_exit_timestamp': None,
+                'best_exit_percent': None,
+                'worst_exit_timestamp': None,
+                'worst_exit_percent': None
             }
             results[ticker] = []
 
         curr_state = curr_cross_states[ticker]
+        next_cross_data = next_cross_best_worst_holder[ticker]
 
         # Check for cross
         if val > avg:
@@ -157,10 +175,17 @@ def track_crosses(file_path):
                     # we're still in the trade, so if we found a cross it failed, reset vars
                     if (curr_state['end_detected_time'] != None):
                         curr_state['end_detected_time'] = None
+                        next_cross_data['best_exit_timestamp'] = None
+                        next_cross_data['best_exit_percent'] = None
+                        next_cross_data['worst_exit_timestamp'] = None
+                        next_cross_data['worst_exit_percent'] = None
+                        next_cross_data['entry_price'] = None
 
                 # we found a cross, have not recorded it yet
                 elif (curr_state['end_detected_time'] == None):
                     curr_state['end_detected_time'] = row_time
+                    # NOTE: right here is an example of when you stop tracking the "price tracking variables" in curr_state, and start tracking them in next_cross_data. because a new cross is detected but not yet confirmed
+                    # TODO: set next_cross_data['entry_price']
 
                 # check 1 minute trial period
                 else:
@@ -168,11 +193,22 @@ def track_crosses(file_path):
                         # trade ends, record it
                         results[ticker].append([curr_state['start_detected_time'], curr_state['end_detected_time'], curr_state['direction']])
 
-                        # Reset state
+                        # Reset state (in_cross stays True)
                         curr_state['start_detected_time'] = curr_state['end_detected_time']
                         curr_state['end_detected_time'] = None
                         curr_state['direction'] = direction
-                        # in_cross stays True
+                        
+                        curr_state['best_exit_timestamp'] = next_cross_data['best_exit_timestamp']
+                        curr_state['best_exit_percent'] = next_cross_data['best_exit_percent']
+                        curr_state['worst_exit_timestamp'] = next_cross_data['worst_exit_timestamp']
+                        curr_state['worst_exit_percent'] = next_cross_data['worst_exit_percent']
+                        curr_state['entry_price'] = next_cross_data['entry_price']
+
+                        next_cross_data['best_exit_timestamp'] = None
+                        next_cross_data['best_exit_percent'] = None
+                        next_cross_data['worst_exit_timestamp'] = None
+                        next_cross_data['worst_exit_percent'] = None
+                        next_cross_data['entry_price'] = None
             
         # working on the first cross (special case)
         else:
@@ -186,12 +222,14 @@ def track_crosses(file_path):
                 curr_state['direction'] = direction
                 curr_state['start_detected_time'] = row_time
                 curr_state['in_cross'] = True
+                curr_state['entry_price'] = price
             
             # in a cross, it failed
             elif (direction == first_row_direction[ticker]):
                 curr_state['direction'] = None
                 curr_state['start_detected_time'] = None
                 curr_state['in_cross'] = False
+                curr_state['entry_price'] = None
             
             # check 1 minute trial period
             else:

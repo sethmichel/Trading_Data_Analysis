@@ -69,8 +69,12 @@ variables:
 
 -worst_exit_percent: each time worst_exit_price is updated, compute the percent change of entering a trade at entry price, and exiting the trade at worst_exit_price. This is the ROI percent. round this percent to 2 decimal places
 
+For simplicity, I'll refer to these 4 variables as the "price tracking variables"
+
 equations to find percents: for buy: (exit_price - entry_price) / entry_price * 100
 for short: (entry_price - exit_price) / entry_price * 100
+
+current state: track_crosses() curr_cross_states is the dictionary you should use to track the price tracking variables for the current cross. this is where things get tricky: if curr_state['start_detected_time'] != None and curr_state['end_detected_time'] == None, you should be tracking those variables saved in curr_state. but notice that the price tracking variables are also in  next_cross_data. if curr_state['end_detected_time'] == None, then you should stop tracking the price tracking variables in curr_state, and start tracking them in next_cross_data. I've added as much of this code as I can to the function already, you can see the price tracking variables are moved to curr_state and reset starting line 201. also see that the else statement at line 214 is an edge case, you'll need to track the data in that edge case and in the if statement before that, because of these 2 sections it might be better to write your solution in a helper function.
 
 edge case: 
 -If a row produces the same ROI as we've found in another row, ignore it. we only care about the earlist row in that case
