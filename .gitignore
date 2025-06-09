@@ -5,7 +5,9 @@
 1tosRawCsvs-TODO/
 2MarketData/
 3SummarizedTrades/
-Analyze_Raw_Market_Data/Crosses.csv
+Google_Sheets_Csvs/
+Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv
+Analyze_Raw_Market_Data/Combined_Data_Csvs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

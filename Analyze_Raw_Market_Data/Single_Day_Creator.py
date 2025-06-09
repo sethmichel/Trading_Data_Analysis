@@ -1,13 +1,14 @@
 import pandas as pd
 import numpy as np
+import re
 
 
 DUPLICATE_TIMESTAMP_THRESHOLD = 18   # for duplicate check threshold
 CROSS_DURATION_THRESHOLD = 1         # for cross duration threshold (in minutes) (cross must be x min to be valid event)
 
-file_dir = "2MarketData"
-file_name = f"{file_dir}/Data_Test_Day-05-07-2025-TIME_FIX.csv"
-trade_csv_name = f"Analyze_Raw_Market_Data/Crosses.csv"
+file_dir = "Google_Sheets_Csvs"
+file_name = f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv"
+trade_csv_name = f"Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv"
 
 
 def helper_parse_time(time_str):
@@ -102,6 +103,59 @@ def check_time_gaps(file_path):
         print("PASS - No backward gaps (≤-3 seconds) found.")
 
 
+def update_price_movement_tracking(state_dict, current_price, trade_direction):
+    """
+    Helper function to track unique 0.1% price movement levels crossed during a trade.
+    
+    Args:
+        state_dict: Dictionary containing the price tracking variables including price_movement
+        current_price: Current row's price
+        trade_direction: 'buy' or 'short'
+    """
+    if state_dict['entry_price'] is None:
+        return
+    
+    # Calculate ROI for current price
+    if trade_direction == 'buy':
+        current_roi = (current_price - state_dict['entry_price']) / state_dict['entry_price'] * 100
+    else:  # short
+        current_roi = (state_dict['entry_price'] - current_price) / state_dict['entry_price'] * 100
+    
+    # Determine which 0.1% threshold level this ROI represents
+    if current_roi >= 0:
+        threshold_level = int(current_roi * 10) / 10  # Floor to nearest 0.1%
+    else:
+        threshold_level = int(current_roi * 10) / 10  # Floor to nearest 0.1% (works for negatives)
+    
+    # Skip if threshold is 0.0
+    if threshold_level == 0.0:
+        return
+    
+    # Initialize price_movement if not set
+    if state_dict['price_movement'] is None:
+        state_dict['price_movement'] = []
+    
+    # Check if ROI has crossed this threshold level for the first time
+    if abs(current_roi) >= abs(threshold_level) and threshold_level not in state_dict['price_movement']:
+        # Fill in any missing increments between 0 and the current threshold
+        if threshold_level < 0:
+            # For negative thresholds, start from -0.1 and go down
+            increment = -0.1
+            while increment >= threshold_level:
+                if increment not in state_dict['price_movement']:
+                    state_dict['price_movement'].append(increment)
+                increment -= 0.1
+                increment = round(increment, 1)  # Avoid floating point precision issues
+        else:
+            # For positive thresholds, start from 0.1 and go up
+            increment = 0.1
+            while increment <= threshold_level:
+                if increment not in state_dict['price_movement']:
+                    state_dict['price_movement'].append(increment)
+                increment += 0.1
+                increment = round(increment, 1)  # Avoid floating point precision issues
+
+
 def update_price_tracking(state_dict, current_price, current_time, trade_direction):
     """
     Helper function to update best/worst exit price tracking variables.
@@ -189,7 +243,8 @@ def track_crosses(file_path):
                 'entry_price': None,
                 'starting_atr14': None,
                 'starting_atr28': None,
-                'starting_rsi': None
+                'starting_rsi': None,
+                'price_movement': None
             }
 
             curr_cross_states[ticker] = {
@@ -206,7 +261,9 @@ def track_crosses(file_path):
                 'best_exit_price': None,
                 'worst_exit_timestamp': None,
                 'worst_exit_percent': None,
-                'worst_exit_price': None
+                'worst_exit_price': None,
+                'macd_exit_price': None,
+                'price_movement': None
             }
             results[ticker] = []
 
@@ -230,7 +287,7 @@ def track_crosses(file_path):
         if (first_cross_confirmed_flag[ticker] == True):
             if (curr_state['in_cross'] == True):
                 if (direction == curr_state['direction']):
-                    # we're still in the trade, so if we found a cross it failed, reset vars
+                    # we're still in the trade, so if we found a cross and it failed, reset vars
                     if (curr_state['end_detected_time'] != None):
                         curr_state['end_detected_time'] = None
                         next_cross_data['best_exit_timestamp'] = None
@@ -243,15 +300,17 @@ def track_crosses(file_path):
                         next_cross_data['starting_atr14'] = None
                         next_cross_data['starting_atr28'] = None
                         next_cross_data['starting_rsi'] = None
+                        next_cross_data['price_movement'] = None
+                        curr_state['macd_exit_price'] = None
                     
                     # Update price tracking in curr_state when not in exit confirmation
                     update_price_tracking(curr_state, price, row_time, curr_state['direction'])
+                    update_price_movement_tracking(curr_state, price, curr_state['direction'])
 
                 # we found a cross, have not recorded it yet
                 elif (curr_state['end_detected_time'] == None):
                     curr_state['end_detected_time'] = row_time
-                    # NOTE: right here is an example of when you stop tracking the "price tracking variables" in curr_state, and start tracking them in next_cross_data. because a new cross is detected but not yet confirmed
-                    # Set entry price and starting indicators for next cross
+                    curr_state['macd_exit_price'] = price
                     next_cross_data['entry_price'] = price
                     next_cross_data['starting_atr14'] = atr14
                     next_cross_data['starting_atr28'] = atr28
@@ -261,6 +320,7 @@ def track_crosses(file_path):
                 else:
                     # Update price tracking in next_cross_data during exit confirmation period
                     update_price_tracking(next_cross_data, price, row_time, direction)
+                    update_price_movement_tracking(next_cross_data, price, direction)
                     
                     if ((row_time - curr_state['end_detected_time']).total_seconds() >= 60):
                         # trade ends, record it with best/worst data
@@ -277,7 +337,11 @@ def track_crosses(file_path):
                             curr_state['best_exit_percent'],
                             curr_state['worst_exit_timestamp'],
                             curr_state['worst_exit_price'],
-                            curr_state['worst_exit_percent']
+                            curr_state['worst_exit_percent'],
+                            curr_state['macd_exit_price'],
+                            # Calculate macd_exit_percent based on direction
+                            ((curr_state['macd_exit_price'] - curr_state['entry_price']) / curr_state['entry_price'] * 100) if curr_state['direction'] == 'buy' else ((curr_state['entry_price'] - curr_state['macd_exit_price']) / curr_state['entry_price'] * 100),
+                            curr_state['price_movement']
                         ])
 
                         # Reset state (in_cross stays True)
@@ -295,6 +359,8 @@ def track_crosses(file_path):
                         curr_state['starting_atr14'] = next_cross_data['starting_atr14']
                         curr_state['starting_atr28'] = next_cross_data['starting_atr28']
                         curr_state['starting_rsi'] = next_cross_data['starting_rsi']
+                        curr_state['price_movement'] = next_cross_data['price_movement']
+                        curr_state['macd_exit_price'] = None
 
                         next_cross_data['best_exit_timestamp'] = None
                         next_cross_data['best_exit_price'] = None
@@ -306,6 +372,7 @@ def track_crosses(file_path):
                         next_cross_data['starting_atr14'] = None
                         next_cross_data['starting_atr28'] = None
                         next_cross_data['starting_rsi'] = None
+                        next_cross_data['price_movement'] = None
             
         # working on the first cross (special case)
         else:
@@ -333,11 +400,21 @@ def track_crosses(file_path):
                 curr_state['starting_atr14'] = None
                 curr_state['starting_atr28'] = None
                 curr_state['starting_rsi'] = None
+                curr_state['macd_exit_price'] = None
+
+                curr_state['best_exit_timestamp'] = None
+                curr_state['best_exit_price'] = None
+                curr_state['best_exit_percent'] = None
+                curr_state['worst_exit_timestamp'] = None
+                curr_state['worst_exit_price'] = None
+                curr_state['worst_exit_percent'] = None
+                curr_state['price_movement'] = None
             
             # check 1 minute trial period
             else:
                 # Update price tracking in curr_state during first cross confirmation period
                 update_price_tracking(curr_state, price, row_time, curr_state['direction'])
+                update_price_movement_tracking(curr_state, price, curr_state['direction'])
                 
                 # if the cross is confirmed
                 if ((row_time - curr_state['start_detected_time']).total_seconds() >= 60):
@@ -346,12 +423,16 @@ def track_crosses(file_path):
 
     # Write results to CSV
     with open(trade_csv_name, 'w') as f:
+        # Get the source CSV filename from the path
+        source_csv = file_path.split('/')[-1]
+        f.write(f"Source csv: {source_csv}\n\n")
+        
         for ticker, crosses in results.items():
             if crosses:  # Only write if there are crosses for this ticker
                 f.write(f"{ticker}\n")
-                f.write("start_time,end_time,direction,starting_atr14,starting_atr28,starting_rsi,entry_price,best exit timestamp,best exit price,best exit percent,worst exit timestamp,worst exit price,worst exit percent\n")
+                f.write("start_time,end_time,direction,best exit timestamp,worst exit timestamp,best exit price,worst exit price,entry_price,macd_exit_price,starting_atr14,starting_atr28,starting_rsi,best exit percent,worst exit percent,macd_exit_percent,price_movement\n")
                 for cross_data in crosses:
-                    start, end, direction, starting_atr14, starting_atr28, starting_rsi, entry_price, best_exit_time, best_exit_price, best_exit_percent, worst_exit_time, worst_exit_price, worst_exit_percent = cross_data
+                    start, end, direction, starting_atr14, starting_atr28, starting_rsi, entry_price, best_exit_time, best_exit_price, best_exit_percent, worst_exit_time, worst_exit_price, worst_exit_percent, macd_exit_price, macd_exit_percent, price_movement = cross_data
                     
                     # Format timestamps, prices, indicators, and percentages
                     best_exit_str = best_exit_time.strftime('%H:%M:%S') if best_exit_time else ''
@@ -364,20 +445,22 @@ def track_crosses(file_path):
                     worst_price_str = str(worst_exit_price) if worst_exit_price is not None else ''
                     best_percent_str = str(best_exit_percent) if best_exit_percent is not None else ''
                     worst_percent_str = str(worst_exit_percent) if worst_exit_percent is not None else ''
+                    macd_exit_price_str = str(macd_exit_price) if macd_exit_price is not None else ''
+                    macd_exit_percent_str = str(round(macd_exit_percent, 2)) if macd_exit_percent is not None else ''
                     
-                    f.write(f"{start.strftime('%H:%M:%S')},{end.strftime('%H:%M:%S') if end else ''},{direction},{starting_atr14_str},{starting_atr28_str},{starting_rsi_str},{entry_price_str},{best_exit_str},{best_price_str},{best_percent_str},{worst_exit_str},{worst_price_str},{worst_percent_str}\n")
+                    # Format price_movement as pipe-separated string
+                    if price_movement is not None and len(price_movement) > 0:
+                        price_movement_str = '|'.join(str(x) for x in price_movement)
+                    else:
+                        price_movement_str = ''
+                    
+                    f.write(f"{start.strftime('%H:%M:%S')},{end.strftime('%H:%M:%S') if end else ''},{direction},{best_exit_str},{worst_exit_str},{best_price_str},{worst_price_str},{entry_price_str},{macd_exit_price_str},{starting_atr14_str},{starting_atr28_str},{starting_rsi_str},{best_percent_str},{worst_percent_str},{macd_exit_percent_str},{price_movement_str}\n")
                 f.write("\n")  # Add blank line between tickers
 
 
 def Parameter_Testing():
     target = 0.2
     stop_loss = -0.5
-
-
-
-
-
-
 
 
 
@@ -406,20 +489,24 @@ def extract_ticker_data(input_file, output_file="Analyze_Raw_Market_Data/justMar
 '''
 TESTING - MAKE THE TIMESTAMPS CORRECT
 '''
-def Change_Timestamps():
+def Change_Timestamps(start_row, end_row, difference_in_start_time):
     """
     Adjust timestamps in the CSV file by subtracting difference_in_start_time from each timestamp.
     Creates a new file with "-TIME_FIX" appended to the original filename.
     Only processes rows between start_row and end_row (inclusive).
     """
-    # Configuration variables
-    start_row = 9653        # has to start at 0 or 2 rows behind where you want to start
-    end_row = 156291        # it'll change 1 row farther than this 9653 
-    difference_in_start_time = "03:26:19"  # subtract this much time from each row   "03:26:19" '15:12:30'
+    '''
+    start time: 6:30:00, target time: 20:25:46, diff: 13:55:46. first line at new timestamps 96616
+    '''
+    negative_timestamp = False
 
     # Parse the time difference
     try:
-        diff_time = pd.to_datetime(difference_in_start_time, format='%H:%M:%S')
+        if (difference_in_start_time[0] != '-'):
+            diff_time = pd.to_datetime(difference_in_start_time, format='%H:%M:%S')
+        else:
+            diff_time = pd.to_datetime(difference_in_start_time, format='-%H:%M:%S')
+            negative_timestamp = True
     except Exception as e:
         print(f"Error: Invalid difference_in_start_time format: {difference_in_start_time}")
         return
@@ -443,10 +530,16 @@ def Change_Timestamps():
                 print(f"Error: Invalid time format at line {idx + 2}: {row['Time']}")
                 continue
 
-            # Subtract the time difference
-            new_time = current_time - pd.Timedelta(hours=diff_time.hour, 
-                                                 minutes=diff_time.minute, 
-                                                 seconds=diff_time.second)
+            if (negative_timestamp == False):
+                # Subtract the time difference
+                new_time = current_time - pd.Timedelta(hours=diff_time.hour, 
+                                                    minutes=diff_time.minute, 
+                                                    seconds=diff_time.second)
+            else:
+                # add the time difference
+                new_time = current_time + pd.Timedelta(hours=diff_time.hour, 
+                                                    minutes=diff_time.minute, 
+                                                    seconds=diff_time.second)
             
             # Check if result would be negative
             if new_time < pd.to_datetime('00:00:00', format='%H:%M:%S'):
@@ -470,12 +563,39 @@ def Change_Timestamps():
         print(f"Error saving file: {str(e)}")
 
 
+def find_time_difference_to_change_timestamps(start_time,changed_time):
+    # Convert times to datetime objects
+    start_dt = pd.to_datetime(start_time, format='%H:%M:%S')
+    target_dt = pd.to_datetime(changed_time, format='%H:%M:%S')
+    
+    # Calculate time difference
+    time_diff = target_dt - start_dt
+    
+    # Extract hours, minutes, seconds
+    total_seconds = time_diff.total_seconds()
+    hours = int(total_seconds // 3600)
+    minutes = int((total_seconds % 3600) // 60)
+    seconds = int(total_seconds % 60)
+    
+    # Print the result
+    print(f"\nTo get from {changed_time} to {start_time}, you need to subtract:")
+    print(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
+
+
 # Run the checks
 #check_duplicate_timestamps(file_name)
 #check_time_gaps(file_name)
-#track_val_avg_crosses(file_name)
 track_crosses(file_name)
+
+#find_time_difference_to_change_timestamps(start_time='09:30:52',changed_time='10:24:40')
+#Change_Timestamps(start_row=96615, end_row=111151, difference_in_start_time="00:53:48")
+# 96617 is first row with new timestamp
+# 1st start_row=0, end_row=96615, difference_in_start_time="13:55:46"
+# 2nd start_row=96615, end_row=111151, difference_in_start_time="-01:26:54" change name 
+# fix: start_row=96615, end_row=111151, difference_in_start_time="00:53:48"
+# start_row: must be 0 or be 2 rows behind where you want to start
+# end_row: it'll change 1 row farther than this
+# diff in start time: can be negative to add time
 
 
 #extract_ticker_data(file_name)
-#Change_Timestamps()

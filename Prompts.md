@@ -92,38 +92,36 @@ start_time,end_time,direction,best possible exit timestamp,best possible exit pe
 06:30:00,06:33:55,short,09:56:20,0.4,06:34:20,-0.23
 ...
 
-4.1) We'll make another feature in a few parts. write the feature in Parameter_Testing(), read the trade_csv_name file which is formatted like this: 
-
-COIN
-start_time	end_time	type
-6:33:55	6:46:23	buy
-6:46:23	7:01:08	short
-
-where COIN isn't a header, but rather a row - that's the ticker symbol for the following data. The next row is the "headers" for that ticker. start_time, end_time... are column names for the following data. The rows under that are the data for their headers. for example: 6:33:55 is start_time, while 6:46:23 is the end_time. After that data, there's another ticker section in the same format, this repeates 9 times. The values for start_time and end_time are timestamps in hour:minute:second format. file_name is another csv file with headers Ticker,Price,Val,Avg,Atr14,Atr28,Rsi,Time, where time is hour:minute:second. it tracks stock market data for 9 tickers. An important note is that the timestamps in each csv file may or may not have leader 0's for single digits, as in one csv might write 6:15:9 while the writes that same timestamp as 06:15:09.
-
-Using trade_csv_name's start_time, end_time, type column values for each ticker symbol, We're going to look at price data in file_name between each start_time and end_time. we'll use the price columns value at the start_time row as the entry price, and look for if the following rows would reach a 'target' percent (positive) of profit if we sold at that point, or reach a 'stop loss' percent (negative) based on the type value ('buy' or 'short').
-
-the function has target and stop_loss variables which are floats representing percents. For each ticker in trade_csv_name, note each rows start_time, end_time, and type values, then find the row in file_name that has that start_time timestamp for that ticker (look at file_name's ticker and time columns). Note that rows price value, that's the entry price. 
-
-Now print the row number and entry price for each start_time
-
-before you write code, do you understand and do you have questions?
-
-4.2) Now we're going to iterate over the following rows of file_name to see if the precent change in price compared to entry price reaches 'target' or 'stop loss' based on the type value. This depends on the type value from trade_csv_name; if it's 'buy' then higher prices are used to find the target value, if it's 'short' then lower values than the entry price are used to find the target value - this is because buy orders make money when the price increases, and short orders make money when the price decreases. Same logic for stop loss, if the stop loss is -0.5 and the type is 'buy' and the current rows price is -0.55% lower than the entry price, it has triggered the stop loss. If a row triggers a target or stop loss, print the row number, timestamp of the triggering, and percent change in price to the terminal (print()), then move on to the next start_time. Continue looking for target and stop loss until you reach a row with the same end_time timestamp, this means the cross didn't reach a target or stop loss, write that it didn't reach either to the terminal and move on to the next start_time
-
-so, using the start_time and type, find the start_time in file_name's csv time column. use the price column as the entry price, then for each row after that compute the percent change of that rows price compared to the entry price based on the 'type'. if the percent change reaches target or stop loss, stop, report the results, move on to the next start_time
-
-before you write code, do you understand and do you have questions?
 
 
-- to add to 4.1 and 4.2, I actually want to know the best/worst exit before the target/sl was hit. if target was hit, what was the largest loss to taht point?
+
+4) lets add a new feature to track_crosses()
+Current functionality: track_crosses() iterates over a csv file containing these columns: Ticker,Price,Val,Avg,Atr14,Atr28,Rsi,Time, where time is hour:minute:second. it tracks stock market data for 9 tickers. This data is grouped mostly by Time in the csv, meaning at each timestamp it shows 1 row for each stock data, meaning 9 rows per timestamp. After all the tickers have been listed the next row is the new data for the enxt timestamp, and so on. The code finds all instances of val crossing over avg and decides if it's a "cross", meaning the values stay crossed for 1 minute. it then records various data points about this cross, and it finds when the cross ends, which is when the val and avg re-cross each other. When a cross ends it's also the start of a new cross. It outputs this data to a csv.
+
+new feature: I want to see price movement as a percent change from the entry price and from the cross start time to the cross end time, this is particular to track though. it needs to be checked every loop for the duration of the trade. Each calculation takes into account if curr_state['direction'] is 'buy' or 'short' and if next_cross_data['direction'] is 'buy' or 'short' to determine the formula to find the percent change. similar to how the 'best and worst variables' are tracked (for example, best_exit_percent,and worst_exit_percent) if the direciton being used is 'buy' then positive percents will be if the price is higher than the entry price, and negative percents are if the price is lower than the entry price, shorts are the opposite - just like real stock market buys and shorts. We want to track every 0.1% price movement but only 1 time for each 0.1%, and we exclude 0.0%, this means if the price rises 0.3%, then falls 0.5% then rises 0.2%, we will record only the unique percents 0.1, 0.2, 0.3, -0.1, -0.2. notice that -0.1 for example is reached multiple times but we only record it the first time it's reached. those numbers represent a simple view of price movement during a time period. Let's call this variable curr_state['price_movement'] and next_cross_data['price_movement']. organize the data in 1 variable using '|' as a separateor. so my example would be written to the file (which I talk about in a moment) as "0.1|0.2|0.3|-0.1|-0.2".
+
+how to track this new variable: it will be tracked very similar to how the best/worst variables are tracked ('best_exit_timestamp', 'best_exit_percent', 'best_exit_price', 'worst_exit_timestamp', 'worst_exit_percent', 'worst_exit_price'), in that it needs to checked every loop, will sometimes be cacluated in curr_state and sometimes in next_cross_data, and sometimes that data will be earased (set to None). do the calculation every time the best/worst variables are updated using the same dictionary that the best/worst variables are using at that time. It's probably better to do the calculation in a helper function. the data will also be handled in an indentical way to the best/worst variables, for example, you'll want to move the data from next_cross_data to curr_data like how the best/worst variables do in line 330, and you'll set it to None whenever the best/worst variabels are set to None. 
+
+When the cross ends, add the data to results, and write it as a new column to the end of the csv file.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 - compare the results to best/worst exit function results
 
 - Then use google sheets to group by time, atr...
-
-
-
 
 
 
