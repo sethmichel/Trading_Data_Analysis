@@ -4,10 +4,14 @@ import re
 
 
 DUPLICATE_TIMESTAMP_THRESHOLD = 18   # for duplicate check threshold
-CROSS_DURATION_THRESHOLD = 1         # for cross duration threshold (in minutes) (cross must be x min to be valid event)
+CROSS_DURATION_THRESHOLD = 4         # for cross duration threshold (in seconds) (cross must be x min to be valid event)
 
 file_dir = "Google_Sheets_Csvs"
 file_name = f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv"
+#file_name = f"{file_dir}/Data_06-09-2025.csv"
+#file_name = f"2MarketData/Data_06-09-2025.csv"
+file_names = [f"{file_dir}/Data_Test_Day-05-06-2025-TIME_FIX.csv", f"{file_dir}/Data_Test_Day-05-07-2025-TIME_FIX.csv", 
+              f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv", f"{file_dir}/Data_06-09-2025.csv"]
 trade_csv_name = f"Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv"
 
 
@@ -119,6 +123,7 @@ def update_price_movement_tracking(state_dict, current_price, trade_direction):
     if trade_direction == 'buy':
         current_roi = (current_price - state_dict['entry_price']) / state_dict['entry_price'] * 100
     else:  # short
+        # curr_state['entry_price'] - curr_state['macd_exit_price']) / curr_state['entry_price'] * 100)
         current_roi = (state_dict['entry_price'] - current_price) / state_dict['entry_price'] * 100
     
     # Determine which 0.1% threshold level this ROI represents
@@ -176,7 +181,7 @@ def update_price_tracking(state_dict, current_price, current_time, trade_directi
         current_roi = (state_dict['entry_price'] - current_price) / state_dict['entry_price'] * 100
     
     # Round to 2 decimal places
-    current_roi = round(current_roi, 2)
+    current_roi = int(current_roi * 100) / 100  # Truncate to 2 decimal places # WARNING: DO NOT ROUND, if 1.8957 is rounded to 1.9 then 1.9 won't appear in price movement and you'll think it's a bug
     
     # Initialize best/worst if not set
     if state_dict['best_exit_percent'] is None:
@@ -201,7 +206,59 @@ def update_price_tracking(state_dict, current_price, current_time, trade_directi
         state_dict['worst_exit_price'] = current_price
 
 
+def extract_date_from_filename(filename):
+    """
+    Extract date from filename in format MM-DD-YYYY.
+    Handles both formats:
+    - Data_Test_Day-MM-DD-YYYY.csv
+    - Data_MM-DD-YYYY.csv
+    """
+    # Match date pattern MM-DD-YYYY
+    match = re.search(r'(\d{2}-\d{2}-\d{4})', filename)
+    if match:
+        return match.group(1)
+    return None
+
+
+def Check_If_Date_In_Output_Csv(date):
+    try:
+        with open(trade_csv_name, 'r') as f:
+            # Try to read header row
+            try:
+                next(f)
+            except StopIteration:
+                # File is empty, no need to check for date
+                return
+                
+            # Try to read first data row
+            first_line = next(f, None)
+            if first_line:  # Only proceed if we have at least one data row
+                first_ticker = first_line.split(',')[0]
+                # Continue reading until ticker changes
+                for line in f:
+                    current_ticker = line.split(',')[0]
+                    if current_ticker != first_ticker:
+                        break
+                    # Check date in current line
+                    current_date = line.split(',')[1]
+                    if current_date == date:
+                        raise ValueError(f"Data for date {date} already exists in {trade_csv_name}")
+                    
+    except FileNotFoundError:
+        # File doesn't exist yet, which is fine
+        pass
+
+
 def track_crosses(file_path):
+    # Extract date from filename and check if it's in the output csv already
+    date = extract_date_from_filename(file_path)
+    if not date:
+        print("Warning: Could not extract date from filename")
+        raise ValueError("Warning: Could not extract date from filename")
+    
+    Check_If_Date_In_Output_Csv(date)
+    
+    # load input csv
     df = pd.read_csv(file_path)
     df['Time'] = df['Time'].apply(helper_parse_time)
     df = df.dropna(subset=['Time'])   # Remove any rows where time parsing failed
@@ -209,7 +266,7 @@ def track_crosses(file_path):
     curr_cross_states = {}   # Dictionary to store state for each ticker
     next_cross_best_worst_holder = {}  # when the next cross is detected and the 1 minute time tracking is going, this 
                                        # tracks the next trades data and moves it to the curr trade when the new cross is confirmed
-    results = {}
+    results = {}    
 
     # annoying first row edge case stuff
     first_row_direction = {}    # {[ticker]: "buy"}
@@ -218,6 +275,8 @@ def track_crosses(file_path):
 
     for idx, row in df.iterrows():
         ticker = row['Ticker']
+        if (ticker != "SOXL"): # TESTING, ONLY DEAL WITH SOXL FOR NOW
+            continue
         row_time = row['Time']
         val = row['Val']
         avg = row['Avg']
@@ -225,7 +284,9 @@ def track_crosses(file_path):
         atr14 = row['Atr14']
         atr28 = row['Atr28']
         rsi = row['Rsi']
-
+        #if (row_time == pd.to_datetime('09:36:13', format='%H:%M:%S')):
+        #    pass
+        
         # Initialize state for new tickers
         if ticker not in curr_cross_states:
             first_row_direction[ticker] = None
@@ -315,6 +376,9 @@ def track_crosses(file_path):
                     next_cross_data['starting_atr14'] = atr14
                     next_cross_data['starting_atr28'] = atr28
                     next_cross_data['starting_rsi'] = rsi
+                    # last check for this cross
+                    update_price_tracking(curr_state, price, row_time, curr_state['direction'])
+                    update_price_movement_tracking(curr_state, price, curr_state['direction'])
 
                 # check 1 minute trial period
                 else:
@@ -322,7 +386,7 @@ def track_crosses(file_path):
                     update_price_tracking(next_cross_data, price, row_time, direction)
                     update_price_movement_tracking(next_cross_data, price, direction)
                     
-                    if ((row_time - curr_state['end_detected_time']).total_seconds() >= 60):
+                    if ((row_time - curr_state['end_detected_time']).total_seconds() >= CROSS_DURATION_THRESHOLD):
                         # trade ends, record it with best/worst data
                         results[ticker].append([
                             curr_state['start_detected_time'], 
@@ -341,7 +405,7 @@ def track_crosses(file_path):
                             curr_state['macd_exit_price'],
                             # Calculate macd_exit_percent based on direction
                             ((curr_state['macd_exit_price'] - curr_state['entry_price']) / curr_state['entry_price'] * 100) if curr_state['direction'] == 'buy' else ((curr_state['entry_price'] - curr_state['macd_exit_price']) / curr_state['entry_price'] * 100),
-                            curr_state['price_movement']
+                            curr_state['price_movement']   # this isn't part of the macd equations, it's the next index
                         ])
 
                         # Reset state (in_cross stays True)
@@ -422,15 +486,23 @@ def track_crosses(file_path):
                     # trade is confirmed, go to normal process, edge case done
 
     # Write results to CSV
-    with open(trade_csv_name, 'w') as f:
-        # Get the source CSV filename from the path
-        source_csv = file_path.split('/')[-1]
-        f.write(f"Source csv: {source_csv}\n\n")
+    # Check if file exists and has content
+    file_exists = False
+    try:
+        with open(trade_csv_name, 'r') as f:
+            first_line = f.readline().strip()
+            file_exists = bool(first_line)
+    except FileNotFoundError:
+        file_exists = False
+
+    # Open file in append mode
+    with open(trade_csv_name, 'a') as f:
+        # Write header only if file is new/empty
+        if not file_exists:
+            f.write("date,ticker,start_time,end_time,direction,best exit timestamp,worst exit timestamp,best exit price,worst exit price,entry_price,macd_exit_price,starting_atr14,starting_atr28,starting_rsi,best exit percent,worst exit percent,macd_exit_percent,price_movement\n")
         
         for ticker, crosses in results.items():
             if crosses:  # Only write if there are crosses for this ticker
-                f.write(f"{ticker}\n")
-                f.write("start_time,end_time,direction,best exit timestamp,worst exit timestamp,best exit price,worst exit price,entry_price,macd_exit_price,starting_atr14,starting_atr28,starting_rsi,best exit percent,worst exit percent,macd_exit_percent,price_movement\n")
                 for cross_data in crosses:
                     start, end, direction, starting_atr14, starting_atr28, starting_rsi, entry_price, best_exit_time, best_exit_price, best_exit_percent, worst_exit_time, worst_exit_price, worst_exit_percent, macd_exit_price, macd_exit_percent, price_movement = cross_data
                     
@@ -454,13 +526,7 @@ def track_crosses(file_path):
                     else:
                         price_movement_str = ''
                     
-                    f.write(f"{start.strftime('%H:%M:%S')},{end.strftime('%H:%M:%S') if end else ''},{direction},{best_exit_str},{worst_exit_str},{best_price_str},{worst_price_str},{entry_price_str},{macd_exit_price_str},{starting_atr14_str},{starting_atr28_str},{starting_rsi_str},{best_percent_str},{worst_percent_str},{macd_exit_percent_str},{price_movement_str}\n")
-                f.write("\n")  # Add blank line between tickers
-
-
-def Parameter_Testing():
-    target = 0.2
-    stop_loss = -0.5
+                    f.write(f"{date},{ticker},{start.strftime('%H:%M:%S')},{end.strftime('%H:%M:%S') if end else ''},{direction},{best_exit_str},{worst_exit_str},{best_price_str},{worst_price_str},{entry_price_str},{macd_exit_price_str},{starting_atr14_str},{starting_atr28_str},{starting_rsi_str},{best_percent_str},{worst_percent_str},{macd_exit_percent_str},{price_movement_str}\n")
 
 
 
@@ -519,7 +585,7 @@ def Change_Timestamps(start_row, end_row, difference_in_start_time):
         return
 
     # Create output filename
-    output_file = file_name.replace('.csv', '-TIME_FIX.csv')
+    output_file = f'{file_name}-TIME_FIX.csv'
     
     # Process only the specified range of lines
     for idx, row in df.iloc[start_row:end_row].iterrows():
@@ -555,10 +621,10 @@ def Change_Timestamps(start_row, end_row, difference_in_start_time):
             print(f"Unexpected error at line {idx + 2}: {str(e)}")
             return
 
-    # Save to new file
+    # Save to new file (will overwrite if exists)
     try:
         df.to_csv(output_file, index=False)
-        print(f"\nSuccessfully adjusted timestamps for rows {start_row} to {end_row}. New file saved as: {output_file}")
+        print(f"\nSuccessfully adjusted timestamps for rows {start_row} to {end_row}. File saved as: {output_file}")
     except Exception as e:
         print(f"Error saving file: {str(e)}")
 
@@ -585,10 +651,11 @@ def find_time_difference_to_change_timestamps(start_time,changed_time):
 # Run the checks
 #check_duplicate_timestamps(file_name)
 #check_time_gaps(file_name)
-track_crosses(file_name)
+for f_name in file_names:
+    track_crosses(f_name)
 
-#find_time_difference_to_change_timestamps(start_time='09:30:52',changed_time='10:24:40')
-#Change_Timestamps(start_row=96615, end_row=111151, difference_in_start_time="00:53:48")
+#find_time_difference_to_change_timestamps(start_time='07:53:02', changed_time='15:36:40')
+#Change_Timestamps(start_row=44505, end_row=214741, difference_in_start_time="07:43:38")
 # 96617 is first row with new timestamp
 # 1st start_row=0, end_row=96615, difference_in_start_time="13:55:46"
 # 2nd start_row=96615, end_row=111151, difference_in_start_time="-01:26:54" change name 
