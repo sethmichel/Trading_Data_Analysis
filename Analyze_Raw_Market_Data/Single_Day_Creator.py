@@ -1,17 +1,18 @@
 import pandas as pd
 import numpy as np
 import re
+from datetime import datetime
 
 
 DUPLICATE_TIMESTAMP_THRESHOLD = 18   # for duplicate check threshold
 CROSS_DURATION_THRESHOLD = 4         # for cross duration threshold (in seconds) (cross must be x min to be valid event)
 
 file_dir = "Google_Sheets_Csvs"
-file_name = f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv"
-#file_name = f"{file_dir}/Data_06-09-2025.csv"
-#file_name = f"2MarketData/Data_06-09-2025.csv"
-file_names = [f"{file_dir}/Data_Test_Day-05-06-2025-TIME_FIX.csv", f"{file_dir}/Data_Test_Day-05-07-2025-TIME_FIX.csv", 
-              f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv", f"{file_dir}/Data_06-09-2025.csv"]
+#file_name = f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv"
+file_name = f"{file_dir}/Data_06-09-2025.csv"
+#file_name = f"2_Raw_Market_Data/Data_06-09-2025.csv"
+#file_names = [f"{file_dir}/Data_Test_Day-05-06-2025-TIME_FIX.csv", f"{file_dir}/Data_Test_Day-05-07-2025-TIME_FIX.csv", 
+#              f"{file_dir}/Data_Test_Day-05-08-2025-TIME_FIX.csv", f"{file_dir}/Data_06-09-2025.csv"]
 trade_csv_name = f"Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv"
 
 
@@ -275,7 +276,7 @@ def track_crosses(file_path):
 
     for idx, row in df.iterrows():
         ticker = row['Ticker']
-        if (ticker != "SOXL"): # TESTING, ONLY DEAL WITH SOXL FOR NOW
+        if (ticker != "SOXL" and ticker != "MARA" and ticker != "HOOD" and ticker != "IONQ"): # TESTING, ONLY DEAL WITH SOXL FOR NOW
             continue
         row_time = row['Time']
         val = row['Val']
@@ -648,11 +649,200 @@ def find_time_difference_to_change_timestamps(start_time,changed_time):
     print(f"{hours:02d}:{minutes:02d}:{seconds:02d}")
 
 
+def Combine_Trade_Lines(start_line, middle_line_list, end_line):
+    # the indexes of the df are 2 lower than the lines from the csv file
+    start_line -= 2
+    end_line -= 2
+    for i in range(0, len(middle_line_list)):
+        middle_line_list[i] -= 2
+
+    source_file = "Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv"
+    output_file = "Analyze_Raw_Market_Data/Single_Days_Cross_Data-COMBINED_LINES.csv"     
+
+    # Load the CSV file into dataframe
+    df = pd.read_csv(source_file)
+    
+    # Get the start line data (this will be our base row to modify)
+    start_row = df.iloc[start_line].copy()
+    
+    # Convert percentage columns to float for comparison
+    start_best_percent = float(start_row['best exit percent']) if pd.notna(start_row['best exit percent']) and start_row['best exit percent'] != '' else None
+    start_worst_percent = float(start_row['worst exit percent']) if pd.notna(start_row['worst exit percent']) and start_row['worst exit percent'] != '' else None
+    
+    print(f"Start line {start_line} data:")
+    print(f"Best exit percent: {start_best_percent}")
+    print(f"Worst exit percent: {start_worst_percent}")
+    
+    # Process middle lines
+    for middle_line in middle_line_list:
+        middle_row = df.iloc[middle_line]
+        middle_best_percent = float(middle_row['best exit percent']) if pd.notna(middle_row['best exit percent']) and middle_row['best exit percent'] != '' else None
+        middle_worst_percent = float(middle_row['worst exit percent']) if pd.notna(middle_row['worst exit percent']) and middle_row['worst exit percent'] != '' else None
+        
+        print(f"\nMiddle line {middle_line} data:")
+        print(f"Best exit percent: {middle_best_percent}")
+        print(f"Worst exit percent: {middle_worst_percent}")
+        
+        # Update best exit data if middle line has better (higher) best exit percent
+        if middle_best_percent is not None and (start_best_percent is None or middle_best_percent > start_best_percent):
+            start_row['best exit percent'] = middle_row['best exit percent']
+            start_row['best exit timestamp'] = middle_row['best exit timestamp']
+            start_row['best exit price'] = middle_row['best exit price']
+            start_best_percent = middle_best_percent
+            print(f"  Updated best exit data from middle line {middle_line}")
+        
+        # Update worst exit data if middle line has worse (lower) worst exit percent
+        if middle_worst_percent is not None and (start_worst_percent is None or middle_worst_percent < start_worst_percent):
+            start_row['worst exit percent'] = middle_row['worst exit percent']
+            start_row['worst exit timestamp'] = middle_row['worst exit timestamp']
+            start_row['worst exit price'] = middle_row['worst exit price']
+            start_worst_percent = middle_worst_percent
+            print(f"  Updated worst exit data from middle line {middle_line}")
+    
+    # Process end line
+    end_row = df.iloc[end_line]
+    end_best_percent = float(end_row['best exit percent']) if pd.notna(end_row['best exit percent']) and end_row['best exit percent'] != '' else None
+    end_worst_percent = float(end_row['worst exit percent']) if pd.notna(end_row['worst exit percent']) and end_row['worst exit percent'] != '' else None
+    
+    print(f"\nEnd line {end_line} data:")
+    print(f"Best exit percent: {end_best_percent}")
+    print(f"Worst exit percent: {end_worst_percent}")
+    
+    # Always use end_time, macd_exit_price, macd_exit_percent from end line
+    start_row['end_time'] = end_row['end_time']
+    start_row['macd_exit_price'] = end_row['macd_exit_price']
+    start_row['macd_exit_percent'] = end_row['macd_exit_percent']
+    print(f"  Updated end_time, macd_exit_price, macd_exit_percent from end line {end_line}")
+    
+    # Update best exit data if end line has better (higher) best exit percent
+    if end_best_percent is not None and (start_best_percent is None or end_best_percent > start_best_percent):
+        start_row['best exit percent'] = end_row['best exit percent']
+        start_row['best exit timestamp'] = end_row['best exit timestamp']
+        start_row['best exit price'] = end_row['best exit price']
+        print(f"  Updated best exit data from end line {end_line}")
+    
+    # Update worst exit data if end line has worse (lower) worst exit percent
+    if end_worst_percent is not None and (start_worst_percent is None or end_worst_percent < start_worst_percent):
+        start_row['worst exit percent'] = end_row['worst exit percent']
+        start_row['worst exit timestamp'] = end_row['worst exit timestamp']
+        start_row['worst exit price'] = end_row['worst exit price']
+        print(f"  Updated worst exit data from end line {end_line}")
+    
+    # Recreate the price_movement value by combining all unique values
+    # Start with start_line's price_movement
+    start_price_movement = start_row['price_movement']
+    if pd.notna(start_price_movement) and start_price_movement != '':
+        combined_price_movement = start_price_movement.split('|')
+    else:
+        combined_price_movement = []
+    
+    print(f"\nStarting price_movement: {combined_price_movement}")
+    
+    # Process middle lines price_movement
+    for middle_line in middle_line_list:
+        middle_row = df.iloc[middle_line]
+        middle_price_movement = middle_row['price_movement']
+        if pd.notna(middle_price_movement) and middle_price_movement != '':
+            middle_values = middle_price_movement.split('|')
+            for value in middle_values:
+                if value not in combined_price_movement:
+                    combined_price_movement.append(value)
+                    print(f"  Added {value} from middle line {middle_line}")
+    
+    # Process end line price_movement
+    end_price_movement = end_row['price_movement']
+    if pd.notna(end_price_movement) and end_price_movement != '':
+        end_values = end_price_movement.split('|')
+        for value in end_values:
+            if value not in combined_price_movement:
+                combined_price_movement.append(value)
+                print(f"  Added {value} from end line {end_line}")
+    
+    # Combine back with '|' separator and update start_row
+    if combined_price_movement:
+        start_row['price_movement'] = '|'.join(combined_price_movement)
+    else:
+        start_row['price_movement'] = ''
+    
+    print(f"Final combined price_movement: {start_row['price_movement']}")
+    
+    # Update the start_line in the dataframe with the combined data
+    df.iloc[start_line] = start_row
+    
+    # Delete the end line and middle lines (delete from highest index to lowest to avoid index shifting)
+    lines_to_delete = sorted([end_line] + middle_line_list, reverse=True)
+    for line_idx in lines_to_delete:
+        df = df.drop(df.index[line_idx]).reset_index(drop=True)
+        print(f"Deleted line {line_idx}")
+    
+    # Save the modified dataframe to output file
+    df.to_csv(output_file, index=False)
+    print(f"\nCombined trade line saved to {output_file}")
+    print(f"Final combined row data:")
+    print(start_row.to_string())
+
+# 1: solo
+# 2: lines 3-5
+# 3: line 6 solo
+# 4: lines 7-9
+def auto_combine_trade_lines(df):
+    df = df.copy()
+
+    # Convert time columns to datetime (without date to simplify comparisons)
+    df['start_time'] = pd.to_datetime(df['start_time'], format='%H:%M:%S').dt.time
+    df['end_time'] = pd.to_datetime(df['end_time'], format='%H:%M:%S').dt.time
+
+    # Initialize columns
+    df['tag'] = ""
+    prev_direction = None
+    current_group = []
+
+    for i, row in df.iterrows():
+        direction = row['direction']
+
+        if prev_direction is None or direction != prev_direction:
+            # Close previous group
+            if current_group:
+                if len(current_group) == 1:
+                    df.at[current_group[0], 'tag'] = 'solo'
+                else:
+                    df.at[current_group[0], 'tag'] = 'start'
+                    for mid in current_group[1:-1]:
+                        df.at[mid, 'tag'] = 'middle'
+                    df.at[current_group[-1], 'tag'] = 'end'
+
+            # Start new group
+            current_group = [i]
+            prev_direction = direction
+        else:
+            current_group.append(i)
+
+    # Final group
+    if current_group:
+        if len(current_group) == 1:
+            df.at[current_group[0], 'tag'] = 'solo'
+        else:
+            df.at[current_group[0], 'tag'] = 'start'
+            for mid in current_group[1:-1]:
+                df.at[mid, 'tag'] = 'middle'
+            df.at[current_group[-1], 'tag'] = 'end'
+
+    return df
+
+
+
+
 # Run the checks
 #check_duplicate_timestamps(file_name)
 #check_time_gaps(file_name)
-for f_name in file_names:
-    track_crosses(f_name)
+#track_crosses(file_name)
+
+
+result = auto_combine_trade_lines(pd.read_csv("Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv"))
+print(result.head(10))
+pass
+#for f_name in file_names:
+#   track_crosses(f_name)
 
 #find_time_difference_to_change_timestamps(start_time='07:53:02', changed_time='15:36:40')
 #Change_Timestamps(start_row=44505, end_row=214741, difference_in_start_time="07:43:38")
@@ -666,3 +856,7 @@ for f_name in file_names:
 
 
 #extract_ticker_data(file_name)
+
+
+#Combine_Trade_Lines(start_line = 3, middle_line_list = [4], end_line = 5)
+                    

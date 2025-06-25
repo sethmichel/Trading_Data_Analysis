@@ -1,10 +1,7 @@
 ### Python ###
 
 # my stuff to ignore
-1tosRawCsvs-DONE/
-1tosRawCsvs-TODO/
-2MarketData/
-3SummarizedTrades/
+Csv_Files/
 Google_Sheets_Csvs/
 Analyze_Raw_Market_Data/Single_Days_Cross_Data.csv
 Analyze_Raw_Market_Data/Combined_Data_Csvs

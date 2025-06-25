@@ -137,7 +137,7 @@ def analyze_trades(df, trade_times, change_tracker):
 
 
 
-marketDataCsv = '2MarketData/Data_04-30-2025.csv'
+marketDataCsv = '2_Raw_Market_Data/Data_04-30-2025.csv'
 tradeTimes = {'SOXL': [['buy','short','buy','buy','short','short','short'],
                       ['06:49','07:35','09:36','10:17','10:45','11:24','11:58']]
               }
