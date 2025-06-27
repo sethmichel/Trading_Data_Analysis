@@ -25,29 +25,15 @@ def CreateDf(csvPath):
     return df
 
 
-def MoveProcessedFile(date_str, todoDir, doneDir):
-    # Convert date format from MM-DD-YYYY to YYYY-MM-DD
-    month, day, year = date_str.split('-')
-    year = f'20{year}'
-    if (len(month) == 1):
-        month = f'0{month}'
-    if (len(day) == 1):
-        day = f'0{day}'
-    formatted_date = f"{year}-{month}-{day}"
+def Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir):
+    # Move raw trades file to DONE directory
+    shutil.move(raw_trades_name, tos_raw_trades_DONE_dir)
+    print(f"Moved {raw_trades_name} to {tos_raw_trades_DONE_dir}")
     
-    # Construct the filename
-    filename = f"{formatted_date}-TradeActivity.csv"
-    source_path = os.path.join(todoDir, filename)
-    dest_path = os.path.join(doneDir, filename)
-    
-    try:
-        # Move the file
-        shutil.move(source_path, dest_path)
-        print(f"Moved {filename} from {todoDir} to {doneDir}")
-    except FileNotFoundError:
-        print(f"Warning: Could not find file {filename} in {todoDir}")
-    except Exception as e:
-        print(f"Error moving file: {str(e)}")
+    # Move market data file to DONE directory
+    shutil.move(raw_market_data_name, market_data_DONE_dir)
+    print(f"Moved {raw_market_data_name} to {market_data_DONE_dir}")
+
 
 
 def QTYCorrector(qty):
@@ -97,7 +83,7 @@ def Normalize_Raw_Trades(raw_df):
         entry_price = current_price  # Store initial entry price
         dollar_change = 0
         total_investment = abs(current_qty * current_price)  # Initial investment amount
-        trade_type = "BUY" if current_qty > 0 else "SHORT"  # Determine if it's a buy or short trade
+        trade_type = "buy" if current_qty > 0 else "short"  # Determine if it's a buy or short trade
         processed_rows.add(i)
         has_multiple_entries = False  # Flag to track if there are multiple entries
         
@@ -165,17 +151,17 @@ def Normalize_Raw_Trades(raw_df):
                         'Entry Price': round(entry_price, 4),
                         'Exit Price': round(exit_price, 4),
                         'Trade Type': trade_type,
-                        'Quantity': None if has_multiple_entries else initial_qty,  # Use initial quantity unless multiple entries
+                        'Qty': None if has_multiple_entries else initial_qty,  # Use initial quantity unless multiple entries
                         'Best Exit Price': None,
                         'Best Exit Percent': None,
                         'Worst Exit Price': None,
                         'Worst Exit Percent': None,
-                        'ATR14': None,
-                        'ATR28': None,
+                        'Entry Atr14': None,
+                        'Entry Atr28': None,
                         'Entry Rsi': None,
                         'Entry Macd Val': None, 
                         'Entry Macd Avg': None,
-                        'Prev_5_Min_Avg_Close_Volume': None,
+                        'Prev 5 Min Avg Close Volume': None,
                         'Price_Movement': None
                     })
                     break
@@ -196,13 +182,10 @@ def Add_Market_Data_Helper__Create_Sub_Dfs(normalized_df, raw_market_data_name):
     for ticker in unique_tickers:
         ticker_data_dict[ticker] = market_df[market_df['Ticker'] == ticker].copy()
 
-        if len(ticker_data_dict[ticker]) == 0:
-            raise ValueError(f"Warning: Empty market data for ticker {ticker}")
-
     return ticker_data_dict
 
 
-def Add_Makret_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade):
+def Add_Market_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade):
     entry_time = trade['Entry Time']
     ticker_data_df = ticker_data_dict[ticker]
     
@@ -224,47 +207,115 @@ def Add_Makret_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade):
     return None
 
 
-def update_price_movement_tracking(state_dict, current_price, trade_direction):
-    # Calculate ROI for current price
-    if trade_direction == 'buy':
-        current_roi = (current_price - state_dict['entry_price']) / state_dict['entry_price'] * 100
-    else:  # short
-        # curr_state['entry_price'] - curr_state['macd_exit_price']) / curr_state['entry_price'] * 100)
-        current_roi = (state_dict['entry_price'] - current_price) / state_dict['entry_price'] * 100
-    
+def Add_Market_Data_Helper__Update_Price_Movement(curr_price_movement, curr_roi_percent):
     # Determine which 0.1% threshold level this ROI represents
-    if current_roi >= 0:
-        threshold_level = int(current_roi * 10) / 10  # Floor to nearest 0.1%
-    else:
-        threshold_level = int(current_roi * 10) / 10  # Floor to nearest 0.1% (works for negatives)
+    threshold_level = int(curr_roi_percent * 10) / 10  # Floor to nearest 0.1%
     
     # Skip if threshold is 0.0
     if threshold_level == 0.0:
-        return
-    
-    # Initialize price_movement if not set
-    if state_dict['price_movement'] is None:
-        state_dict['price_movement'] = []
+        return curr_price_movement
     
     # Check if ROI has crossed this threshold level for the first time
-    if abs(current_roi) >= abs(threshold_level) and threshold_level not in state_dict['price_movement']:
+    if abs(curr_roi_percent) >= abs(threshold_level) and threshold_level not in curr_price_movement:
         # Fill in any missing increments between 0 and the current threshold
         if threshold_level < 0:
             # For negative thresholds, start from -0.1 and go down
             increment = -0.1
             while increment >= threshold_level:
-                if increment not in state_dict['price_movement']:
-                    state_dict['price_movement'].append(increment)
+                if increment not in curr_price_movement:
+                    curr_price_movement.append(increment)
                 increment -= 0.1
                 increment = round(increment, 1)  # Avoid floating point precision issues
         else:
             # For positive thresholds, start from 0.1 and go up
             increment = 0.1
             while increment <= threshold_level:
-                if increment not in state_dict['price_movement']:
-                    state_dict['price_movement'].append(increment)
+                if increment not in curr_price_movement:
+                    curr_price_movement.append(increment)
                 increment += 0.1
                 increment = round(increment, 1)  # Avoid floating point precision issues
+    
+    return curr_price_movement
+
+
+def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_data_dict, start_row, idx, start_idx):
+    entry_price = start_row['Price']
+    curr_best_price = start_row['Price']   # correct, it starts at this
+    curr_worst_price = start_row['Price']  # correct, it starts at this
+    curr_worst_percent = 0.00
+    curr_best_percent = 0.00
+    curr_roi_percent = None
+    price_movement = []
+    exit_time_reached = False   # for exit condition, we stop tracking when the macd re-crosses or the exit time is reached, whichever is later
+    macd_cross_reached = False  # for exit condition, edge case described below
+    trade_type = normalized_df.at[idx, 'Trade Type']
+    ticker_df = ticker_data_dict[ticker]  # Get the rows from the starting index to the end
+    
+    exit_seconds_parts = normalized_df.at[idx, 'Exit Time'].split(':')
+    exit_seconds = int(exit_seconds_parts[0]) * 3600 + int(exit_seconds_parts[1]) * 60 + int(exit_seconds_parts[2])
+    
+    # Convert original index to position for slicing
+    start_position = ticker_df.index.get_loc(start_idx)
+    market_data_from_start = ticker_df.iloc[start_position:]
+
+    for idx2, row in market_data_from_start.iterrows():
+        row_price = row['Price']
+        macd_val = row['Val']
+        macd_avg = row["Avg"]
+        # check if it's the exit time row
+        row_seconds_parts = row['Time'].split(':')
+        row_seconds = int(row_seconds_parts[0]) * 3600 + int(row_seconds_parts[1]) * 60 + int(row_seconds_parts[2])
+
+        # 3.2) update best/worst prices/percents
+        # Update best/worst prices based on trade direction
+        if (trade_type.lower() == 'short'):
+            # For shorts, lower price is better (profit), higher price is worse (loss)
+            curr_roi_percent = ((entry_price - row_price) / entry_price) * 100
+
+            if row_price < curr_best_price:
+                curr_best_price = row_price
+                curr_best_percent = curr_roi_percent
+            elif row_price > curr_worst_price:
+                curr_worst_price = row_price
+                curr_worst_percent = curr_roi_percent                    
+            
+        else:  # buy
+            curr_roi_percent = ((row_price - entry_price) / entry_price) * 100
+
+            if row_price > curr_best_price:
+                curr_best_price = row_price
+                curr_best_percent = curr_roi_percent
+            elif row_price < curr_worst_price:
+                curr_worst_price = row_price
+                curr_worst_percent = curr_roi_percent
+        
+        # 3.3) track the price movement
+        # Round to 2 decimal places
+        curr_roi_percent = int(curr_roi_percent * 100) / 100  # Truncate to 2 decimal places # WARNING: DO NOT ROUND, if 1.8957 is rounded to 1.9 then 1.9 won't appear in price movement and you'll think it's a bug
+        price_movement = Add_Market_Data_Helper__Update_Price_Movement(price_movement, curr_roi_percent)
+
+        # 3.4) exit logic - if macd val and avg don't line up with trade_type OR the exit time is reached, whichever is later
+        # scenarios: exit time reached before end cross
+        #            end cross before exit time
+        #            end time reached so late that the cross has re-crossed into the trade type
+        if (exit_time_reached == False and abs(row_seconds - exit_seconds) <= 2):
+            exit_time_reached = True
+
+        if (macd_cross_reached == False and (trade_type == 'buy' and macd_val < macd_avg) or (trade_type == 'short' and macd_val > macd_avg)):
+            macd_cross_reached = True
+
+        # edge case. possible to enter and exit a trade but I stop recording data before the macd cross. like if I stop recording at 8 but the macd cross is at 8:05
+        elif (macd_cross_reached == False and idx2 == market_data_from_start.index[-1]):
+            macd_cross_reached = True
+
+        if (exit_time_reached == True and macd_cross_reached == True):
+            normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
+            normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
+            normalized_df.at[idx, 'Best Exit Percent'] = round(curr_best_percent, 2)
+            normalized_df.at[idx, 'Worst Exit Percent'] = round(curr_worst_percent, 2)
+            normalized_df.at[idx, 'Price_Movement'] = '|'.join(map(str, price_movement)) # we don't want to save the brackets from the list
+
+            return normalized_df
 
 
 def Add_Market_Data(normalized_df, raw_market_data_name):
@@ -276,7 +327,15 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
     # 2) add basic data: go over each trade in normalized_df, and add atr14, atr28, start rsi, start macd val/avg
     for idx, trade in normalized_df.iterrows():
         ticker = trade['Ticker']
-        start_idx, start_row = Add_Makret_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade)
+        
+        # possible we don't have market data for a ticker we traded. that's fine
+        if len(ticker_data_dict[ticker]) == 0:
+            print(f"Warning: Empty market data for ticker {ticker}, skipping this trade")
+            continue
+        
+        start_idx, start_row = Add_Market_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade)
+        if (idx == 15):
+            pass # it fails on tsla index 15. it never finds the end of tsla. short. cross fails right away, so val > avg. so the cross exit might be getting skipped
 
         if start_row is None:
             # TODO: this should NEVER happen, try to play an error sound or something to get the users attention
@@ -284,77 +343,16 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
             continue  # Skip this trade if no matching row found
         
         # Add the market data values to normalized_df
-        normalized_df.at[idx, 'ATR14'] = start_row['Atr14']
-        normalized_df.at[idx, 'ATR28'] = start_row['Atr28']
+        normalized_df.at[idx, 'Entry Atr14'] = start_row['Atr14']
+        normalized_df.at[idx, 'Entry Atr28'] = start_row['Atr28']
         normalized_df.at[idx, 'Entry Rsi'] = start_row['Rsi']
         normalized_df.at[idx, 'Entry Macd Val'] = start_row['Val']
         normalized_df.at[idx, 'Entry Macd Avg'] = start_row['Avg']
     
         # 3) add Best/worst Exit Price, Best/worst Exit Percent. Loop over the data from start time to end time
         # currently have the starting row for the trade as "start_row"
-        
-        # assign best/worst values at start and note exit time in seconds
-        entry_price = normalized_df.at[idx, 'Entry_Price']
-        curr_best_price = start_row['Price']
-        curr_worst_price = start_row['Price']
-        curr_worst_percent = 0.00
-        curr_best_percent = 0.00
-        curr_roi = None
-
-        exit_seconds_parts = normalized_df.at[idx, 'Exit_Time'].split(':')
-        exit_seconds = int(exit_seconds_parts[0]) * 3600 + int(exit_seconds_parts[1]) * 60 + int(exit_seconds_parts[2])
-
-        # Get the rows from the starting index to the end
-        ticker_df = ticker_data_dict[ticker]
-        market_data_from_start = ticker_df.iloc[start_idx:]
-
-        for idx2, row in market_data_from_start.iterrows():
-            trade_type = normalized_df.at[idx, 'Trade Type']
-            row_price = row['Price']
-
-            # check if it's the exit time row
-            row_seconds_parts = row['Time'].split(':')
-            row_seconds = int(row_seconds_parts[0]) * 3600 + int(row_seconds_parts[1]) * 60 + int(row_seconds_parts[2])
-
-            if abs(row_seconds - exit_seconds) <= 2:
-                # TODO exit logic
-                pass
-
-            else: 
-                # Update best/worst prices based on trade direction
-                if (trade_type == 'short'):
-                    # For shorts, lower price is better (profit), higher price is worse (loss)
-                    curr_roi_percent = ((entry_price - curr_best_price) / entry_price) * 100
-
-                    if row_price < curr_best_price:
-                        curr_best_price = row_price
-                        curr_best_percent = curr_roi_percent
-                    if row_price > curr_worst_price:
-                        curr_worst_price = row_price
-                        curr_worst_percent = curr_roi_percent                    
-                    
-                else:  # buy
-                    curr_roi_percent = ((curr_best_price - entry_price) / entry_price) * 100
-
-                    if row_price > curr_best_price:
-                        curr_best_price = row_price
-                        curr_best_percent = curr_roi_percent
-                    if row_price < curr_worst_price:
-                        curr_worst_price = row_price
-                        curr_worst_percent = curr_roi_percent
-
-                # now deal with percent tracking
-                # Round to 2 decimal places
-                current_roi_percent = int(curr_roi_percent * 100) / 100  # Truncate to 2 decimal places # WARNING: DO NOT ROUND, if 1.8957 is rounded to 1.9 then 1.9 won't appear in price movement and you'll think it's a bug
-    
-
-
-            # at the exit time find the percent value
-            # save best/worst percent/price to normalized_df
-
-
+        # 3.0 - 3.4) Get variables, update best/worst values, update price movement for the current trade. updates are written to normalized_df at the correct row
+        normalized_df = Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_data_dict, start_row, idx, start_idx)
 
     return normalized_df
-
-
 
