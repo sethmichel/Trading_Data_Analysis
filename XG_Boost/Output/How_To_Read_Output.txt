@@ -1,0 +1,36 @@
+shap
+- x axis shows if it contributed to failed trades or successful trades. it's how much that feature contributed to pushing the model’s 
+prediction higher or lower
+    + means that feature pushed the prediction toward the positive class (e.g., "trade success")
+    - means that feature pushed the prediction toward the negative class (e.g., "trade failure")
+
+-y axis is mainly a list of features sorted by importance. not that useful
+    the color scale on the side isn't an axis, it's a color code for the dots
+
+color of the dots: it's how high/low that feature value is in its possibel range (the actual raw value not the impact on the model)
+    rsi of 95 is red, but 23 is blue
+
+why are red dots on the left side then?
+    for rsi for example it means 
+
+
+critical for my data to remember
+- rsi: normal rsi is bad because both blue and red kind of mean the same thing. I convert them to the absoluate distance from 50. meaning 50 is blue, and 
+    30 and 70 are both red
+- macd val/avg: it's the absolute values
+- seconds since open is flipped, so higher values = later in the day
+
+
+Organize the charts
+	• 1 overview
+		○ Feature importance for a quick summary and importance of each feature
+		○ Shap summary plot -> importance of each feature
+	• 2 interactions and range
+		○ Dependence plots zoom in on features
+		○ Kde plot: density of data points
+		○ Now dig into the features
+	• 3 correlations
+		○ Correlation matrix (also look at dependence and kde)
+	• 4 data point by data point
+		○ Waterfall plots
+		○ Force plot

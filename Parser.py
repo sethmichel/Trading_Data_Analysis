@@ -156,11 +156,13 @@ def Normalize_Raw_Trades(raw_df):
                         'Best Exit Percent': None,
                         'Worst Exit Price': None,
                         'Worst Exit Percent': None,
-                        'Entry Atr14': None,
-                        'Entry Atr28': None,
                         'Entry Rsi': None,
                         'Entry Macd Val': None, 
                         'Entry Macd Avg': None,
+                        'Entry Atr14': None,
+                        'Entry Atr28': None,
+                        'Entry Volatility Percent': None,
+                        'Entry Volatility Ratio': None,
                         'Prev 5 Min Avg Close Volume': None,
                         'Price_Movement': None
                     })
@@ -345,6 +347,8 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
         # Add the market data values to normalized_df
         normalized_df.at[idx, 'Entry Atr14'] = start_row['Atr14']
         normalized_df.at[idx, 'Entry Atr28'] = start_row['Atr28']
+        normalized_df.at[idx, 'Entry Volatility Percent'] = start_row['Volatility Percent']
+        normalized_df.at[idx, 'Entry Volatility Ratio'] = start_row['Volatility Ratio']
         normalized_df.at[idx, 'Entry Rsi'] = start_row['Rsi']
         normalized_df.at[idx, 'Entry Macd Val'] = start_row['Val']
         normalized_df.at[idx, 'Entry Macd Avg'] = start_row['Avg']

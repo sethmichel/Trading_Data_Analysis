@@ -43,21 +43,14 @@ def Get_File_Names(month, day, year):
     return file_names[0], file_names[1]
 
 
-def CreateSummaryCsv():
+def Create_Summary_Csv(date):
         # prep work
                 # 1: put raw trades in 1_tos_Raw_Trades-TODO
                 # 2: put market data in 2_Raw_Market_Data
                 # when it's done it'll move the tos raw trades csv into 1_tos_Raw_Trades-DONE
                 # when it's done it'll make a new csv in 3_Final_Trade_Csvs
 
-        # Prompt user for date confirmation
-        user_input = input("\n\nDid you enter the correct date? (y/n): ")
-        if user_input.lower() != 'y':
-            print("Exiting program.")
-            return
-
         # 1) enter date in month-day-year format
-        date = "04-09-2025"
         month, day, year = date.split('-')
 
         # use a function bec some files have 'On_Demand' in them (I want to keep that special title)
@@ -83,5 +76,34 @@ def CreateSummaryCsv():
         Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
 
 
+# just calls the normal create summary csv function in a loop
+def Bulk_Create_Summary_Csvs(dates):
+        for date in dates:
+              Create_Summary_Csv(date)
+        
+        # Combine all individual CSV files into one combined file
+        print("Combining all individual CSV files into Bulk_Combined.csv...")
+        combined_df = pd.DataFrame()
+        
+        for date in dates:
+            csv_file_path = f"{summarized_final_trades_dir}/Summary_{date}.csv"
+            if os.path.exists(csv_file_path):
+                df = pd.read_csv(csv_file_path)
+                combined_df = pd.concat([combined_df, df], ignore_index=True)
+                print(f"Added {csv_file_path} to combined file")
+            else:
+                print(f"Warning: {csv_file_path} not found, skipping...")
+        
+        # Save the combined file
+        combined_file_path = f"{summarized_final_trades_dir}/Bulk_Combined.csv"
+        combined_df.to_csv(combined_file_path, index=False)
+        print(f"Combined file saved to: {combined_file_path}")
+        print(f"Total rows in combined file: {len(combined_df)}")
 
-CreateSummaryCsv()
+
+Create_Summary_Csv(date="06-11-2025")
+
+'''Bulk_Create_Summary_Csvs(dates=['04-09-2025', '04-10-2025', '05-01-2025', '05-09-2025', 
+                                '06-17-2025', '06-24-2025', 
+                                '06-30-2025'])
+'''
