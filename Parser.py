@@ -1,5 +1,5 @@
 import pandas as pd
-from datetime import date, timedelta
+from datetime import date, timedelta, datetime
 import os
 import shutil
 
@@ -163,6 +163,7 @@ def Normalize_Raw_Trades(raw_df):
                         'Entry Atr28': None,
                         'Entry Volatility Percent': None,
                         'Entry Volatility Ratio': None,
+                        'Target': None,
                         'Prev 5 Min Avg Close Volume': None,
                         'Price_Movement': None
                     })
@@ -209,6 +210,7 @@ def Add_Market_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade):
     return None
 
 
+# this tracks unique 0.1% movements, does not record duplicates
 def Add_Market_Data_Helper__Update_Price_Movement(curr_price_movement, curr_roi_percent):
     # Determine which 0.1% threshold level this ROI represents
     threshold_level = int(curr_roi_percent * 10) / 10  # Floor to nearest 0.1%
@@ -217,27 +219,162 @@ def Add_Market_Data_Helper__Update_Price_Movement(curr_price_movement, curr_roi_
     if threshold_level == 0.0:
         return curr_price_movement
     
+    # Extract current values from dictionaries for comparison
+    current_values = [entry['value'] for entry in curr_price_movement]
+    
     # Check if ROI has crossed this threshold level for the first time
-    if abs(curr_roi_percent) >= abs(threshold_level) and threshold_level not in curr_price_movement:
+    if abs(curr_roi_percent) >= abs(threshold_level) and threshold_level not in current_values:
         # Fill in any missing increments between 0 and the current threshold
         if threshold_level < 0:
             # For negative thresholds, start from -0.1 and go down
             increment = -0.1
             while increment >= threshold_level:
-                if increment not in curr_price_movement:
-                    curr_price_movement.append(increment)
+                if increment not in current_values:
+                    curr_price_movement.append({'value': increment, 'timestamp': None})
+                    current_values.append(increment)  # Update our tracking list
                 increment -= 0.1
                 increment = round(increment, 1)  # Avoid floating point precision issues
         else:
             # For positive thresholds, start from 0.1 and go up
             increment = 0.1
             while increment <= threshold_level:
-                if increment not in curr_price_movement:
-                    curr_price_movement.append(increment)
+                if increment not in current_values:
+                    curr_price_movement.append({'value': increment, 'timestamp': None})
+                    current_values.append(increment)  # Update our tracking list
                 increment += 0.1
                 increment = round(increment, 1)  # Avoid floating point precision issues
     
     return curr_price_movement
+
+
+# this tracks all 0.1% movements including 0.0, with duplicate tracking and oscillation detection
+# also fills in gaps
+# it uses timestamps to reject spam adding values if price oscilates between values over and over
+def Add_Market_Data_Helper__Update_Price_Movement_With_Duplicates(curr_price_movement, curr_roi_percent):    
+    # Floor to nearest 0.1% like the original function
+    threshold_level = int(curr_roi_percent * 10) / 10
+    current_time = datetime.now()
+    if (len(curr_price_movement) == 3):
+        pass
+    
+    # If this is the first entry, just add it
+    if len(curr_price_movement) == 0:
+        curr_price_movement.append({'value': threshold_level, 'timestamp': current_time})
+        return curr_price_movement
+    
+    # Rule 1: Cannot be the same value as the most recent value
+    if curr_price_movement[-1]['value'] == threshold_level:
+        return curr_price_movement
+    
+    # Check if we need to fill gaps between most recent value and current value
+    most_recent_value = curr_price_movement[-1]['value']
+    
+    # Calculate the gap and fill if necessary
+    if most_recent_value != threshold_level:
+        # Determine direction and fill gaps
+        if most_recent_value < threshold_level:
+            # Going up, fill gaps from most_recent + 0.1 to threshold_level
+            gap_value = most_recent_value + 0.1
+            gap_value = round(gap_value, 1)  # Avoid floating point precision issues
+            while gap_value < threshold_level:
+                # Calculate interpolated timestamp for gap fill
+                most_recent_time = curr_price_movement[-1]['timestamp']
+                time_diff = (current_time - most_recent_time).total_seconds()
+                gap_timestamp = most_recent_time + timedelta(seconds=time_diff / 2)
+                
+                curr_price_movement.append({'value': gap_value, 'timestamp': gap_timestamp})
+                gap_value += 0.1
+                gap_value = round(gap_value, 1)
+        else:
+            # Going down, fill gaps from most_recent - 0.1 to threshold_level
+            gap_value = most_recent_value - 0.1
+            gap_value = round(gap_value, 1)
+            while gap_value > threshold_level:
+                # Calculate interpolated timestamp for gap fill
+                most_recent_time = curr_price_movement[-1]['timestamp']
+                time_diff = (current_time - most_recent_time).total_seconds()
+                gap_timestamp = most_recent_time + timedelta(seconds=time_diff / 2)
+                
+                curr_price_movement.append({'value': gap_value, 'timestamp': gap_timestamp})
+                gap_value -= 0.1
+                gap_value = round(gap_value, 1)
+    
+    # Rule 2: Check oscillation detection with 2nd most recent value
+    if len(curr_price_movement) >= 2:
+        second_most_recent_value = curr_price_movement[-2]['value']
+        if second_most_recent_value == threshold_level:
+            # Check if it's been at least 10 seconds since the 2nd most recent entry
+            second_most_recent_time = curr_price_movement[-2]['timestamp']
+            time_diff = (current_time - second_most_recent_time).total_seconds()
+            if time_diff < 30:
+                # Less than 10 seconds, ignore this value due to oscillation
+                return curr_price_movement
+    
+    # Add the current value
+    curr_price_movement.append({'value': threshold_level, 'timestamp': current_time})
+    return curr_price_movement
+
+
+# removes noise values from list. it's like 230 values per minute otherwise. 80% of which is useless
+# we DO NOT save the timestamps
+def Post_Process_Price_Movement(price_movement):
+    processed_movement = []
+
+    # if too short to process
+    if len(price_movement) <= 5:
+        # drop all the timestamps
+        for i, entry in enumerate(price_movement):
+            processed_movement.append(entry['value'])
+
+        return processed_movement  
+    
+    for i, entry in enumerate(price_movement):
+        curr_value = entry['value']
+        
+        # For the first 5 entries, always add them
+        if len(processed_movement) < 5:
+            processed_movement.append(curr_value) # no timestamps
+            continue
+        
+        # Get the prev 5 values from processed_movement
+        prev_5_values = processed_movement[-5:]
+        
+        # If current value is NOT in the prev 5, we want to add it
+        if curr_value not in prev_5_values:
+            # check for gaps
+            last_processed_value = processed_movement[-1]
+            
+            # find the 0.1 distance btw last_processed_value and curr_value. 0.2 and -0.1
+            holder_val = last_processed_value
+            while (holder_val != curr_value):
+                # keep this at the start
+                if (last_processed_value > curr_value):
+                    holder_val = round(holder_val - 0.1, 1)  # fixes float error
+                elif (last_processed_value < curr_value):
+                    holder_val = round(holder_val + 0.1, 1)  # fixes float error
+                
+                # this will add the final value correctly
+                processed_movement.append(holder_val)
+    
+    for i in processed_movement:
+        if not isinstance(i, float):
+            pass
+    return processed_movement
+
+
+# 0.3
+def Was_Target_Hit(processed_price_movement):
+    target = 0.3
+    stop_loss = -0.3
+
+    for percent in processed_price_movement:
+        if (percent == stop_loss):
+            return 0
+        
+        if (percent == target):
+            return 1
+    
+    return 0
 
 
 def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_data_dict, start_row, idx, start_idx):
@@ -247,7 +384,7 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
     curr_worst_percent = 0.00
     curr_best_percent = 0.00
     curr_roi_percent = None
-    price_movement = []
+    price_movement = []         # list of dictionaries 'value' and 'timestamp'
     exit_time_reached = False   # for exit condition, we stop tracking when the macd re-crosses or the exit time is reached, whichever is later
     macd_cross_reached = False  # for exit condition, edge case described below
     trade_type = normalized_df.at[idx, 'Trade Type']
@@ -294,9 +431,14 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
         # 3.3) track the price movement
         # Round to 2 decimal places
         curr_roi_percent = int(curr_roi_percent * 100) / 100  # Truncate to 2 decimal places # WARNING: DO NOT ROUND, if 1.8957 is rounded to 1.9 then 1.9 won't appear in price movement and you'll think it's a bug
-        price_movement = Add_Market_Data_Helper__Update_Price_Movement(price_movement, curr_roi_percent)
+        
+        # this version only tracks unique values
+        #price_movement = Add_Market_Data_Helper__Update_Price_Movement(price_movement, curr_roi_percent)
 
-        # 3.4) exit logic - if macd val and avg don't line up with trade_type OR the exit time is reached, whichever is later
+        # this version tracks all values, so way more price movement data
+        price_movement = Add_Market_Data_Helper__Update_Price_Movement_With_Duplicates(price_movement, curr_roi_percent)
+
+        # 3.4) exit logic - if macd val and avg don't line up with trade_type OR the exit time is reached, whichever is LATER
         # scenarios: exit time reached before end cross
         #            end cross before exit time
         #            end time reached so late that the cross has re-crossed into the trade type
@@ -311,11 +453,13 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
             macd_cross_reached = True
 
         if (exit_time_reached == True and macd_cross_reached == True):
+            processed_price_movement = Post_Process_Price_Movement(price_movement)
+            normalized_df.at[idx, 'Target'] = Was_Target_Hit(processed_price_movement)
             normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
             normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
             normalized_df.at[idx, 'Best Exit Percent'] = round(curr_best_percent, 2)
             normalized_df.at[idx, 'Worst Exit Percent'] = round(curr_worst_percent, 2)
-            normalized_df.at[idx, 'Price_Movement'] = '|'.join(map(str, price_movement)) # we don't want to save the brackets from the list
+            normalized_df.at[idx, 'Price_Movement'] = '|'.join(map(str, processed_price_movement)) 
 
             return normalized_df
 

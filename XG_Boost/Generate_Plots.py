@@ -105,7 +105,7 @@ IMPORTANT: this has logic to pick the best feature for the coloring (interaction
            I can override it though via replacing auto with a feature
 '''
 def Generate_SHAP_dependence_Plot(shap_values, X, dest_dir):
-    features_to_plot = ['Entry_Volatility_Percent', 'RSI_Entry_50_Baseline']
+    features_to_plot = ['Entry_Volatility_Ratio']
     
     for feature in features_to_plot:
         shap.dependence_plot(
@@ -138,7 +138,7 @@ def Generate_SHAP_Value_Correltation(dest_dir, shap_values, X):
 # show correlation between 2 features
 def Generate_KDE_plot(dest_dir, X, y):
     featureX = "Entry_Volatility_Percent"
-    featureY = "Entry_Volatility_Ratio"
+    featureY = "RSI_Entry_50_Baseline"
 
     plt.figure(figsize=(8, 6))
     sns.kdeplot(

@@ -71,20 +71,20 @@ def Main():
 
         # --- SHAP waterfall plots (multiple) ---
         sample_indices = list(range(29, 34)) # this excludes the final index #29-43
-        Generate_Plots.Generate_SHAP_Force_Waterfall_Plots(X, shap_values, sample_indices, datapoint_analysis_dir)
-        Generate_Plots.Generate_SHAP_Force_Waterfall_Summary_Text(shap_values, sample_indices, datapoint_analysis_dir)
+        #Generate_Plots.Generate_SHAP_Force_Waterfall_Plots(X, shap_values, sample_indices, datapoint_analysis_dir)
+        #Generate_Plots.Generate_SHAP_Force_Waterfall_Summary_Text(shap_values, sample_indices, datapoint_analysis_dir)
 
         # --- Interactive force plot (HTML) ---
         #Generate_Plots.Generate_SHAP_Interactive_Force_HTML_Plot(shap_values, datapoint_analysis_dir)
 
         # --- SHAP dependence plots (multiple) ---
-        #Generate_Plots.Generate_SHAP_dependence_Plot(shap_values, X, interactions_ranges_dir)
+        Generate_Plots.Generate_SHAP_dependence_Plot(shap_values, X, interactions_ranges_dir)
 
         # --- SHAP Value Correlation Matrix ---
         #Generate_Plots.Generate_SHAP_Value_Correltation(correlations_dir, shap_values, X)
 
         # --- kernal density estimate plot (correlation btw 2 features (kinda like a heatmap)) ---
-        #Generate_Plots.Generate_KDE_plot(interactions_ranges_dir, X, y)
+        Generate_Plots.Generate_KDE_plot(interactions_ranges_dir, X, y)
 
         # --- Classification report txt ---
         # bad, 100% accuracy since my data isn't prediction ready

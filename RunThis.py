@@ -100,10 +100,18 @@ def Bulk_Create_Summary_Csvs(dates):
         print(f"Combined file saved to: {combined_file_path}")
         print(f"Total rows in combined file: {len(combined_df)}")
 
-
-Create_Summary_Csv(date="06-11-2025")
-
-'''Bulk_Create_Summary_Csvs(dates=['04-09-2025', '04-10-2025', '05-01-2025', '05-09-2025', 
-                                '06-17-2025', '06-24-2025', 
-                                '06-30-2025'])
 '''
+test_roi_list = [0.1,0.2,0.1,0.2,0.1,0.2,0.0,0.1,0.2]
+curr_price_movement = []
+for roi in test_roi_list:
+        curr_price_movement = Parser.Add_Market_Data_Helper__Update_Price_Movement_With_Duplicates(curr_price_movement, roi)
+
+print(curr_price_movement) # 12102
+'''
+#Create_Summary_Csv(date="04-10-2025")
+
+
+Bulk_Create_Summary_Csvs(dates=['04-09-2025', '04-10-2025', '05-01-2025', '05-09-2025', 
+                                '06-17-2025', '06-24-2025', '06-30-2025', '06-25-2025',
+                                '06-13-2025', '06-11-2025'])
+
