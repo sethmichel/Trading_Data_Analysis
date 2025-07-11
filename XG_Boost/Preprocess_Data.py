@@ -14,6 +14,13 @@ rsi complexity: actually, 50 should be considered a low value and less than 30/m
 Returns:
     X (pd.DataFrame): Feature matrix
     y (pd.Series): Target vector (0 = fail, 1 = success)
+
+drop these columns
+date, exit time, time in trade, dollar change, percent change, total invetment, entry price, exit price, trade type, qty, 
+best/worst exit percent/price, entry macd val/avg, target, prev 5min avg close volume, price movement, 'Entry Directional Bias'
+
+change these columns
+target, trade type, ticker, entry time, Rsi Extreme Prev Cross, Entry Directional Bias
 '''
 def Clean_Data(csv_path):
     try:
@@ -24,12 +31,13 @@ def Clean_Data(csv_path):
         
         # Convert categorical data. 'Trade Type': 'buy' → 1, 'short' → 0. ticker to numeric category
         df["Trade Type"] = df["Trade Type"].map({"buy": 1, "short": 0})
+        df["Rsi Extreme Prev Cross"] = df["Rsi Extreme Prev Cross"].map({True: 1, False: 0})
         df["Ticker"] = df["Ticker"].astype("category").cat.codes
 
         # drop unused column and columns that give away the result. raise error is there's any mistakes in this step
-        drop_cols = ["Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Total Investment', 'Qty', 'Entry Price', 'Exit Price',
-                    'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 'Prev 5 Min Avg Close Volume', 
-                    'Price_Movement', 'Percent Change']
+        drop_cols = ["Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Percent Change', 'Total Investment', 'Entry Price', 
+                     'Exit Price', 'Qty', 'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 
+                     'Entry Macd Val', 'Entry Macd Avg', 'Prev 5 Min Avg Close Volume', 'Price Movement']
         missing_cols = [col for col in drop_cols if col not in df.columns]
         if missing_cols:
             raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
@@ -47,6 +55,10 @@ def Clean_Data(csv_path):
             seconds_since_open.append(entry_time_seconds - seconds_630)
 
         df["Seconds_Since_Open"] = seconds_since_open
+
+        # I want absolute distance from 0.5 for directional bias. 0.5 means neutral, but high and low values are targets
+        df['Entry_Directional_Bias_Abs_Distance'] = (df['Entry Directional Bias'] - 0.5).abs()
+        df = df.drop(columns=['Entry Directional Bias'])
 
         # change entry macd val/avg to absolute value. it goes between + and - which the model doesn't understand
         for col in ['Entry Macd Val', 'Entry Macd Avg']:
@@ -66,13 +78,13 @@ def Clean_Data(csv_path):
             df = df.drop(columns=["Ticker"])
 
         # deal with rsi (described above) 
-        df['RSI_Entry_50_Baseline'] = (df['Entry_Rsi'] - 50).abs() # doesn't save direction. shap: 50 is blue, farther from 50 = red
+        #df['RSI_Entry_50_Baseline'] = (df['Entry_Rsi'] - 50).abs() # doesn't save direction. shap: 50 is blue, farther from 50 = red
         #df = df.drop(columns=['Entry_Rsi'])
 
         # Separate features and target (do this even if we're not making a predictive model). need dependent/independent vars
         X = df.drop(columns=["Target"])
         y = df["Target"]
-        
+        print(df.columns)
         return X, y
     
     except Exception as e:

@@ -54,48 +54,43 @@ def Load_Pretrained_Model_JSON():
 
 
 def Main():
-    try:
-        #model, X, y = Train_Model()
-        model, X, y = Load_Pretrained_Model_JSON()
+    #model, X, y = Train_Model()
+    model, X, y = Load_Pretrained_Model_JSON()
 
-        # --- get shap_values ---
-        print("Calculating SHAP values...")
-        explainer = shap.Explainer(model, X)
-        shap_values = explainer(X)
-        
-        # --- SHAP summary plot ---
-        #Generate_Plots.Generate_SHAP_Summary_Plot(overview_dir, shap_values, X)
+    # --- get shap_values ---
+    print("Calculating SHAP values...")
+    explainer = shap.Explainer(model, X)
+    shap_values = explainer(X)
+    
+    # --- SHAP summary plot ---
+    Generate_Plots.Generate_SHAP_Summary_Plot(overview_dir, shap_values, X)
 
-        # --- Feature importance plot ---
-        #Generate_Plots.Generate_Feature_Importance_Plot(overview_dir, model)
+    # --- Feature importance plot ---
+    Generate_Plots.Generate_Feature_Importance_Plot(overview_dir, model)
 
-        # --- SHAP waterfall plots (multiple) ---
-        sample_indices = list(range(29, 34)) # this excludes the final index #29-43
-        #Generate_Plots.Generate_SHAP_Force_Waterfall_Plots(X, shap_values, sample_indices, datapoint_analysis_dir)
-        #Generate_Plots.Generate_SHAP_Force_Waterfall_Summary_Text(shap_values, sample_indices, datapoint_analysis_dir)
+    # --- SHAP waterfall plots (multiple) ---
+    sample_indices = list(range(29, 34)) # this excludes the final index #29-43
+    Generate_Plots.Generate_SHAP_Force_Waterfall_Plots(X, shap_values, sample_indices, datapoint_analysis_dir)
+    Generate_Plots.Generate_SHAP_Force_Waterfall_Summary_Text(shap_values, sample_indices, datapoint_analysis_dir)
 
-        # --- Interactive force plot (HTML) ---
-        #Generate_Plots.Generate_SHAP_Interactive_Force_HTML_Plot(shap_values, datapoint_analysis_dir)
+    # --- Interactive force plot (HTML) ---
+    Generate_Plots.Generate_SHAP_Interactive_Force_HTML_Plot(shap_values, datapoint_analysis_dir)
 
-        # --- SHAP dependence plots (multiple) ---
-        Generate_Plots.Generate_SHAP_dependence_Plot(shap_values, X, interactions_ranges_dir)
+    # --- SHAP dependence plots (multiple) ---
+    Generate_Plots.Generate_SHAP_dependence_Plot(shap_values, X, interactions_ranges_dir)
 
-        # --- SHAP Value Correlation Matrix ---
-        #Generate_Plots.Generate_SHAP_Value_Correltation(correlations_dir, shap_values, X)
+    # --- SHAP Value Correlation Matrix ---
+    Generate_Plots.Generate_SHAP_Value_Correltation(correlations_dir, shap_values, X)
 
-        # --- kernal density estimate plot (correlation btw 2 features (kinda like a heatmap)) ---
-        Generate_Plots.Generate_KDE_plot(interactions_ranges_dir, X, y)
+    # --- kernal density estimate plot (correlation btw 2 features (kinda like a heatmap)) ---
+    Generate_Plots.Generate_KDE_plot(interactions_ranges_dir, X, y)
 
-        # --- Classification report txt ---
-        # bad, 100% accuracy since my data isn't prediction ready
-        #Generate_Plots.Generate_Classification_Report(output_dir, model, X, y)
+    # --- Classification report txt ---
+    # bad, 100% accuracy since my data isn't prediction ready
+    #Generate_Plots.Generate_Classification_Report(output_dir, model, X, y)
 
-        print("Training complete.")
+    print("Training complete.")
 
-
-    except Exception as e:
-        print(f"ERROR: file: {fileName}, function: {inspect.currentframe().f_code.co_name}, line: {sys.exc_info()[2].tb_lineno}, error: {str(e)}, ")
-        raise ValueError()
 
 
 

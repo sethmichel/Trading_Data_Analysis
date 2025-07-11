@@ -105,7 +105,8 @@ IMPORTANT: this has logic to pick the best feature for the coloring (interaction
            I can override it though via replacing auto with a feature
 '''
 def Generate_SHAP_dependence_Plot(shap_values, X, dest_dir):
-    features_to_plot = ['Entry_Volatility_Ratio']
+    features_to_plot = ['Entry_Volatility_Percent', 'Entry_Volatility_Ratio', 'Prev_Max_Macd_Diff_Percent', 
+                        'Rsi_Extreme_Prev_Cross', 'Entry_Directional_Bias_Abs_Distance']
     
     for feature in features_to_plot:
         shap.dependence_plot(
@@ -137,40 +138,39 @@ def Generate_SHAP_Value_Correltation(dest_dir, shap_values, X):
 # kernal density estimate
 # show correlation between 2 features
 def Generate_KDE_plot(dest_dir, X, y):
-    featureX = "Entry_Volatility_Percent"
-    featureY = "RSI_Entry_50_Baseline"
+    featureX = ["Entry_Volatility_Percent", "Entry_Volatility_Percent", "Entry_Volatility_Ratio"]
+    featureY = ["Entry_Volatility_Ratio",   "Entry_Directional_Bias_Abs_Distance",   "Entry_Directional_Bias_Abs_Distance"]
 
-    plt.figure(figsize=(8, 6))
-    sns.kdeplot(
-        data=X, 
-        x=featureX, 
-        y=featureY,
-        fill=True, 
-        cmap="magma", 
-        thresh=0.05, 
-        levels=100
-    )
-    '''
-    This labels it by target, so we see if it succeeds in the dense areas. seems odd to me, like label 1 overwrites the label 0 areas so we're missing data
-    sns.kdeplot(
-    data=X.assign(label=y),  # Assuming `y` is your actual result column
-    x=featureX, y=featureY,
-    hue="label",
-    fill=True,
-    common_norm=False,
-    cmap="coolwarm"
-    )
-    '''
+    for i in range(0, len(featureX)):
+        plt.figure(figsize=(8, 6))
+        sns.kdeplot(
+            data=X, 
+            x=featureX[i], 
+            y=featureY[i],
+            fill=True, 
+            cmap="magma", 
+            thresh=0.05, 
+            levels=100
+        )
+        '''
+        This labels it by target, so we see if it succeeds in the dense areas. seems odd to me, like label 1 overwrites the label 0 areas so we're missing data
+        sns.kdeplot(
+        data=X.assign(label=y),  # Assuming `y` is your actual result column
+        x=featureX, y=featureY,
+        hue="label",
+        fill=True,
+        common_norm=False,
+        cmap="coolwarm"
+        )
+        '''
 
-    plt.title(f"Density Plot: {featureX} vs {featureY}")
-    plt.xlabel(featureX)
-    plt.ylabel(featureY)
-    plt.tight_layout()
+        plt.title(f"Density Plot: {featureX[i]} vs {featureY[i]}")
+        plt.xlabel(featureX[i])
+        plt.ylabel(featureY[i])
+        plt.tight_layout()
 
-    # Save the plot
-    plt.savefig(f"{dest_dir}/KDE_{featureX}_vs_{featureY}.png", dpi=300)
-
-    plt.show()
+        # Save the plot
+        plt.savefig(f"{dest_dir}/KDE_{featureX[i]}_vs_{featureY[i]}.png", dpi=300)
 
 
 def Generate_Classification_Report(dest_dir, model, X, y):

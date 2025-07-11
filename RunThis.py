@@ -1,6 +1,11 @@
 import Parser
 import pandas as pd
 import os
+import sys
+import inspect
+import Main_Globals
+
+fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
 # 1) put raw tos csv's in 1_tos_Raw_Trades-TODO
 # 2) put market data in 2_Raw_Market_Data
@@ -17,41 +22,46 @@ headers = ["Date", "Amount", "Entry Time", "Exit Time", "Ticker", "Entry", "Exit
 
 
 def Get_File_Names(month, day, year):
-    raw_trades_name = f"{tos_raw_trades_TODO_dir}/{year}-{month}-{day}-TradeActivity.csv"
-    raw_market_data_name = f"{market_data_TODO_dir}/Raw_Market_Data_{month}-{day}-{year}.csv"
-    file_names = []
+    try:
+        raw_trades_name = f"{tos_raw_trades_TODO_dir}/{year}-{month}-{day}-TradeActivity.csv"
+        raw_market_data_name = f"{market_data_TODO_dir}/Raw_Market_Data_{month}-{day}-{year}.csv"
+        file_names = []
 
-    # Check if both files exist
-    if (os.path.exists(raw_trades_name) == False):
-        raw_trades_name_on_demand = raw_trades_name.replace('.csv', '_On_Demand.csv')
-        if (os.path.exists(raw_trades_name_on_demand) == False):
+        # Check if both files exist
+        if (os.path.exists(raw_trades_name) == False):
+            raw_trades_name_on_demand = raw_trades_name.replace('.csv', '_On_Demand.csv')
+            if (os.path.exists(raw_trades_name_on_demand) == False):
                 raise FileNotFoundError(f"Could not find file {raw_trades_name} or {raw_trades_name_on_demand}")
+            else:
+                file_names.append(raw_trades_name_on_demand)
         else:
-              file_names.append(raw_trades_name_on_demand)
-    else:
-          file_names.append(raw_trades_name)
+            file_names.append(raw_trades_name)
 
-    if (os.path.exists(raw_market_data_name) == False):
-        raw_market_data_name_on_demand = raw_market_data_name.replace('.csv', '_On_Demand.csv')
-        if (os.path.exists(raw_market_data_name_on_demand) == False):
+        if (os.path.exists(raw_market_data_name) == False):
+            raw_market_data_name_on_demand = raw_market_data_name.replace('.csv', '_On_Demand.csv')
+            if (os.path.exists(raw_market_data_name_on_demand) == False):
                 raise FileNotFoundError(f"Could not find file {raw_market_data_name} or {raw_market_data_name_on_demand}")
-        else:  
-              file_names.append(raw_market_data_name_on_demand)
-    else:
-          file_names.append(raw_market_data_name)
+            else:  
+                file_names.append(raw_market_data_name_on_demand)
+        else:
+            file_names.append(raw_market_data_name)
 
-    return file_names[0], file_names[1]
+        return file_names[0], file_names[1]
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
 def Create_Summary_Csv(date):
+    try:
         # prep work
-                # 1: put raw trades in 1_tos_Raw_Trades-TODO
-                # 2: put market data in 2_Raw_Market_Data
-                # when it's done it'll move the tos raw trades csv into 1_tos_Raw_Trades-DONE
-                # when it's done it'll make a new csv in 3_Final_Trade_Csvs
+        # 1: put raw trades in 1_tos_Raw_Trades-TODO
+        # 2: put market data in 2_Raw_Market_Data
+        # when it's done it'll move the tos raw trades csv into 1_tos_Raw_Trades-DONE
+        # when it's done it'll make a new csv in 3_Final_Trade_Csvs
 
         # 1) enter date in month-day-year format
-        month, day, year = date.split('-')
+        year, month, day = date.split('-')
 
         # use a function bec some files have 'On_Demand' in them (I want to keep that special title)
         raw_trades_name, raw_market_data_name = Get_File_Names(month, day, year)
@@ -60,11 +70,11 @@ def Create_Summary_Csv(date):
         # 2) normalize raw trades so it's readable and each trade is 1 line.
         #   -- uses raw trades in 1tosRawCsvs-TODO
         print(f"1) Normalizing raw trades")
-        print(f"file names -> \nraw trades: {raw_trades_name}, \nraw market data {raw_market_data_name}")
+        print(f"file names -> \nraw trades: {raw_trades_name}, \nraw market data {raw_market_data_name}\n")
 
         raw_trade_df = Parser.CreateDf(raw_trades_name)            # creates the df of unreadable raw data
         normalized_df = Parser.Normalize_Raw_Trades(raw_trade_df)  # makes the data readable (not adding market data yet)
-        
+
         # 3) add market data to the trade summary
         final_df = Parser.Add_Market_Data(normalized_df, raw_market_data_name)
 
@@ -74,18 +84,56 @@ def Create_Summary_Csv(date):
 
         # 5) move the used market data/trade log to used folders
         Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
+    
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-# just calls the normal create summary csv function in a loop
-def Bulk_Create_Summary_Csvs(dates):
+''' 1) deletes everything in 3_final_trade_csvs
+    2) gets all dates from todo_trade_data
+    3) calls Create_Summary_Csv() to make a summary csv for each date
+    4) combines all csv's in 3_final_trade_csv into a bulk csv
+'''
+def Bulk_Create_Summary_Csvs():
+    try:
+        dates_source = 'Csv_Files/1_tos_Raw_Trades/TODO_Trade_Data'
+        
+        # delete everyting in the final trade summary dir
+        deletion_dir = 'Csv_Files/3_Final_Trade_Csvs'
+        if os.path.exists(deletion_dir):
+            for filename in os.listdir(deletion_dir):
+                file_path = os.path.join(deletion_dir, filename)
+                if os.path.isfile(file_path):
+                    os.remove(file_path)
+                    print(f"Deleted: {file_path}")
+        print("\n")
+
+        # Create dates list by going over all files in dates_source
+        dates = []
+        if os.path.exists(dates_source):
+            files = os.listdir(dates_source)
+            for file in files:
+                if file.endswith('.csv'):
+                    # Split filename by '-' and combine indexes 0-2 to get the date
+                    parts = file.split('-')
+                    if len(parts) >= 3:
+                        date = f"{parts[0]}-{parts[1]}-{parts[2]}"
+                        if date not in dates:  # Avoid duplicates
+                            dates.append(date)
+        
+        valid_dates = []
         for date in dates:
-              Create_Summary_Csv(date)
+            try:
+                Create_Summary_Csv(date)
+                valid_dates.append(date)
+            except Exception as e: 
+                print(f"error for date: {date}. this process uses each date in tos raw todo trades. it's doing it in bulk so I probably don't have market data for this day. error: {e}")
         
         # Combine all individual CSV files into one combined file
         print("Combining all individual CSV files into Bulk_Combined.csv...")
         combined_df = pd.DataFrame()
         
-        for date in dates:
+        for date in valid_dates:
             csv_file_path = f"{summarized_final_trades_dir}/Summary_{date}.csv"
             if os.path.exists(csv_file_path):
                 df = pd.read_csv(csv_file_path)
@@ -100,18 +148,11 @@ def Bulk_Create_Summary_Csvs(dates):
         print(f"Combined file saved to: {combined_file_path}")
         print(f"Total rows in combined file: {len(combined_df)}")
 
-'''
-test_roi_list = [0.1,0.2,0.1,0.2,0.1,0.2,0.0,0.1,0.2]
-curr_price_movement = []
-for roi in test_roi_list:
-        curr_price_movement = Parser.Add_Market_Data_Helper__Update_Price_Movement_With_Duplicates(curr_price_movement, roi)
-
-print(curr_price_movement) # 12102
-'''
-#Create_Summary_Csv(date="04-10-2025")
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-Bulk_Create_Summary_Csvs(dates=['04-09-2025', '04-10-2025', '05-01-2025', '05-09-2025', 
-                                '06-17-2025', '06-24-2025', '06-30-2025', '06-25-2025',
-                                '06-13-2025', '06-11-2025'])
+
+#Create_Summary_Csv(date="2025-04-09")
+Bulk_Create_Summary_Csvs()
 

@@ -76,7 +76,7 @@ def Clean_Data_2(file, df):
 
         drop_cols = ["Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Total Investment', 'Qty', 'Entry Price', 'Exit Price',
             'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 'Prev 5 Min Avg Close Volume', 
-            'Price_Movement', 'Percent Change']
+            'Price Movement', 'Percent Change']
         missing_cols = [col for col in drop_cols if col not in df.columns]
         if missing_cols:
             raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")

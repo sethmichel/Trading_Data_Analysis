@@ -1,0 +1,103 @@
+Volatility Time By Ticker Analysis (Target: 0.5)
+============================================================
+
+Date: 04-09-2025
+------------------------------
+HOOD: 06:30:15
+IONQ: 06:30:15
+MARA: 06:31:48
+RDDT: 06:30:15
+SMCI: 06:30:15
+SOXL: 06:30:15
+TSLA: 06:32:02
+
+Date: 04-10-2025
+------------------------------
+HOOD: 06:30:00
+IONQ: 06:32:50
+MARA: 06:30:18
+RDDT: 06:30:00
+SMCI: 06:32:28
+SOXL: 06:30:00
+TSLA: 06:33:01
+
+Date: 05-01-2025
+------------------------------
+HOOD: 06:32:01
+IONQ: 06:39:18
+MARA: 06:36:32
+RDDT: 06:37:28
+SMCI: 06:43:43
+SOXL: 06:36:42
+TSLA: 06:39:16
+
+Date: 05-09-2025
+------------------------------
+HOOD: 06:48:27
+IONQ: 06:32:46
+MARA: 06:32:30
+RDDT: 06:39:36
+SMCI: Never Reached
+SOXL: 06:54:00
+TSLA: 06:59:02
+
+Date: 06-11-2025
+------------------------------
+HOOD: 06:45:16
+IONQ: 06:30:17
+MARA: Never Reached
+RDDT: 06:43:17
+SMCI: 06:41:30
+SOXL: 06:46:38
+TSLA: 06:49:53
+
+Date: 06-13-2025
+------------------------------
+HOOD: 06:56:28
+IONQ: 06:36:02
+MARA: 07:15:25
+RDDT: 06:57:00
+SMCI: 07:41:01
+SOXL: 06:51:38
+TSLA: Never Reached
+
+Date: 06-17-2025
+------------------------------
+HOOD: Never Reached
+IONQ: 06:36:35
+MARA: 06:36:49
+RDDT: 06:30:15
+SMCI: Never Reached
+SOXL: Never Reached
+TSLA: Never Reached
+
+Date: 06-24-2025.csv
+------------------------------
+HOOD: Never Reached
+IONQ: 06:35:37
+MARA: Never Reached
+RDDT: 06:37:31
+SMCI: Never Reached
+SOXL: Never Reached
+TSLA: Never Reached
+
+Date: 06-25-2025.csv
+------------------------------
+HOOD: 06:38:38
+IONQ: 06:34:32
+MARA: 06:36:06
+RDDT: 06:34:10
+SMCI: 06:41:32
+SOXL: Never Reached
+TSLA: Never Reached
+
+Date: 06-30-2025.csv
+------------------------------
+HOOD: 08:03:23
+IONQ: 06:33:09
+MARA: Never Reached
+RDDT: 06:38:45
+SMCI: Never Reached
+SOXL: Never Reached
+TSLA: Never Reached
+
