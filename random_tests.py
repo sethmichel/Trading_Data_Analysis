@@ -5,6 +5,8 @@ after 'Old_', which they all start with, write 'Raw_', keep the rest of the titl
 
 import os
 import glob
+import pandas as pd
+import pandas_ta as ta
 
 def rename_csv_files():
     """
@@ -46,5 +48,34 @@ def rename_csv_files():
     
     print("File renaming completed!")
 
+
+# find the min and max of macd zscore so I know the range
+def min_max_zScore():
+    try:
+        df = pd.read_csv('testdata.csv')
+        if 'Macd Z-Score' not in df.columns:
+            print("Column 'Macd Z-Score' not found in testdata.csv!")
+            return
+        min_val = df['Macd Z-Score'].min()
+        max_val = df['Macd Z-Score'].max()
+        print(f"Min of 'Macd Z-Score': {min_val}")
+        print(f"Max of 'Macd Z-Score': {max_val}")
+        
+    except Exception as e:
+        print(f"Error reading or processing testdata.csv: {e}")
+
+
+def Test_Pandas_Ta():
+    df = pd.DataFrame()
+    df = pd.read_csv("testdata.csv")
+    tickers = ['HOOD', 'IONQ', 'MARA', 'RDDT', 'SMCI', 'SOXL', 'TSLA']
+    
+    for ticker in tickers:
+        ticker_df = df[df['Ticker'] == ticker].copy()
+
+
+
 if __name__ == "__main__":
-    rename_csv_files()
+    #min_max_zScore()
+    #rename_csv_files()
+    Test_Pandas_Ta()

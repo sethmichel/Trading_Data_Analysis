@@ -1,4 +1,0 @@
-rsi handling
-- If you think RSI effects grow more powerful the further from 50 it gets, but not linearly, you could do:
-     df['RSI_Extreme_Score'] = (df['Entry_RSI'] - 50).abs() ** 1.5
-

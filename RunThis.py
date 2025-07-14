@@ -83,7 +83,7 @@ def Create_Summary_Csv(date):
         print(f"Trade summary saved to: {trade_summary_name}")
 
         # 5) move the used market data/trade log to used folders
-        Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
+        #Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
     
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)

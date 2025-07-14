@@ -416,7 +416,7 @@ def Print_Volatility_Counts():
 def Volatility_Time_By_Ticker():
     try:
         data_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
-        volatility_target = 0.5
+        volatility_target = 0.3
         
         # Dictionary to store results organized by date
         results_by_date = {}
@@ -547,262 +547,37 @@ def move_all_csvs_back():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-def directional_bias_helper_get_high_low_close(market_data_df):
-    data_holder = {}
-
-    for idx, row in market_data_df.iterrows():
-        ticker = row['Ticker']
-        curr_price = row['Price']
-        curr_time = row['Time']
-
-        if ticker not in data_holder:
-            data_holder[ticker] = {
-                'high': [],
-                'low': [],
-                'close': [],
-                'prev close': [],
-                'TR': [],
-                'upTR': [],
-                'downTR': [],
-                'upAtr': [],
-                'downAtr': [],
-                'directional bias': [],
-                'current_minute': None,
-                'prev_row_price': curr_price
-            }
-
-        time_parts = curr_time.split(':')
-        curr_minute = int(time_parts[1])
-        
-        # Check if we're in a new minute
-        if data_holder[ticker]['current_minute'] != curr_minute:
-            # If this isn't the first minute for this ticker, save the close price
-            if data_holder[ticker]['current_minute'] != None:
-                data_holder[ticker]['close'].append(data_holder[ticker]['prev_row_price'])
-            
-            # Start new minute - initialize high and low with current price
-            data_holder[ticker]['current_minute'] = curr_minute
-            data_holder[ticker]['high'].append(curr_price)
-            data_holder[ticker]['low'].append(curr_price)
-            
-        else:
-            # Still in same minute - update high and low if needed
-            if curr_price > data_holder[ticker]['high'][-1]:
-                data_holder[ticker]['high'][-1] = curr_price
-            elif curr_price < data_holder[ticker]['low'][-1]:
-                data_holder[ticker]['low'][-1] = curr_price
-        
-        # Store current price as previous for next iteration
-        data_holder[ticker]['prev_row_price'] = curr_price
-
-    # After processing all rows, add the final close price for each ticker
-    for ticker in data_holder:
-        data_holder[ticker]['close'].append(data_holder[ticker]['prev_row_price'])
-
-    return data_holder
-
-
-def Calcualte_Directional_Bias_V2(market_data_csv_path):
-    market_data_df = pd.read_csv(market_data_csv_path)
-    ema_length = 7
-    
-    # 1) get high, low, close for every ticker
-    data_holder = directional_bias_helper_get_high_low_close(market_data_df)
-
-    # 2) populate prev close. it's i-1 of close
-    for ticker in data_holder:
-        close_list = data_holder[ticker]['close']
-        prev_close_list = data_holder[ticker]['prev close']
-        prev_close_list.append(None)  # first index is non computable
-        
-        for i in range(len(close_list) - 1):
-            prev_close_list.append(close_list[i])
-
-        data_holder[ticker]['prev close'] = prev_close_list
-
-    # 3) compute True range
-    '''TR = max(
-        High - Low,
-        abs(High - PrevClose),
-        abs(Low - PrevClose)) '''
-    for ticker in data_holder:
-        high_list = data_holder[ticker]['high']
-        low_list = data_holder[ticker]['low']
-        prev_close_list = data_holder[ticker]['prev close']
-        tr_list = data_holder[ticker]['TR']
-        
-        # Compute TR for each index
-        for i in range(len(high_list)):
-            high = high_list[i]
-            low = low_list[i]
-            prev_close = prev_close_list[i]
-            
-            if (prev_close == None):
-                tr = round(high - low, 3)
-            else:
-                tr = round(max(
-                    high - low,
-                    abs(high - prev_close),
-                    abs(low - prev_close)
-                ), 3)
-
-            tr_list.append(tr)
-
-        data_holder[ticker]['TR'] = tr_list
-
-    # 4) classify TR as upTR or downTR
-    # If Close > PrevClose → UpTR = TR, DownTR = 0
-    # If Close < PrevClose → DownTR = TR, UpTR = 0
-    # else they're both 0
-    for ticker in data_holder:
-        close_list = data_holder[ticker]['close']
-        prev_close_list = data_holder[ticker]['prev close']
-        tr_list = data_holder[ticker]['TR']
-        up_tr_list = data_holder[ticker]['upTR']
-        down_tr_list = data_holder[ticker]['downTR']
-        
-        # Classify each TR value based on close vs prev_close
-        for i in range(len(tr_list)):
-            close = close_list[i]
-            prev_close = prev_close_list[i]
-            tr = tr_list[i]
-            
-            # prev_close[0] is none
-            if  (prev_close == None or (close == prev_close)):
-                up_tr_list.append(0)
-                down_tr_list.append(0)
-
-            elif close > prev_close:
-                up_tr_list.append(tr)
-                down_tr_list.append(0)
-
-            else:
-                up_tr_list.append(0)
-                down_tr_list.append(tr)
-                
-        data_holder[ticker]['upTR'] = up_tr_list
-        data_holder[ticker]['downTR'] = down_tr_list
-
-    # 5) compute wilders EMA using ema_length (use up/downTR for data). The first x entries of up/downAtr should be None due to warmup period
-    for ticker in data_holder:
-        up_tr_list = data_holder[ticker]['upTR']
-        down_tr_list = data_holder[ticker]['downTR']
-        up_atr_list = data_holder[ticker]['upAtr']
-        down_atr_list = data_holder[ticker]['downAtr']
-        
-        # Calculate Wilder EMA for both upTR and downTR
-        for i in range(len(up_tr_list)):
-            if i < ema_length:
-                # First 7 indexes should be None
-                up_atr_list.append(None)
-                down_atr_list.append(None)
-            elif i == ema_length:
-                # First EMA calculation - simple average of first 7 values
-                up_avg = sum(up_tr_list[:ema_length]) / ema_length
-                down_avg = sum(down_tr_list[:ema_length]) / ema_length
-                up_atr_list.append(round(up_avg, 4))
-                down_atr_list.append(round(down_avg, 4))
-            else:
-                # Subsequent calculations - Wilder EMA formula
-                current_up_tr = up_tr_list[i]
-                current_down_tr = down_tr_list[i]
-                previous_up_ema = up_atr_list[i-1]
-                previous_down_ema = down_atr_list[i-1]
-                
-                new_up_ema = previous_up_ema + (current_up_tr - previous_up_ema) / ema_length
-                new_down_ema = previous_down_ema + (current_down_tr - previous_down_ema) / ema_length
-                
-                up_atr_list.append(round(new_up_ema, 4))
-                down_atr_list.append(round(new_down_ema, 4))
-        
-        data_holder[ticker]['upAtr'] = up_atr_list
-        data_holder[ticker]['downAtr'] = down_atr_list
-
-    # 6) compute directional bias
-    for ticker in data_holder:
-        up_atr_list = data_holder[ticker]['upAtr']
-        down_atr_list = data_holder[ticker]['downAtr']
-        directional_bias_list = data_holder[ticker]['directional bias']
-        
-        # Calculate directional bias for each index
-        for i in range(len(up_atr_list)):
-            if up_atr_list[i] is None or down_atr_list[i] is None:
-                # During warmup period, directional bias is None
-                directional_bias_list.append(None)
-            else:
-                up_atr = up_atr_list[i]
-                down_atr = down_atr_list[i]
-                denominator = up_atr + down_atr
-                
-                if denominator == 0:
-                    # Neutral bias when both are 0
-                    directional_bias = 0.5
-                else:
-                    directional_bias = up_atr / denominator
-                
-                directional_bias_list.append(round(directional_bias, 3))
-        
-        data_holder[ticker]['directional bias'] = directional_bias_list
-    
-    return data_holder
-  
-
-# for each ticker in data_holder
-# write that minutes data_holder[ticker]['directional bias'] for the whole minute to each line
-# when we detect a minute change move to the next index of data_holder[ticker]['directional bias']
-# if it's none then write "NaN"
-def Add_Directional_Bias_To_Market_Data(data_holder, market_data_csv_path):
+# if I use the wrong starting timestamp in on demand, this'll correct it
+def Change_Timestamps_of_Market_Data():
     try:
-        df = pd.read_csv(market_data_csv_path)
-        df['Directional Bias'] = None   # Initialize new directional bias column
-        ticker_minute_index = {}        # Dictionary to track current minute index for each ticker
+        correct_start = "06:30:00"
+        file_path = "Raw_Market_Data_05-10-2025_On_Demand.csv"
+        output_filename = "Raw_Market_Data_05-10-2025_On_Demand_correct.csv"
         
-        for index, row in df.iterrows():
-            ticker = row['Ticker']
-            time_str = row['Time']
-            
-            time_parts = time_str.split(':')
-            current_minute = int(time_parts[1])
-            
-            # Initialize ticker tracking if first time seeing this ticker
-            if ticker not in ticker_minute_index:
-                ticker_minute_index[ticker] = {
-                    'current_minute': current_minute,
-                    'minute_index': 0
-                }
-            
-            # Check if we've moved to a new minute for this ticker
-            if current_minute != ticker_minute_index[ticker]['current_minute']:
-                ticker_minute_index[ticker]['current_minute'] = current_minute
-                ticker_minute_index[ticker]['minute_index'] += 1
-            
-            # Get the directional bias value
-            directional_bias_list = data_holder[ticker]['directional bias']
-            minute_index = ticker_minute_index[ticker]['minute_index']
-            
-            # Check if we have data for this minute index
-            if minute_index < len(directional_bias_list):
-                bias_value = directional_bias_list[minute_index]
-                if bias_value is None:
-                    df.at[index, 'Directional Bias'] = "NaN"
-                else:
-                    df.at[index, 'Directional Bias'] = bias_value
+        df = pd.read_csv(file_path)
         
-        # Reorder columns to put Time as the rightmost column
-        columns = df.columns.tolist()
-        columns.remove('Time')
-        columns.append('Time')
-        df = df[columns]
+        # Convert time strings to datetime objects
+        time_as_datetime = pd.to_datetime(df['Time'], format='%H:%M:%S')
         
-        # Save the modified dataframe back to the same file
-        df.to_csv(market_data_csv_path, index=False)
+        # Get the first timestamp as a datetime object
+        erroneous_start_time = time_as_datetime.iloc[0]
         
-        print(f"Added Directional Bias column to: {market_data_csv_path}\n")
+        # Get the correct start time as a datetime object (with today's date, which is fine for delta calculation)
+        correct_start_dt = pd.to_datetime(correct_start, format='%H:%M:%S')
         
+        # Calculate the offset needed to shift the times
+        time_offset = correct_start_dt - erroneous_start_time
+        
+        # Apply the offset to all timestamps and format back to string
+        df['Time'] = (time_as_datetime + time_offset).dt.strftime('%H:%M:%S')
+        
+        # Save the updated dataframe to a new CSV file
+        df.to_csv(output_filename, index=False)
+        
+        print(f"Timestamps corrected and saved to: {output_filename}")
+
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
 
 
 #Stupid_Sublist_Calculation()
@@ -810,6 +585,7 @@ def Add_Directional_Bias_To_Market_Data(data_holder, market_data_csv_path):
 #Print_Volatility_Counts()
 #Volatility_Time_By_Ticker()
 #move_all_csvs_back()
+Change_Timestamps_of_Market_Data()
 
 
 '''market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"

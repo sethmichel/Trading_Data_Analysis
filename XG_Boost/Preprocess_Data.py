@@ -27,7 +27,7 @@ def Clean_Data(csv_path):
         df = pd.read_csv(csv_path)
         
         # Convert target to integer (1 or 0). it probably already is but this also makes sure it's not a string or something
-        df["Target"] = df["Target"].fillna(0).astype(int)
+        #df["Target"] = df["Target"].fillna(0).astype(int)
         
         # Convert categorical data. 'Trade Type': 'buy' → 1, 'short' → 0. ticker to numeric category
         df["Trade Type"] = df["Trade Type"].map({"buy": 1, "short": 0})
@@ -35,9 +35,10 @@ def Clean_Data(csv_path):
         df["Ticker"] = df["Ticker"].astype("category").cat.codes
 
         # drop unused column and columns that give away the result. raise error is there's any mistakes in this step
-        drop_cols = ["Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Percent Change', 'Total Investment', 'Entry Price', 
-                     'Exit Price', 'Qty', 'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 
-                     'Entry Macd Val', 'Entry Macd Avg', 'Prev 5 Min Avg Close Volume', 'Price Movement']
+        drop_cols = ['Target 0.3,-0.3', "Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Percent Change', 'Total Investment', 
+                     'Entry Price', 'Exit Price', 'Qty', 'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 
+                     'Entry Macd Val', 'Entry Macd Avg', 'Prev 5 Min Avg Close Volume', 'Price Movement','Entry Directional Bias',
+                     'Entry Directional Bias Abs Distance']
         missing_cols = [col for col in drop_cols if col not in df.columns]
         if missing_cols:
             raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
@@ -57,8 +58,8 @@ def Clean_Data(csv_path):
         df["Seconds_Since_Open"] = seconds_since_open
 
         # I want absolute distance from 0.5 for directional bias. 0.5 means neutral, but high and low values are targets
-        df['Entry_Directional_Bias_Abs_Distance'] = (df['Entry Directional Bias'] - 0.5).abs()
-        df = df.drop(columns=['Entry Directional Bias'])
+        #f['Entry_Directional_Bias_Abs_Distance'] = (df['Entry Directional Bias'] - 0.5).abs()
+        #df = df.drop(columns=['Entry Directional Bias'])
 
         # change entry macd val/avg to absolute value. it goes between + and - which the model doesn't understand
         for col in ['Entry Macd Val', 'Entry Macd Avg']:
@@ -82,8 +83,24 @@ def Clean_Data(csv_path):
         #df = df.drop(columns=['Entry_Rsi'])
 
         # Separate features and target (do this even if we're not making a predictive model). need dependent/independent vars
-        X = df.drop(columns=["Target"])
-        y = df["Target"]
+        X = df.drop(columns=['Target_0.5,0.9,-0.1,-0.5'])
+
+        # multi class classification
+        y = df['Target_0.5,0.9,-0.1,-0.5'].map({
+            '-0.5': 0,      # bad
+            '-0.1': 1,      # neutral
+            "neither": 1,   # neutral
+            '0.9': 2        # good
+        })
+        
+        # Check for any unmapped values (NaN)
+        if y.isna().any():
+            print("Warning: Found unmapped values in target column:")
+            unmapped_values = df.loc[y.isna(), 'Target_0.5,0.9,-0.1,-0.5'].unique()
+            print(f"Unmapped values: {unmapped_values}")
+            raise ValueError(f"Unmapped target values found: {unmapped_values}")
+        
+        print(f"Target value distribution: {y.value_counts().sort_index()}")
         print(df.columns)
         return X, y
     

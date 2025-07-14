@@ -54,8 +54,8 @@ def Load_Pretrained_Model_JSON():
 
 
 def Main():
-    #model, X, y = Train_Model()
-    model, X, y = Load_Pretrained_Model_JSON()
+    model, X, y = Train_Model()
+    #model, X, y = Load_Pretrained_Model_JSON()
 
     # --- get shap_values ---
     print("Calculating SHAP values...")

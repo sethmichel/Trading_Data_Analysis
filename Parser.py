@@ -185,7 +185,9 @@ def Normalize_Raw_Trades(raw_df):
                             'Entry Volatility Ratio': None,
                             'Entry Directional Bias': None,
                             'Entry Directional Bias Abs Distance': None,
-                            'Target': None,
+                            'Entry My Adx': None,
+                            'Target 0.3,-0.3': None,
+                            'Target 0.5,0.9,-0.1,-0.5': None,
                             'Prev 5 Min Avg Close Volume': None,
                             'Price Movement': None
                         })
@@ -384,19 +386,45 @@ def Post_Process_Price_Movement(price_movement):
 
 
 # 0.3
-def Was_Target_Hit(processed_price_movement):
+def Was_Target_Hit(price_movement, target):
     try:
-        target = 0.3
-        stop_loss = -0.3
-
-        for percent in processed_price_movement:
-            if (percent == stop_loss):
-                return 0
+        if (target == 'Target 0.3,-0.3'):
+            target = 0.3
+            stop_loss = -0.3
             
-            if (percent == target):
-                return 1
-        
-        return 0
+            # Scan through price_movement to find which appears first
+            for roi in price_movement:
+                if roi >= target:
+                    return target
+                elif roi <= stop_loss:
+                    return stop_loss
+            
+            # If neither target nor stop_loss was hit
+            return "neither"
+
+        elif (target == 'Target 0.5,0.9,-0.1,-0.5'):
+            normal_target = 0.5
+            upper_target = 0.9
+            normal_stop_loss = -0.5
+            upper_stop_loss = -0.1
+
+            # First phase: scan for normal_target or normal_stop_loss
+            for i, roi in enumerate(price_movement):
+                if roi <= normal_stop_loss:
+                    return normal_stop_loss
+                
+                elif roi >= normal_target:
+                    # Second phase: scan from this point for upper_target or upper_stop_loss
+                    for j in range(i + 1, len(price_movement)):
+                        if price_movement[j] >= upper_target:
+                            return upper_target
+                        
+                        elif price_movement[j] <= upper_stop_loss:
+                            return upper_stop_loss
+                    return "neither"
+            
+            return "neither"
+    
     
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -480,7 +508,8 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
 
             if (exit_time_reached == True and macd_cross_reached == True):
                 #processed_price_movement = Post_Process_Price_Movement(price_movement)
-                normalized_df.at[idx, 'Target'] = Was_Target_Hit(price_movement)
+                normalized_df.at[idx, 'Target 0.3,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.3,-0.3')
+                normalized_df.at[idx, 'Target 0.5,0.9,-0.1,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.1,-0.5')
                 normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
                 normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
                 normalized_df.at[idx, 'Best Exit Percent'] = round(curr_best_percent, 2)
@@ -675,6 +704,8 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
             normalized_df.at[idx, 'Entry Macd Avg'] = start_row['Avg']
             normalized_df.at[idx, 'Entry Directional Bias'] = start_row['Directional Bias']
             normalized_df.at[idx, 'Entry Directional Bias Abs Distance'] = round(abs(start_row['Directional Bias'] - 0.5), 3)
+            normalized_df.at[idx, 'Entry My Adx'] = start_row['My Adx']
+
             
             # 3) add Best/worst Exit Price, Best/worst Exit Percent. Loop over the data from start time to end time
             # currently have the starting row for the trade as "start_row"

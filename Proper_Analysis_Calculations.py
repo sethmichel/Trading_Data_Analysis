@@ -202,19 +202,65 @@ def Volatility_Percent_vs_Ratio(df):
     Write_Analysis(message)
 
 
+def Write_Grid_Seach_Resutls(all_sublists):
+    best_sublists_sum = {}
+    best_sublists_winrate = {}
+    
+    # find top 10 sublists by sum
+    sum_sorted_items = sorted(all_sublists.items(), key=lambda x: x[1]['sum'], reverse=True)
+    for i in range(min(30, len(sum_sorted_items))):
+        key, sublist = sum_sorted_items[i]
+        sublist_rounded = sublist.copy()
+        sublist_rounded['sum'] = round(sublist_rounded['sum'], 2)
+        best_sublists_sum[key] = sublist_rounded
+
+    # find top 10 sublists by winrate
+    winrate_sorted_items = sorted(all_sublists.items(), key=lambda x: x[1]['winrate'], reverse=True)
+    for i in range(min(30, len(winrate_sorted_items))):
+        key, sublist = winrate_sorted_items[i]
+        sublist_rounded = sublist.copy()
+        sublist_rounded['winrate'] = sublist_rounded['winrate']
+        best_sublists_winrate[key] = sublist_rounded
+
+    message = (f"TEST 2: testing all combos of volatility percent vs volatility ratio vs parameters.\n"
+        f"parameters: using an upper/lower target and upper/lower stop loss\n"
+        f"Total combinations tested: {len(all_sublists)}\n"
+        f"Results (Top 10 by sum):\n"
+        f"volatility, ratio, adx28, 14, 7, ads zscore, rsi_type, normal_target, upper_target, normal_stop_loss, upper_stop_loss\n")
+
+    for i, (key, sub_list) in enumerate(best_sublists_sum.items()):
+        message += f"{i+1}) id: {sub_list['id']}, sum: {sub_list['sum']}, count: {sub_list['count']}, wins: {sub_list['wins']}, losses: {sub_list['losses']}, neither: {sub_list['neither']}\n"
+        
+    message += (f"\nResults (Top 10 by win rate):\n"
+                f"volatility, ratio, adx28, 14, 7, ads zscore, rsi_type, normal_target, upper_target, normal_stop_loss, upper_stop_loss\n")
+
+    for i, (key, sub_list) in enumerate(best_sublists_winrate.items()):
+        message += f"{i+1}) id: {sub_list['id']}, sum: {sub_list['sum']}, count: {sub_list['count']}, wins: {sub_list['wins']}, losses: {sub_list['losses']}, neither: {sub_list['neither']}\n"
+
+    message = message.replace("'", '').replace("{", '').replace("}", '')
+
+    Write_Analysis(message)
+    print("\nit's done\n")
+
+
 '''
 use all combos of volatility % and volatility ratio, and paramters 
 parmater format is: ex) target = 0.5, upper target = 0.9, upper stop loss = -0.1, stop loss = -0.5
 output: organized text saying what the best 5 combos are, their results, their counts
 '''
-def Volatility_Percent_vs_Ratio_vs_Parameters(df):
+def Grid_Search_Parameter_Optimization(df):
     volatilities = [0.2,0.3,0.4,0.5, 0.6, 0.7, 0.8, 0.9,1.0]
     ratios = [0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4]
-    dir_bias_dist = [0.0,0.1,0.2,0.3,0.4] # these are absolute value distance from 0.5. bec 0.5 is neutral and upper/lower values are good
+    adx28s = [0.0,0.1,0.2,0.3,0.4,0.5]
+    adx14s = [0.0,0.1,0.2,0.3,0.4,0.5]
+    adx7s = [0.0,0.1,0.2,0.3,0.4,0.5]
+    abs_macd_zScores = [0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0]   # absolute value of z-score, not normal z-score
+    extreme_rsis = [True, False, "either"]
     normal_targets = [0.2,0.3,0.4,0.5,0.6]
     upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
     upper_stop_losss = [0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
     normal_stop_losss = [-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
+    
     all_sublists = {}
     
     # Pre-process price movements to avoid repeated string operations
@@ -225,93 +271,80 @@ def Volatility_Percent_vs_Ratio_vs_Parameters(df):
     
     for volatility in volatilities:
         for ratio in ratios:
-            #for dir_bias in dir_bias_dist:
-                #filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & (df['Entry Volatility Ratio'] >= ratio) & (df['Entry Directional Bias Abs Distance'] >= dir_bias)]
-            filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & (df['Entry Volatility Ratio'] >= ratio)]
-            for normal_target in normal_targets:
+            for adx28 in adx28s:
+                for adx14 in adx14s:
+                    for adx7 in adx7s:
+                        for zscore in abs_macd_zScores:
+                            for rsi_type in extreme_rsis:
+                                filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & 
+                                                 (df['Entry Volatility Ratio'] >= ratio) & 
+                                                 (df['Adx28'] >= adx28) & 
+                                                 (df['Adx14'] >= adx14) & 
+                                                 (df['Adx7'] >= adx7) &
+                                                 (abs(df['Macd Z-Score']) >= zscore) &
+                                                 (df['Rsi Extreme Prev Cross'] >= rsi_type)]
 
-                for upper_target in upper_targets:
-                    if (upper_target <= normal_target):
-                        continue
-                    
-                    for upper_stop_loss in upper_stop_losss:
-                        if ((upper_stop_loss >= upper_target) or upper_stop_loss >= normal_target):
-                            continue
+                                for normal_target in normal_targets:
 
-                        for normal_stop_loss in normal_stop_losss:
-                            if ((normal_stop_loss >= normal_target) or (normal_stop_loss >= upper_stop_loss)):
-                                continue
+                                    for upper_target in upper_targets:
+                                        if (upper_target <= normal_target):
+                                            continue
+                                        
+                                        for upper_stop_loss in upper_stop_losss:
+                                            if ((upper_stop_loss >= upper_target) or upper_stop_loss >= normal_target):
+                                                continue
+
+                                            for normal_stop_loss in normal_stop_losss:
+                                                if ((normal_stop_loss >= normal_target) or (normal_stop_loss >= upper_stop_loss)):
+                                                    continue
                             
-                            # start list so index 0 is there paramters
-                            #sublist_key = f"{volatility}, {ratio}, {dir_bias}, {normal_target}, {upper_target}, {normal_stop_loss}, {upper_stop_loss}"
-                            sublist_key = f"{volatility}, {ratio}, {normal_target}, {upper_target}, {normal_stop_loss}, {upper_stop_loss}"
-                            sublist = {'id': sublist_key, 'sum': 0, 'count': len(filtered_df), 'wins': 0, 'losses': 0, 'neither': 0}
+                                                sublist_key = f"{volatility}, {ratio}, {adx28}, {adx14}, {adx7}, {zscore}, {rsi_type}, {normal_target}, {upper_target}, {normal_stop_loss}, {upper_stop_loss}"
+                                                sublist = {'id': sublist_key, 'sum': 0, 'count': len(filtered_df), 'wins': 0, 'losses': 0, 'neither': 0, 'winrate': 0}
 
-                            for index, row in filtered_df.iterrows():
-                                price_movement_list = row['price_movement_list']
+                                                for index, row in filtered_df.iterrows():
+                                                    price_movement_list = row['price_movement_list']
 
-                                if not price_movement_list:  # Fixed: check if list is empty
-                                    sublist['neither'] += 1
-                                    # sum is unaffected
-                                    continue
+                                                    if not price_movement_list:  # Fixed: check if list is empty
+                                                        sublist['neither'] += 1
+                                                        # sum is unaffected
+                                                        continue
 
-                                updated_flag = False
-                                curr_target = normal_target
-                                curr_sl = normal_stop_loss
-                                hit_target_once = False
+                                                    updated_flag = False
+                                                    curr_target = normal_target
+                                                    curr_sl = normal_stop_loss
+                                                    hit_target_once = False
 
-                                for value in price_movement_list:
-                                    if value == curr_target:
-                                        if hit_target_once == False:
-                                            # Hit normal target - switch to upper targets
-                                            hit_target_once = True
-                                            curr_target = upper_target
-                                            curr_sl = upper_stop_loss
-                                        else:
-                                            # Hit upper target
-                                            sublist['sum'] += upper_target
-                                            sublist['wins'] += 1
-                                            updated_flag = True
-                                            break
+                                                    for value in price_movement_list:
+                                                        if value == curr_target:
+                                                            if hit_target_once == False:
+                                                                # Hit normal target - switch to upper targets
+                                                                hit_target_once = True
+                                                                curr_target = upper_target
+                                                                curr_sl = upper_stop_loss
+                                                            else:
+                                                                # Hit upper target
+                                                                sublist['sum'] += upper_target
+                                                                sublist['wins'] += 1
+                                                                updated_flag = True
+                                                                break
 
-                                    elif (value == curr_sl):
-                                        # if we hit the normal OR upper stop loss. (target changes which is being used)
-                                        sublist['sum'] += curr_sl
-                                        sublist['losses'] += 1
-                                        updated_flag = True
-                                        break
+                                                        elif (value == curr_sl):
+                                                            # if we hit the normal OR upper stop loss. (target changes which is being used)
+                                                            sublist['sum'] += curr_sl
+                                                            sublist['losses'] += 1
+                                                            updated_flag = True
+                                                            break
 
-                                # if we never hit a ending target - use the last value from price movement
-                                if (updated_flag == False):
-                                    sublist['sum'] += price_movement_list[-1]
-                                    sublist['neither'] += 1
+                                                    # if we never hit a ending target - use the last value from price movement
+                                                    if (updated_flag == False):
+                                                        sublist['sum'] += price_movement_list[-1]
+                                                        sublist['neither'] += 1
 
-                            all_sublists[sublist_key] = sublist
+                                                sublist['winrate'] = round(sublist['count'] / sublist['wins'], 2)
+                                                all_sublists[sublist_key] = sublist
 
-    # find the top x sublists based on sum
-    best_sublists = {}
-    sorted_items = sorted(all_sublists.items(), key=lambda x: x[1]['sum'], reverse=True)
-    
-    for i in range(min(10, len(sorted_items))):
-        key, sublist = sorted_items[i]
-        sublist_rounded = sublist.copy()
-        sublist_rounded['sum'] = round(sublist_rounded['sum'], 2)
-        best_sublists[key] = sublist_rounded
+    Write_Grid_Seach_Resutls(all_sublists)
 
-    message = (f"TEST 2: testing all combos of volatility percent vs volatility ratio vs parameters.\n"
-        f"parameters: using an upper/lower target and upper/lower stop loss\n"
-        f"Total combinations tested: {len(all_sublists)}\n"
-        f"Results (Top 10 by sum):\n"
-        f"volatility, ratio, normal_target, upper_target, normal_stop_loss, upper_stop_loss\n")
-
-    # Iterate through the dictionary items properly
-    for i, (key, sub_list) in enumerate(best_sublists.items()):
-        message += f"{i+1}) id: {sub_list['id']}, sum: {sub_list['sum']}, count: {sub_list['count']}, wins: {sub_list['wins']}, losses: {sub_list['losses']}, neither: {sub_list['neither']}\n"
-        
-    message = message.replace("'", '').replace("{", '').replace("}", '')
-
-    Write_Analysis(message)
-    print("\nit's done\n")
 
 
 
@@ -329,4 +362,4 @@ data_file = "Bulk_Combined.csv"
 df = pd.read_csv(f"{data_dir}/{data_file}")
 
 #Volatility_Percent_vs_Ratio(df)
-Volatility_Percent_vs_Ratio_vs_Parameters(df)
+Grid_Search_Parameter_Optimization(df)
