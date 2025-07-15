@@ -65,17 +65,9 @@ def min_max_zScore():
         print(f"Error reading or processing testdata.csv: {e}")
 
 
-def Test_Pandas_Ta():
-    df = pd.DataFrame()
-    df = pd.read_csv("testdata.csv")
-    tickers = ['HOOD', 'IONQ', 'MARA', 'RDDT', 'SMCI', 'SOXL', 'TSLA']
-    
-    for ticker in tickers:
-        ticker_df = df[df['Ticker'] == ticker].copy()
 
 
 
 if __name__ == "__main__":
     #min_max_zScore()
-    #rename_csv_files()
-    Test_Pandas_Ta()
+    rename_csv_files()

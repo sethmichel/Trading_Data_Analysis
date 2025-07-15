@@ -17,10 +17,10 @@ Returns:
 
 drop these columns
 date, exit time, time in trade, dollar change, percent change, total invetment, entry price, exit price, trade type, qty, 
-best/worst exit percent/price, entry macd val/avg, target, prev 5min avg close volume, price movement, 'Entry Directional Bias'
+best/worst exit percent/price, entry macd val/avg, target, prev 5min avg close volume, price movement
 
 change these columns
-target, trade type, ticker, entry time, Rsi Extreme Prev Cross, Entry Directional Bias
+target, trade type, ticker, entry time, Rsi Extreme Prev Cross
 '''
 def Clean_Data(csv_path):
     try:
@@ -37,8 +37,7 @@ def Clean_Data(csv_path):
         # drop unused column and columns that give away the result. raise error is there's any mistakes in this step
         drop_cols = ['Target 0.3,-0.3', "Date", "Exit Time", "Time in Trade", 'Dollar Change', 'Percent Change', 'Total Investment', 
                      'Entry Price', 'Exit Price', 'Qty', 'Best Exit Price', 'Best Exit Percent', 'Worst Exit Price', 'Worst Exit Percent', 
-                     'Entry Macd Val', 'Entry Macd Avg', 'Prev 5 Min Avg Close Volume', 'Price Movement','Entry Directional Bias',
-                     'Entry Directional Bias Abs Distance']
+                     'Entry Macd Val', 'Entry Macd Avg', 'Prev 5 Min Avg Close Volume', 'Price Movement']
         missing_cols = [col for col in drop_cols if col not in df.columns]
         if missing_cols:
             raise ValueError(f"The following columns are missing from the DataFrame: {missing_cols}")
@@ -56,10 +55,6 @@ def Clean_Data(csv_path):
             seconds_since_open.append(entry_time_seconds - seconds_630)
 
         df["Seconds_Since_Open"] = seconds_since_open
-
-        # I want absolute distance from 0.5 for directional bias. 0.5 means neutral, but high and low values are targets
-        #f['Entry_Directional_Bias_Abs_Distance'] = (df['Entry Directional Bias'] - 0.5).abs()
-        #df = df.drop(columns=['Entry Directional Bias'])
 
         # change entry macd val/avg to absolute value. it goes between + and - which the model doesn't understand
         for col in ['Entry Macd Val', 'Entry Macd Avg']:

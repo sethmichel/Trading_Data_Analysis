@@ -761,22 +761,23 @@ def Add_ADX_Comparisons(market_data_csv_path):
 csv_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
 
 # macd z score
-'''for filename in os.listdir(csv_dir):
+for filename in os.listdir(csv_dir):
     file_path = os.path.join(csv_dir, filename)
     print(f"Processing: {filename}")
-    #Add_Macd_Z_Score(file_path)
-'''
+    Add_Macd_Z_Score(file_path)
+
 # adx slope
 '''for filename in os.listdir(csv_dir):
     file_path = os.path.join(csv_dir, filename)
     print(f"Processing ADX Slope for: {filename}")
     Add_ADX_Slope(file_path)'''
 
+'''
 # adx 7v14 & 7v28
 for filename in os.listdir(csv_dir):
     file_path = os.path.join(csv_dir, filename)
     print(f"Processing ADX Comparisons for: {filename}")
     Add_ADX_Comparisons(file_path)
-
+'''
 
 #Add_ADX("test market csv.csv") # 5/12

@@ -8,6 +8,7 @@ from datetime import datetime
 from sklearn.feature_selection import mutual_info_regression
 import seaborn as sns
 import matplotlib.pyplot as plt
+import csv
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
@@ -129,268 +130,6 @@ def Get_Group_Of_Dates():
         
         return dates
     
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-'''
-dumbo google sheets can't make a sublist from my price movement. so this is going to read all of bulk data
-formula: go through each price movement, takes actions on the first trigger number found
-if target: add target
-if sl: add sl
-if sublist_trigger: make a sublist and add target/sl whichever comes first
-how it's organized
--it tests tons of combos and skips impossible combos (those are the 'rules')
--it makes a list of each outcome for each trade, index 0-3 are the parameters, index 4 is the sum, the rest are the results
--at the end it saves the best x combos to a csv for google sheets
-'''
-def Stupid_Sublist_Calculation():
-    try:
-        bulk_csv_data = "Csv_Files/3_Final_Trade_Csvs/Bulk_Combined.csv"
-        volatility = 0.7
-        targets = [0.3,0.4,0.5,0.6]
-        sublist_triggers = [0.2,0.3,0.4,0.5,0.6,0.7,0.8]
-        sublist_targets = [0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
-        stop_losss = [-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
-        
-        df = pd.read_csv(bulk_csv_data)
-        
-        # Filter dataframe to only include rows where Entry Volatility Percent is at least 0.7
-        filtered_df = df[df['Entry Volatility Percent'] >= volatility]
-        
-        # Create a dictionary to store all sublists
-        all_sublists = {}
-        curr_paras = {'target': None, 'sublist_trigger': None, 'sublist_target': None, 'stop_loss': None}
-        
-
-        # RULES: skip the loop if any of these are not true
-        # target must be more than sublist trigger 
-        # target must be more than sublist_targets
-        # sublist_trigger must be more than sublist_target
-        # sublist_target must be more than stop loss
-        for target in targets:
-            curr_paras['target'] = target
-
-            for sublist_trigger in sublist_triggers:
-                if (sublist_trigger >= target):
-                    continue
-
-                curr_paras['sublist_trigger'] = sublist_trigger
-                
-                for sublist_target in sublist_targets:
-                    if ((sublist_target >= target) or (sublist_target >= sublist_trigger)):
-                        continue
-            
-                    curr_paras['sublist_target'] = sublist_target
-
-                    for stop_loss in stop_losss:
-                        if (stop_loss >= sublist_target):
-                            continue
-                        curr_paras['stop_loss'] = stop_loss
-                        sublist = [target, sublist_trigger, sublist_target, stop_loss]
-                        
-                        for index, row in filtered_df.iterrows():
-                            price_movement_str = str(row['Price Movement'])
-                            
-                            # Split the price movement string into a list of floats
-                            if (len(price_movement_str) < 0):   # some rows are 0.0 but idk if they're 0 or 0.0 here
-                                sublist.append(filtered_df.loc[index, 'Percent Change'])
-                                continue
-                            else:
-                                price_movement_list = [float(x) for x in price_movement_str.split('|')]
-                        
-                            updated_flag = False
-                            for j, value in enumerate(price_movement_list):
-                                if value == target:
-                                    sublist.append(target)
-                                    updated_flag = True
-                                    break
-
-                                elif value == stop_loss:
-                                    sublist.append(stop_loss)
-                                    updated_flag = True
-                                    break
-
-                                elif value == sublist_trigger:
-                                    # Copy from sublist_trigger to the end (excluding sublist_trigger itself)
-                                    sublist_values = price_movement_list[j + 1:]
-                                    for val in sublist_values:
-                                        if (val == target):
-                                            sublist.append(target)
-                                            updated_flag = True
-                                            break
-                                        elif (val == stop_loss):
-                                            sublist.append(stop_loss)
-                                            updated_flag = True
-                                            break
-                                        elif (val == sublist_target):
-                                            sublist.append(sublist_target)
-                                            updated_flag = True
-                                            break
-                                        
-                                    else: # for-else loop
-                                        # it didn't find target/sl
-                                        sublist.append(filtered_df.loc[index, 'Percent Change'])
-                                        updated_flag = True
-
-                                if (updated_flag == True):
-                                    break
-                            
-                            # If no condition was met, append the Percent Change as default
-                            if not updated_flag:
-                                sublist.append(filtered_df.loc[index, 'Percent Change'])
-                            
-                        # find the sum
-                        sublist_sum = 0
-                        for val in sublist:
-                            sublist_sum += val
-                        sublist.insert(4, round(sublist_sum, 2))
-
-                        # Store this sublist with the target index
-                        values_str = ','.join(str(value) for value in curr_paras.values())
-                        all_sublists[values_str] = sublist
-        
-        # Get the top x sublists based on the sum (index 4 of each sublist)
-        best_sublists = {}
-        sorted_items = sorted(all_sublists.items(), key=lambda x: x[1][4], reverse=True)
-        
-        for i in range(min(50, len(sorted_items))):
-            key, sublist = sorted_items[i]
-            best_sublists[key] = sublist
-
-        # Create DataFrame from all sublists
-        result_df = pd.DataFrame(best_sublists)
-
-        output_filename = f"Csv_Files/dumb_code_instead_of_sheets_calculations/Stupid_Sublist_Thing.csv"
-        result_df.to_csv(output_filename, index=False)
-            
-        print(f"Created sublist CSV: {output_filename}")
-
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-
-'''
-move stop loss calculations
-My target is actually an alert, and when it hits it I move the sl 0.x under the target and use a new upper target
-'''
-def Move_Targets_Calculations():
-    try:
-        volatilities = [0.5, 0.6, 0.7, 0.8, 0.9]
-        alert_targets = [0.2,0.3,0.4,0.5,0.6]
-        upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
-        alert_stop_losss = [0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
-        normal_stop_losss = [-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
-        bulk_csv_data = "Csv_Files/3_Final_Trade_Csvs/Bulk_Combined.csv"
-        df = pd.read_csv(bulk_csv_data)
-        volatility_dataframes = {}
-        output_filename = "Csv_Files/dumb_code_instead_of_sheets_calculations/Move_Targets.csv"
-
-        if os.path.exists(output_filename):
-            os.remove(output_filename)
-            
-        for volatility in volatilities:
-            all_sublists = {}
-            curr_paras = {'alert_target': None, 'upper_target': None, 'alert_stop_loss': None, 'normal_stop_loss': None}
-            filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & (df['Entry Volatility Ratio'] >= 1)]
-
-            for alert_target in alert_targets:
-                curr_paras['alert_target'] = alert_target
-
-                for upper_target in upper_targets:
-                    if (upper_target <= alert_target):
-                        continue
-
-                    curr_paras['upper_target'] = upper_target
-                    
-                    for alert_stop_loss in alert_stop_losss:
-                        if ((alert_stop_loss >= upper_target) or alert_stop_loss >= alert_target):
-                            continue
-
-                        curr_paras['alert_stop_loss'] = alert_stop_loss
-
-                        for normal_stop_loss in normal_stop_losss:
-                            if ((normal_stop_loss >= alert_target) or (normal_stop_loss >= alert_stop_loss)):
-                                continue
-
-                            curr_paras['normal_stop_loss'] = normal_stop_loss
-                            sublist = [alert_target, upper_target, alert_stop_loss, normal_stop_loss]
-
-                            for index, row in filtered_df.iterrows():
-                                price_movement_str = str(row['Price Movement'])
-
-                                if (len(price_movement_str) < 0):
-                                    sublist.append(filtered_df.loc[index, 'Percent Change'])
-                                    continue
-                                else:
-                                    price_movement_list = [float(x) for x in price_movement_str.split('|')]
-
-                                updated_flag = False
-
-                                for j, value in enumerate(price_movement_list):
-                                    if (value == alert_target):
-                                        for k, value in enumerate(price_movement_list[j + 1:], start=j + 1):
-                                            if (value == upper_target):
-                                                sublist.append(upper_target)
-                                                updated_flag = True
-                                                break
-                                            elif (value == alert_stop_loss):
-                                                sublist.append(alert_stop_loss)
-                                                updated_flag = True
-                                                break
-                                        else:
-                                            sublist.append(filtered_df.loc[index, 'Percent Change'])
-                                            updated_flag = True
-
-                                    elif (value == normal_stop_loss):
-                                        sublist.append(normal_stop_loss)
-                                        updated_flag = True
-                                        break
-
-                                    if (updated_flag == True):
-                                        break
-
-                                if (updated_flag == False):
-                                    sublist.append(filtered_df.loc[index, 'Percent Change'])
-
-                            sublist_sum = 0
-                            for val in sublist[4:]:
-                                sublist_sum += val
-                            sublist.insert(4, round(sublist_sum, 2))
-                            values_str = ','.join(str(value) for value in curr_paras.values())
-                            all_sublists[values_str] = sublist
-
-            best_sublists = {}
-            sorted_items = sorted(all_sublists.items(), key=lambda x: x[1][4], reverse=True)
-            for i in range(min(50, len(sorted_items))):
-                key, sublist = sorted_items[i]
-                best_sublists[key] = sublist
-
-            if best_sublists:
-                volatility_dataframes[volatility] = pd.DataFrame(best_sublists)
-
-        final_result = []
-        for volatility in volatilities:
-            if volatility in volatility_dataframes:
-                df_data = volatility_dataframes[volatility]
-                header_data = [f"Volatility: {volatility}"] + [""] * (df_data.shape[1] - 1)
-                final_result.append(header_data)
-
-                for _, row in df_data.iterrows():
-                    final_result.append(row.tolist())
-
-                if volatility != volatilities[-1]:
-                    final_result.append([""] * df_data.shape[1])
-                    
-        if final_result:
-            first_volatility = next(iter(volatility_dataframes.values()))
-            final_df = pd.DataFrame(final_result, columns=first_volatility.columns)
-            final_df.to_csv(output_filename, index=False)
-            print(f"Created Move Targets CSV: {output_filename}")
-        else:
-            print("No data to write to CSV")
-
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
@@ -580,12 +319,305 @@ def Change_Timestamps_of_Market_Data():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-#Stupid_Sublist_Calculation()
-#Move_Targets_Calculations()
+# for if you have market data, but take it again adding new indicators
+# huge issue is idk if either of them used threading so the order might be off and the timestamps might be 1 second off
+# strat: split them into ticker df's, find the start point, and just copy they by row. then merge them and order by timestamp
+def Merge_Market_Data():
+    try:
+        dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        csv1_path = f"{dir}/Raw_Market_Data_06-25-2025.csv"  # all other data
+        csv2_path = f"{dir}/Raw_Market_Data_06-25-2025_On_Demand.csv"  # adx columns
+        output_csv_path = f"{dir}/Raw_Market_Data_06-25-2025_Final.csv"
+
+        df1 = pd.read_csv(csv1_path)
+        df2 = pd.read_csv(csv2_path)
+        
+        # Get unique tickers
+        tickers = df1['Ticker'].unique()
+        
+        merged_ticker_dfs = []
+        
+        for ticker in tickers:
+            # Group each ticker into its own dataframe
+            ticker_df1 = df1[df1['Ticker'] == ticker].copy()
+            ticker_df2 = df2[df2['Ticker'] == ticker].copy()
+            
+            # Make sure the timestamps are in ascending order
+            ticker_df1 = ticker_df1.sort_values(by='Time').reset_index(drop=True)
+            ticker_df2 = ticker_df2.sort_values(by='Time').reset_index(drop=True)
+            
+            # Columns to merge from csv2
+            columns_to_merge = ['Adx28', 'Adx14', 'Adx7']
+            
+            # Copy the columns
+            for col in columns_to_merge:
+                if col in ticker_df2.columns:
+                    ticker_df1[col] = ticker_df2[col]
+            
+            merged_ticker_dfs.append(ticker_df1)
+            
+        # Merge the ticker dataframes back together
+        final_df = pd.concat(merged_ticker_dfs, ignore_index=True)
+        
+        # Reorder the columns of the final dataframe
+        final_column_order = [
+            'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
+            'Adx28', 'Adx14', 'Adx7', 'Time'
+        ]
+        
+        # Ensure all requested columns exist, creating them if they don't
+        for col in final_column_order:
+            if col not in final_df.columns:
+                final_df[col] = None
+        
+        final_df = final_df[final_column_order]
+        
+        # Sort the final dataframe by time
+        final_df = final_df.sort_values(by='Time').reset_index(drop=True)
+        
+        # Save the dataframe as a new csv file
+        final_df.to_csv(output_csv_path, index=False)
+        
+        print(f"Successfully merged CSVs and saved to {output_csv_path}")
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+# change past csv market data files to include the new volatility %
+# (atr14 / price) * 100
+def Add_Volatility_Percent():
+    try:
+        dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        csv_files_list = ["Raw_Market_Data_06-25-2025_Final.csv"]
+        
+        for csv_file in csv_files_list:
+            file_path = os.path.join(dir, csv_file)
+            temp_file_path = os.path.join(dir, f'temp_{csv_file}')
+            
+            print(f"Processing {csv_file}...")
+            
+            with open(file_path, 'r', newline='', encoding='utf-8') as input_file, \
+                open(temp_file_path, 'w', newline='', encoding='utf-8') as output_file:
+                
+                reader = csv.reader(input_file)
+                writer = csv.writer(output_file)
+                
+                # Read header and check if Volatility column already exists
+                header = next(reader)
+                if 'Volatility Percent' in header:
+                    print(f"Skipping {csv_file} - Volatility column already exists")
+                    continue
+                
+                # Insert Volatility column between Volume and Time
+                new_header = header[:11] + ['Volatility Percent'] + header[11:]
+                writer.writerow(new_header)
+                
+                # Process each row
+                for row in reader:
+                    if len(row) >= 9:  # Ensure we have enough columns
+                        if (row[1] != "" and row[4] != ""):
+                            price = float(row[1])
+                            atr14 = float(row[4])
+                            
+                            # Calculate volatility: (atr14 / price) * 100
+                            volatility_percent = round((atr14 / price) * 100, 2)
+                        else:
+                            volatility_percent = ""
+
+                        # Insert volatility percent
+                        new_row = row[:11] + [volatility_percent] + row[11:]
+                        writer.writerow(new_row)
+            
+            # Replace original file with modified file
+            os.remove(file_path)
+            os.rename(temp_file_path, file_path)
+            
+            print(f"Completed processing {csv_file}")
+        
+        print("All CSV files have been updated with the Volatility column.")
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+# add volaitlity ratio to all market data csv's
+# REQUIRED: must have volatility percent already
+def Add_Volatility_Ratio():
+    dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+    csv_files_list = ["Raw_Market_Data_06-25-2025_Final.csv"]
+    
+    for csv_file in csv_files_list:
+        file_path = os.path.join(dir, csv_file)
+        temp_file_path = os.path.join(dir, f'temp_{csv_file}')
+        
+        print(f"Processing {csv_file}...")
+        
+        with open(file_path, 'r', newline='', encoding='utf-8') as input_file, \
+             open(temp_file_path, 'w', newline='', encoding='utf-8') as output_file:
+            
+            reader = csv.reader(input_file)
+            writer = csv.writer(output_file)
+            
+            # Read header and check if Volatility column already exists
+            header = next(reader)
+            if 'Volatility Ratio' in header:
+                print(f"Skipping {csv_file} - Volatility column already exists")
+                continue
+            
+            # Check if Volatility Percent column exists (required for calculation)
+            if 'Volatility Percent' not in header:
+                print(f"Skipping {csv_file} - 'Volatility Percent' column not found (required)")
+                continue
+            
+            # Insert Volatility column between volume and Time
+            new_header = header[:12] + ['Volatility Ratio'] + header[12:]
+            writer.writerow(new_header)
+            
+            # Process each row
+            for row in reader:
+                if len(row) >= 9:  # Ensure we have enough columns
+                    if (row[4] != "" and row[5] != ""):
+                        atr14 = float(row[4])
+                        atr28 = float(row[5])
+                        
+                        # Calculate volatility: (atr14 / price) * 100
+                        volatility_ratio = round((atr14/atr28), 2)
+                    else:
+                        volatility_ratio = ""
+                    
+                    # Insert volatility value between Volume and Time
+                    new_row = row[:12] + [volatility_ratio] + row[12:]
+                    writer.writerow(new_row)
+        
+        # Replace original file with modified file
+        os.remove(file_path)
+        os.rename(temp_file_path, file_path)
+        
+        print(f"Completed processing {csv_file}")
+    
+    print("All CSV files have been updated with the Volatility column.")
+
+
+# changes 1 column name in all csv files
+def Change_Column_Name():
+    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/USED_Market_Data'
+    csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
+
+    original_column_name = "Vol"
+    new_column_name = "Volume"
+    
+    for csv_file in csv_files_list:
+        file_path = os.path.join(market_data_dir, csv_file)
+        temp_file_path = os.path.join(market_data_dir, f'temp_{csv_file}')
+        
+        print(f"Processing {csv_file}...")
+        
+        with open(file_path, 'r', newline='', encoding='utf-8') as input_file, \
+             open(temp_file_path, 'w', newline='', encoding='utf-8') as output_file:
+            
+            reader = csv.reader(input_file)
+            writer = csv.writer(output_file)
+            
+            # Read header and check if original column name exists
+            header = next(reader)
+            if original_column_name not in header:
+                print(f"Skipping {csv_file} - '{original_column_name}' column not found")
+                continue
+            
+            # Replace the original column name with the new one
+            new_header = [new_column_name if col == original_column_name else col for col in header]
+            writer.writerow(new_header)
+            
+            # Copy all data rows without changes
+            for row in reader:
+                writer.writerow(row)
+        
+        # Replace original file with modified file
+        os.remove(file_path)
+        os.rename(temp_file_path, file_path)
+        
+        print(f"Completed processing {csv_file}")
+    
+    print("All CSV files have been updated with the column name change.")
+
+
+# edits all values in 1 column in 1 csv file
+# need this in case you add 0's to the end of numbers accidently. like 0.5800 instead of 0.58
+def Edit_Values():
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    file_path = f"{market_data_dir}/Raw_Market_Data_04-09-2025_On_Demand.csv"
+    temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_04-09-2025_On_Demand.csv"
+    
+    print(f"Processing {file_path}...")
+    
+    with open(file_path, 'r', newline='', encoding='utf-8') as input_file, \
+         open(temp_file_path, 'w', newline='', encoding='utf-8') as output_file:
+        
+        reader = csv.reader(input_file)
+        writer = csv.writer(output_file)
+        
+        # Read header and find the Volatility Percent column index
+        header = next(reader)
+        if 'Volatility Percent' not in header:
+            print("Error: 'Volatility Percent' column not found in the CSV file")
+            return
+        
+        volatility_index = header.index('Volatility Percent')
+        writer.writerow(header)
+        
+        # Process each row
+        for row in reader:
+            if len(row) > volatility_index:
+                # Get the volatility value and remove trailing zeros
+                volatility_value = row[volatility_index]
+                try:
+                    # Convert to float and back to remove trailing zeros
+                    cleaned_value = str(float(volatility_value))
+                    row[volatility_index] = cleaned_value
+                except ValueError:
+                    # If conversion fails, keep the original value
+                    pass
+            
+            writer.writerow(row)
+    
+    # Replace original file with modified file
+    os.remove(file_path)
+    os.rename(temp_file_path, file_path)
+    
+    print("Completed processing - trailing zeros removed from Volatility Percent column.")
+
+
+# swtich the order of columns
+def Re_Order_Columns():
+    # --- Load and reorder columns for Raw_Market_Data_06-20-2025_Final.csv ---
+    csv_path = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-20-2025_Final.csv"
+    desired_order = [
+        'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
+        'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time'
+    ]
+    try:
+        df = pd.read_csv(csv_path)
+        # Reorder columns
+        df = df[desired_order]
+        print(df.head(2))  # Show the first few rows to verify order
+        # Save the reordered DataFrame back to the same file
+        df.to_csv(csv_path, index=False)
+
+    except Exception as e:
+        print(f"Error loading or reordering columns: {e}")
+
+
 #Print_Volatility_Counts()
 #Volatility_Time_By_Ticker()
 #move_all_csvs_back()
-Change_Timestamps_of_Market_Data()
+#Change_Timestamps_of_Market_Data()
+#Merge_Market_Data()
+#Add_Volatility_Percent()
+#Add_Volatility_Ratio()
+#Re_Order_Columns()
+
 
 
 '''market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
@@ -599,3 +631,8 @@ for filename in os.listdir(market_data_dir):
     data_holder = Calcualte_Directional_Bias_V2(file_path)
     Add_Directional_Bias_To_Market_Data(data_holder, file_path)
 '''
+
+
+
+
+

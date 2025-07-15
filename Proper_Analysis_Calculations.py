@@ -1,10 +1,18 @@
 import pandas as pd
+import numpy as np
 import os
 import inspect
 import sys
 import shutil
 import Main_Globals
 from datetime import datetime
+import concurrent.futures
+import threading
+from multiprocessing import freeze_support
+from numba import jit, prange
+import itertools
+
+fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
 
 def Write_Analysis(message):
@@ -202,7 +210,7 @@ def Volatility_Percent_vs_Ratio(df):
     Write_Analysis(message)
 
 
-def Write_Grid_Seach_Resutls(all_sublists):
+def Write_Grid_Seach_Results(all_sublists):
     best_sublists_sum = {}
     best_sublists_winrate = {}
     
@@ -243,123 +251,237 @@ def Write_Grid_Seach_Resutls(all_sublists):
     print("\nit's done\n")
 
 
-'''
-use all combos of volatility % and volatility ratio, and paramters 
-parmater format is: ex) target = 0.5, upper target = 0.9, upper stop loss = -0.1, stop loss = -0.5
-output: organized text saying what the best 5 combos are, their results, their counts
-'''
-def Grid_Search_Parameter_Optimization(df):
-    volatilities = [0.2,0.3,0.4,0.5, 0.6, 0.7, 0.8, 0.9,1.0]
-    ratios = [0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1,1.2,1.3,1.4]
-    adx28s = [0.0,0.1,0.2,0.3,0.4,0.5]
-    adx14s = [0.0,0.1,0.2,0.3,0.4,0.5]
-    adx7s = [0.0,0.1,0.2,0.3,0.4,0.5]
-    abs_macd_zScores = [0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0,4.5,5.0]   # absolute value of z-score, not normal z-score
-    extreme_rsis = [True, False, "either"]
-    normal_targets = [0.2,0.3,0.4,0.5,0.6]
-    upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
-    upper_stop_losss = [0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
-    normal_stop_losss = [-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
+def Grid_Search_Helper__Find_NT_Indexes(filtered_df, normal_target):
+    try:
+        # Vectorized approach - process all rows at once
+        def find_first_target_index(price_movement_list):
+            try:
+                return next(i for i, val in enumerate(price_movement_list) if val == normal_target)
+            except StopIteration:
+                return None
+        
+        # Apply to entire column at once instead of manual loops
+        # Using a list comprehension is more direct and avoids pandas converting int/None to float/NaN
+        return [find_first_target_index(pm_list) for pm_list in filtered_df['price_movement_list']]
     
-    all_sublists = {}
-    
-    # Pre-process price movements to avoid repeated string operations
-    df['price_movement_list'] = df['Price Movement'].apply(
-        lambda x: [float(val) for val in str(x).split('|')] if str(x) and str(x) != 'nan' else []
-    )
-    print("done - preprocessed price movements")
-    
-    for volatility in volatilities:
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+def Grid_Search_Helper__Find_NSL_Indexes(filtered_df, normal_sl, normal_target_index_list):
+    try:
+        # Vectorized approach with zip for parallel processing
+        def find_sl_before_target(price_movement_list, target_idx):
+            end_index = target_idx if target_idx is not None else len(price_movement_list)
+            try:
+                return next(i for i in range(end_index) if price_movement_list[i] == normal_sl)
+            except StopIteration:
+                return None
+        
+        # Process all rows at once using zip
+        return [
+            find_sl_before_target(pm_list, target_idx) 
+            for pm_list, target_idx in zip(filtered_df['price_movement_list'], normal_target_index_list)
+        ]
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+# preformance note: it's much better to filter the df's as do the for loops
+# adx28s, adx14s, adx7s parameters
+def process_volatility_chunk(volatility, df, ratios, adx28s, adx14s, adx7s, abs_macd_zScores, extreme_rsis, normal_targets, upper_targets, upper_stop_losss, normal_stop_losss):
+    try:
+        local_sublists = {}
+        df_vol = df[df['Entry Volatility Percent'] >= volatility]
+        
         for ratio in ratios:
+            df_ratio = df_vol[df_vol['Entry Volatility Ratio'] >= ratio]
             for adx28 in adx28s:
+                df_adx28 = df_ratio[df_ratio['Entry Adx28'] >= adx28]
                 for adx14 in adx14s:
+                    df_adx14 = df_adx28[df_adx28['Entry Adx14'] >= adx14]
                     for adx7 in adx7s:
+                        df_adx7 = df_adx14[df_adx14['Entry Adx7'] >= adx7]
                         for zscore in abs_macd_zScores:
+                            df_zscore = df_adx7[abs(df_adx7['Entry Macd Z-Score']) >= zscore]
+
                             for rsi_type in extreme_rsis:
-                                filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & 
-                                                 (df['Entry Volatility Ratio'] >= ratio) & 
-                                                 (df['Adx28'] >= adx28) & 
-                                                 (df['Adx14'] >= adx14) & 
-                                                 (df['Adx7'] >= adx7) &
-                                                 (abs(df['Macd Z-Score']) >= zscore) &
-                                                 (df['Rsi Extreme Prev Cross'] >= rsi_type)]
+                                # Handle "either" case for RSI - include all entries regardless of RSI value
+                                if rsi_type == "either":
+                                    filtered_df = df_zscore
+                                else:
+                                    filtered_df = df_zscore[df_zscore['Rsi Extreme Prev Cross'] == rsi_type]
+
+                                # if no results just skip it
+                                if (len(filtered_df) == 0):
+                                    continue
 
                                 for normal_target in normal_targets:
-
-                                    for upper_target in upper_targets:
-                                        if (upper_target <= normal_target):
-                                            continue
+                                    # 1) each iteration find all indexes of normal_target in price movement for each row of filtered_df (None if it's not there)
+                                    normal_target_index_list = Grid_Search_Helper__Find_NT_Indexes(filtered_df, normal_target)
+                                    
+                                    for normal_stop_loss in normal_stop_losss:
+                                        # 2) since we know normal_target index, find the index of each normal stop loss in price movement for each row of filtered df
+                                        #    BUT, only check up to normal target index
+                                        normal_sl_index_list = Grid_Search_Helper__Find_NSL_Indexes(filtered_df, normal_stop_loss, normal_target_index_list)                                
                                         
-                                        for upper_stop_loss in upper_stop_losss:
-                                            if ((upper_stop_loss >= upper_target) or upper_stop_loss >= normal_target):
+                                        for upper_target in upper_targets:
+                                            if (upper_target <= normal_target):
                                                 continue
 
-                                            for normal_stop_loss in normal_stop_losss:
-                                                if ((normal_stop_loss >= normal_target) or (normal_stop_loss >= upper_stop_loss)):
+                                            for upper_stop_loss in upper_stop_losss:
+                                                if ((upper_stop_loss >= upper_target) or upper_stop_loss >= normal_target):
                                                     continue
-                            
-                                                sublist_key = f"{volatility}, {ratio}, {adx28}, {adx14}, {adx7}, {zscore}, {rsi_type}, {normal_target}, {upper_target}, {normal_stop_loss}, {upper_stop_loss}"
+                                
+                                                # makeing the key a tuple is faster than a string
+                                                sublist_key = (volatility, ratio, adx28, adx14, adx7, zscore, rsi_type, normal_target, upper_target, normal_stop_loss, upper_stop_loss)
                                                 sublist = {'id': sublist_key, 'sum': 0, 'count': len(filtered_df), 'wins': 0, 'losses': 0, 'neither': 0, 'winrate': 0}
 
-                                                for index, row in filtered_df.iterrows():
+                                                # 3) we have indexes of normal target and normal stop loss. if normal stop loss appears first use that.
+                                                #    otherwise start looking for upper target and upper stop loss 1 index after normal target
+                                                for row_idx, (_, row) in enumerate(filtered_df.iterrows()):
                                                     price_movement_list = row['price_movement_list']
-
-                                                    if not price_movement_list:  # Fixed: check if list is empty
-                                                        sublist['neither'] += 1
-                                                        # sum is unaffected
-                                                        continue
-
-                                                    updated_flag = False
-                                                    curr_target = normal_target
-                                                    curr_sl = normal_stop_loss
-                                                    hit_target_once = False
-
-                                                    for value in price_movement_list:
-                                                        if value == curr_target:
-                                                            if hit_target_once == False:
-                                                                # Hit normal target - switch to upper targets
-                                                                hit_target_once = True
-                                                                curr_target = upper_target
-                                                                curr_sl = upper_stop_loss
-                                                            else:
-                                                                # Hit upper target
-                                                                sublist['sum'] += upper_target
-                                                                sublist['wins'] += 1
-                                                                updated_flag = True
-                                                                break
-
-                                                        elif (value == curr_sl):
-                                                            # if we hit the normal OR upper stop loss. (target changes which is being used)
-                                                            sublist['sum'] += curr_sl
-                                                            sublist['losses'] += 1
-                                                            updated_flag = True
-                                                            break
-
-                                                    # if we never hit a ending target - use the last value from price movement
-                                                    if (updated_flag == False):
+                                                    normal_target_idx = normal_target_index_list[row_idx]
+                                                    normal_sl_idx = normal_sl_index_list[row_idx]
+                                                    
+                                                    # Case 1: Neither normal target nor normal stop loss appear
+                                                    if (normal_sl_idx is None and normal_target_idx is None):
                                                         sublist['sum'] += price_movement_list[-1]
                                                         sublist['neither'] += 1
 
-                                                sublist['winrate'] = round(sublist['count'] / sublist['wins'], 2)
-                                                all_sublists[sublist_key] = sublist
+                                                    # Case 2: Normal stop loss appears before normal target
+                                                    elif (normal_sl_idx is not None and 
+                                                        (normal_target_idx is None or normal_sl_idx < normal_target_idx)):
+                                                        sublist['sum'] += normal_stop_loss
+                                                        sublist['losses'] += 1
+                                                        
+                                                    # Case 3: Normal target appears first, now look for upper targets/stops (we know normal target is not none)
+                                                    else:
+                                                        # Check if normal target is the last value
+                                                        if normal_target_idx == len(price_movement_list) - 1:
+                                                            sublist['sum'] += normal_target
+                                                            sublist['wins'] += 1
 
-    Write_Grid_Seach_Resutls(all_sublists)
+                                                        else:
+                                                            # Look for upper targets/stops after normal target
+                                                            found_upper = False
+                                                            for i in range(normal_target_idx + 1, len(price_movement_list)):
+                                                                value = price_movement_list[i]
+
+                                                                if value == upper_target:
+                                                                    sublist['sum'] += upper_target
+                                                                    sublist['wins'] += 1
+                                                                    found_upper = True
+                                                                    break
+
+                                                                elif (value == upper_stop_loss):
+                                                                    sublist['sum'] += upper_stop_loss
+                                                                    sublist['losses'] += 1
+                                                                    found_upper = True
+                                                                    break
+                                                            
+                                                            # If no upper target/stop found, use final value
+                                                            if found_upper == False:
+                                                                sublist['sum'] += price_movement_list[-1]
+                                                                sublist['neither'] += 1
+
+                                                # this is after all trades have been looped - find winrate for this parameter combo
+                                                if sublist['count'] > 0:
+                                                    sublist['winrate'] = round(sublist['wins'] / sublist['count'], 2)
+                                                else:
+                                                    sublist['winrate'] = 0
+                                                
+                                                local_sublists[sublist_key] = sublist
+
+        return local_sublists
+    
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+# this multithreasd like mad, it's optimzied for my cpu: Intel(R) Core(TM) i5-14400F. check how many threads
+#     each core of you cpu can handle
+# 10 cores = 6 performance, 4 effiecient cores.
+'''
+my understanding is the 6p cores have 12 threads that support hyperthreading while the 4e cores have 4 slower threads
+with no hyperthreading. it assignes cores based on availablilty so I need to give it to p cores. apparently you can't
+tell cores apart in python without some tools, so I'll just deal with it
+'''
+def Grid_Search_Parameter_Optimization(df):
+    try:
+        volatilities = [0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+        ratios = [0.4,0.5,0.6,0.7,0.8,0.9,1.0,1.1]
+        adx28s = [0,10,20,30,40,50,60]
+        adx14s = [0,10,20,30,40,50,60]
+        adx7s = [0,10,20,30,40,50,60]
+        abs_macd_zScores = [0.0,0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0]   # absolute value of z-score, not normal z-score
+        extreme_rsis = [True, False, "either"]
+        normal_targets = [0.2,0.3,0.4,0.5,0.6]
+        upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+        upper_stop_losss = [0.7,0.6,0.5,0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
+        normal_stop_losss = [-0.3,-0.4,-0.5,-0.6,-0.7,-0.8,-0.9]
+        
+        # Pre-process price movements to avoid repeated string operations
+        df['price_movement_list'] = df['Price Movement'].apply(
+            lambda x: [float(val) for val in str(x).split('|')] if str(x) and str(x) != 'nan' else []
+        )
+        
+        all_sublists = {}
+        
+        num_workers = len(volatilities)
+        print(f"Initializing a pool of {num_workers} worker processes.")
+        
+        # Use ProcessPoolExecutor to process each volatility value in parallel
+        with concurrent.futures.ProcessPoolExecutor(max_workers=num_workers) as executor:
+            # Submit one task per volatility value
+            future_to_volatility = {
+                executor.submit(
+                    process_volatility_chunk, 
+                    volatility, df, ratios, adx28s, adx14s, adx7s, abs_macd_zScores,
+                    extreme_rsis, normal_targets, upper_targets, upper_stop_losss, normal_stop_losss
+                ): volatility 
+                for volatility in volatilities
+            }
+            
+            # Collect results as they complete
+            for future in concurrent.futures.as_completed(future_to_volatility):
+                volatility = future_to_volatility[future]
+                try:
+                    local_sublists = future.result()
+                    # Merge local results into main dictionary
+                    all_sublists.update(local_sublists)
+                    print(f"Completed processing volatility {volatility}")
+                except Exception as exc:
+                    print(f"Thread processing volatility {volatility} generated an exception: {exc}")
+                    # Stop everything and provide details
+                    executor.shutdown(wait=False, cancel_futures=True)
+                    raise RuntimeError(f"Thread failed while processing volatility {volatility}: {exc}")
+        
+        # Write results only once at the end
+        Write_Grid_Seach_Results(all_sublists)
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-# Ensure the text file "Analysis_Results.txt" exists (create if it doesn't)
-if not os.path.exists("Analysis_Results.txt"):
-    with open("Analysis_Results.txt", "w") as f_create:
-        pass
-# erase the text file if it exists
-else:
-    with open("Analysis_Results.txt", "w") as f:
-        pass
+def main():
+    # Ensure the text file "Analysis_Results.txt" exists (create if it doesn't)
+    if not os.path.exists("Analysis_Results.txt"):
+        with open("Analysis_Results.txt", "w") as f_create:
+            pass
+    # erase the text file if it exists
+    else:
+        with open("Analysis_Results.txt", "w") as f:
+            pass
 
-data_dir = "Csv_Files/3_Final_Trade_Csvs"
-data_file = "Bulk_Combined.csv"
-df = pd.read_csv(f"{data_dir}/{data_file}")
+    data_dir = "Csv_Files/3_Final_Trade_Csvs"
+    data_file = "Bulk_Combined.csv"
+    df = pd.read_csv(f"{data_dir}/{data_file}")
 
-#Volatility_Percent_vs_Ratio(df)
-Grid_Search_Parameter_Optimization(df)
+    #Volatility_Percent_vs_Ratio(df)
+    Grid_Search_Parameter_Optimization(df)
+
+if __name__ == '__main__':
+    freeze_support()
+    main()

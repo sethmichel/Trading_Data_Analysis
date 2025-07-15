@@ -177,15 +177,16 @@ def Normalize_Raw_Trades(raw_df):
                             'Worst Exit Percent': None,
                             'Entry Macd Val': None, 
                             'Entry Macd Avg': None,
+                            'Entry Macd Z-Score': None,
                             'Prev Max Macd Diff Percent': None,
                             'Rsi Extreme Prev Cross': None,
                             'Entry Atr14': None,
                             'Entry Atr28': None,
                             'Entry Volatility Percent': None,
                             'Entry Volatility Ratio': None,
-                            'Entry Directional Bias': None,
-                            'Entry Directional Bias Abs Distance': None,
-                            'Entry My Adx': None,
+                            'Entry Adx28': None,
+                            'Entry Adx14': None,
+                            'Entry Adx7': None,
                             'Target 0.3,-0.3': None,
                             'Target 0.5,0.9,-0.1,-0.5': None,
                             'Prev 5 Min Avg Close Volume': None,
@@ -702,10 +703,10 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
             normalized_df.at[idx, 'Entry Volatility Ratio'] = start_row['Volatility Ratio']
             normalized_df.at[idx, 'Entry Macd Val'] = start_row['Val']
             normalized_df.at[idx, 'Entry Macd Avg'] = start_row['Avg']
-            normalized_df.at[idx, 'Entry Directional Bias'] = start_row['Directional Bias']
-            normalized_df.at[idx, 'Entry Directional Bias Abs Distance'] = round(abs(start_row['Directional Bias'] - 0.5), 3)
-            normalized_df.at[idx, 'Entry My Adx'] = start_row['My Adx']
-
+            normalized_df.at[idx, 'Entry Macd Z-Score'] = start_row['Macd Z-Score']
+            normalized_df.at[idx, 'Entry Adx28'] = start_row['Adx28']
+            normalized_df.at[idx, 'Entry Adx14'] = start_row['Adx14']
+            normalized_df.at[idx, 'Entry Adx7'] = start_row['Adx7']
             
             # 3) add Best/worst Exit Price, Best/worst Exit Percent. Loop over the data from start time to end time
             # currently have the starting row for the trade as "start_row"
