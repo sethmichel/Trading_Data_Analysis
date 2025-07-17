@@ -49,3 +49,32 @@ explaination prompt: your alternative approach sounds interesting. it might be s
 This is undoable because we can't prune sublists until the end - I'd run out of ram
 
 ------------------------------------------------------------------------------------------------------------------------
+
+current state. it's doing 1.4% in 1:17 minutes. issue is probably not using enough vectorization and not using numba enough. It also likely does a lot of redundant calculations and it probably has bugs. It actually got slower when I removed the combination redundancy
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+
+redesign
+-solve ram issue: prune sublists and use batch computation
+-key speed: use numba and vectorization with large batches using every cpu thread
+
+design goal: minimize computations
+compute all required combos, and do all required addition at the end
+
+- all combos are required, thus I can brute force it like I used to but change the filtering and make a 2nd addition algo (rsi case)
+
+
+
+volatilities = [0.9,0.8,0.7,0.6,0.5,0.4,0.3] # KEEP IN DESCENDING ORDER
+ratios = [0.5,0.6,0.7,0.8,0.9,1.0,1.1]
+adx28s = [20,30,40,50,60]
+adx14s = [20,30,40,50,60]
+adx7s = [20,30,40,50,60]
+abs_macd_zScores = [0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0]   
+extreme_rsis = [True, False, "either"]
+normal_targets = [0.2,0.3,0.4,0.5,0.6]
+upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
+upper_stop_losss = [0.4,0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3,-0.4,-0.5]
+normal_stop_losss = [-0.3,-0.4,-0.5,-0.6]
