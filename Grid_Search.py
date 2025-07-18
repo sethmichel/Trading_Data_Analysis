@@ -264,6 +264,7 @@ def Convert_To_Numba_Arrays(data_holder, normal_target_indexes, normal_sl_indexe
     max_row_idx = np.max(data_rows) + 1 if len(data_rows) > 0 else 1
 
     # --- Create mapping arrays and tiered index arrays for Numba ---
+    # these basically store the rows that each parameter point to, it's for faster lookup
     nt_map = np.array(normal_targets, dtype=np.float64)
     nsl_map = np.array(normal_stop_losss, dtype=np.float64)
     ut_map = np.array(upper_targets, dtype=np.float64)
@@ -435,8 +436,8 @@ def process_combination_batch(combination_batch, local_sublists, nt_map, nt_idx_
         all_metadata = []
         
         for i, combo in enumerate(combination_batch):
-            all_filtered_rows.append(combo['filtered_rows'])
-            all_filtered_prices.append(combo['filtered_prices'])
+            all_filtered_rows.append(combo['filtered_rows'])     # all the rows need for each combination
+            all_filtered_prices.append(combo['filtered_prices'])  # all final prices of each row for each combination
             all_params.append((combo['normal_target'], combo['normal_stop_loss'], 
                              combo['upper_target'], combo['upper_stop_loss']))
             all_metadata.append((combo['volatility'], combo['ratio'], combo['adx28'], combo['adx14'], 
@@ -520,12 +521,12 @@ def process_batch_numba_large(all_filtered_rows, all_filtered_prices, all_params
                 row_idx = filtered_rows[j]
 
                 # Early exit pruning for this combination
-                if j >= sixty_percent_mark and current_sum < 4:
-                    valid_mask[i] = False
-                    break
-                if j >= eighty_percent_mark and current_sum < 7:
-                    valid_mask[i] = False
-                    break
+                #if j >= sixty_percent_mark and current_sum < 4:
+                #    valid_mask[i] = False
+                #    break
+                #if j >= eighty_percent_mark and current_sum < 7:
+                #    valid_mask[i] = False
+                #    break
 
                 normal_target_idx = nt_idx_array[row_idx]
                 normal_sl_idx = nsl_idx_array[row_idx]
@@ -659,8 +660,7 @@ def Create_2D_List_From_Df(df, normal_targets, normal_stop_losss, upper_targets,
 
 def Grid_Search_Parameter_Optimization(df):
     try:
-        # Parameter ranges - converted to numpy arrays for better performance
-        volatilities = np.array([0.9,0.8,0.7,0.6,0.5,0.4,0.3], dtype=np.float64)
+        volatilities = np.array([0.4,0.8,0.7,0.6,0.5,0.9,0.3], dtype=np.float64)
         ratios = np.array([0.5, 0.6, 0.7, 0.8, 0.9, 1.0, 1.1], dtype=np.float64)
         adx28s = np.array([20, 30, 40, 50, 60], dtype=np.float64)
         adx14s = np.array([20, 30, 40, 50, 60], dtype=np.float64)
@@ -671,6 +671,19 @@ def Grid_Search_Parameter_Optimization(df):
         upper_targets = np.array([0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9], dtype=np.float64)
         upper_stop_losss = np.array([0.3, 0.2, 0.1, 0.0, -0.1, -0.2, -0.3], dtype=np.float64)
         normal_stop_losss = np.array([-0.3, -0.4, -0.5], dtype=np.float64)
+        '''
+        volatilities = np.array([0.6], dtype=np.float64)
+        ratios = np.array([1.1], dtype=np.float64)
+        adx28s = np.array([20], dtype=np.float64)
+        adx14s = np.array([20], dtype=np.float64)
+        adx7s = np.array([20], dtype=np.float64)
+        abs_macd_zScores = np.array([1.0], dtype=np.float64)   # absolute value of z-score, not normal z-score
+        extreme_rsis = [True, False, "either"]  # Keep as list for string handling
+        normal_targets = np.array([0.3, 0.4, 0.5], dtype=np.float64)
+        upper_targets = np.array([0.6, 0.7, 0.8, 0.9], dtype=np.float64)
+        upper_stop_losss = np.array([-0.1], dtype=np.float64)
+        normal_stop_losss = np.array([-0.5], dtype=np.float64)
+        '''
 
         data_holder, short_rows_data_holder, normal_target_indexes, normal_sl_indexes, upper_target_indexes, upper_sl_indexes = Create_2D_List_From_Df(
             df, normal_targets.tolist(), normal_stop_losss.tolist(), 
