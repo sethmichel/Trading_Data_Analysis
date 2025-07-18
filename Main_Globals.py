@@ -49,3 +49,4 @@ SetupLogging() # Initialize logger
 
 def ErrorHandler(fileName, function, message, lineNumber):
     logger.error(f"{fileName} - {function}() - Line {lineNumber}: {message}")
+    print(f"\nERROR: {fileName} - {function}() - Line {lineNumber}: {message}*********\n")
