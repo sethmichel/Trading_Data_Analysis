@@ -55,59 +55,6 @@ current state. it's doing 1.4% in 1:17 minutes. issue is probably not using enou
 ------------------------------------------------------------------------------------------------------------------------
 
 
-
-redesign
-
-parents = []
-depth = "" # current list
-
-1) calculate base case 1 time for each new depth
-2) iterate over that depth list. After each calculation to find the adjacent list's sublist_key it's,
-    (parents[0], parents[1]...parents[depth - 1], depth index - 1, then same parameters)    # depth index is index of that list like adx7 list
-
-
-so I'd start at upper_stop_losses (max depth - 1)
-for vol
-for ratio
-for a28
-for a14
-for a7
-for zscore
-for rsi
-for nt
-for ut
-for usl
-for nsl
-
-sublist_key = (vol, ratio, a28, a14, a7, zscore, rsi, nt, ut, nsl, usl)
-
-calculate [0] and save it
-calculate [1], but add in sublist_key=(vol, ratio, a28, a14, a7, zscore, rsi-1, nt, ut, usl, nsl)
-calcualte [2], but add in sublist_key=(vol, ratio, a28, a14, a7, zscore, rsi-2, nt, ut, usl, nsl)
-
-bottom for loop ends, iterates usl and the process repeats. sublist key only changes depth -1 and depth
-calcualte [0][1] the same as before
-
-
-
-volatilities = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
-ratios = [0.5,0.6,0.7,0.8,0.9,1.0,1.1]
-adx28s = [20,30,40,50,60]
-adx14s = [20,30,40,50,60]
-adx7s = [20,30,40,50,60]
-abs_macd_zScores = [0.5,1.0,1.5,2.0,2.5,3.0,3.5,4.0]   # absolute value of z-score, not normal z-score
-extreme_rsis = [True, False, "either"]
-normal_targets = [0.2,0.3,0.4,0.5]
-upper_targets = [0.3,0.4,0.5,0.6,0.7,0.8,0.9]
-upper_stop_losss = [0.3,0.2,0.1,0.0,-0.1,-0.2,-0.3]
-normal_stop_losss = [-0.3,-0.4,-0.5]
-
-what if I sort the dataset so that 
-1) remove all rows length 3 and less. add their final values to the top 50 at the end
-2) rows are sorted by length of price_movement
-3) I add columns for indexes of all nt and nsl since those are searched each time
-4) if after 60% of the rows, the sum is 4% or less, quit it and don't save it
-
 ----------------------------------------------------------------------------------------------------------------
 resign prompts
 
@@ -118,6 +65,24 @@ do you see any errors anywhere in the code?
 
 
 
+
+
+data_holder = [[idx of original df, [values], last price]]
+normal_indexes = {normal para: [{original df idx: idx of that normal para}]}
+upper_indexes = {normal para: [{upper para}: [{original df idx: idx of that normal para}]]}
+
+numpy
+data_rows = index 0 of data_holder
+data_values = index 1 of data_holder
+data_prices = index 2 of data_holder
+
+nt/nsl map = array of the list
+
+
+nt map and nt array are the same. why?
+
+makeing 2 batch functions seems unnessary. idk process_batch_numba_large mostly uses python code. idk why we both making all those lists like all_filtered_rows too
+    I bet I can easily combine adding it to sublist and the computation. this would remove 1 for loop. (add to local sublist if it's valid live)
 
 
 
