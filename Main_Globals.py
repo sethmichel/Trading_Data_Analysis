@@ -45,7 +45,7 @@ def SetupLogging():
     logger.propagate = True
 
 SetupLogging() # Initialize logger
-
+logger.info("\nNew Start")
 
 def ErrorHandler(fileName, function, message, lineNumber):
     logger.error(f"{fileName} - {function}() - Line {lineNumber}: {message}")

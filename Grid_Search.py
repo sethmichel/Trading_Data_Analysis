@@ -64,7 +64,7 @@ def Write_Grid_Seach_Results(all_sublists):
     message = message.replace("'", '').replace("{", '').replace("}", '')
 
     Write_Analysis(message)
-    print("\nit's done\n")
+    print("\nCOMPLETE\n")
 
 
 def prune_sublists(local_sublists, keep_count=50):
@@ -151,7 +151,7 @@ def process_batch(batch_combinations, local_sublists, normal_target_indexes, nor
                 
                 local_sublists[sublist_key] = sublist
             
-                # Prune local_sublists when it reaches 200,000 entries
+                # Prune local_sublists when it reaches x entries
                 if len(local_sublists) >= 400000:
                     local_sublists = prune_sublists(local_sublists, keep_count=50)
             else:
@@ -330,6 +330,8 @@ def Create_Entries(volatilities, data_holder, ratios, adx28s, adx14s, adx7s, abs
         local_sublists = {}
         total_combinations = 0
         batch_size = 200000
+        prune_size = 400000
+        prune_count = 0 # updates user with progress
         
         # Collect all combinations into batches
         combination_batch = []
@@ -401,8 +403,11 @@ def Create_Entries(volatilities, data_holder, ratios, adx28s, adx14s, adx7s, abs
                                                         combination_batch = []  # Reset for next batch
                                                         
                                                         # Prune when necessary to manage memory
-                                                        if len(local_sublists) > 400000:
+                                                        if len(local_sublists) > prune_size:
                                                             local_sublists = prune_sublists(local_sublists, keep_count=50)
+                                                            prune_count += 1
+                                                            if (prune_count % 10 == 0):
+                                                                print(f"in progress, completed {prune_count} prunes of {prune_size}...")
 
         # Process any remaining combinations in the final batch
         if combination_batch:
@@ -570,7 +575,7 @@ def Create_2D_List_From_Df(df, normal_targets, normal_stop_losss, upper_targets,
 
         # Keep only the columns specified in columns_to_keep
         columns_to_keep = ['price_movement_list','Entry Volatility Percent','Entry Volatility Ratio','Entry Adx28',
-                        'Entry Adx14','Entry Adx7','Entry Macd Z-Score','Rsi Extreme Prev Cross']
+                           'Entry Adx14','Entry Adx7','Entry Macd Z-Score','Rsi Extreme Prev Cross']
         df = df[[col for col in columns_to_keep if col in df.columns]].copy()
 
         # Separate rows where 'price_movement_list' length <= 3. we'll deal with them at the end
@@ -700,6 +705,15 @@ def Grid_Search_Parameter_Optimization(df):
             normal_target_indexes, normal_sl_indexes, upper_target_indexes, upper_sl_indexes
         )
 
+        # Ensure the text file "Analysis_Results.txt" exists (create if it doesn't)
+        if not os.path.exists("Analysis_Results.txt"):
+            with open("Analysis_Results.txt", "w") as f_create:
+                pass
+        # erase the text file if it exists
+        else:
+            with open("Analysis_Results.txt", "w") as f:
+                pass
+
         print("Writing results...")
         # Write results only once at the end
         Write_Grid_Seach_Results(all_sublists)
@@ -709,15 +723,6 @@ def Grid_Search_Parameter_Optimization(df):
 
 
 def main():
-    # Ensure the text file "Analysis_Results.txt" exists (create if it doesn't)
-    if not os.path.exists("Analysis_Results.txt"):
-        with open("Analysis_Results.txt", "w") as f_create:
-            pass
-    # erase the text file if it exists
-    else:
-        with open("Analysis_Results.txt", "w") as f:
-            pass
-
     data_dir = "Csv_Files/3_Final_Trade_Csvs"
     data_file = "Bulk_Combined.csv"
     df = pd.read_csv(f"{data_dir}/{data_file}")

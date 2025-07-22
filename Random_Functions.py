@@ -324,13 +324,12 @@ def Change_Timestamps_of_Market_Data():
 # strat: split them into ticker df's, find the start point, and just copy they by row. then merge them and order by timestamp
 def Merge_Market_Data():
     try:
-        dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
-        csv1_path = f"{dir}/Raw_Market_Data_06-25-2025.csv"  # all other data
-        csv2_path = f"{dir}/Raw_Market_Data_06-25-2025_On_Demand.csv"  # adx columns
-        output_csv_path = f"{dir}/Raw_Market_Data_06-25-2025_Final.csv"
+        original_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025.csv"  # all other data
+        new_data_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025_On_Demand.csv"  # new indicator columns
+        output_csv_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025_Final.csv"
 
-        df1 = pd.read_csv(csv1_path)
-        df2 = pd.read_csv(csv2_path)
+        df1 = pd.read_csv(original_path)
+        df2 = pd.read_csv(new_data_path)
         
         # Get unique tickers
         tickers = df1['Ticker'].unique()
@@ -384,16 +383,45 @@ def Merge_Market_Data():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+def Append_Csv_To_Other_Csv():
+    try:
+        base_csv = f"Csv_Files/csvs_to_edit/Raw_Market_Data_06-11-2025_On_Demand.csv"
+        csv_to_append = f"Csv_Files/csvs_to_edit/6-11 vol data added.csv"
+        dest_path = f"Csv_Files/csvs_to_edit/Raw_Market_Data_06-11-2025_On_Demand_Final.csv"
+        
+        print(f"Appending {csv_to_append} to {base_csv}...")
+        
+        # Read the base CSV
+        base_df = pd.read_csv(base_csv)
+        print(f"Base CSV has {len(base_df)} rows")
+        
+        # Read the CSV to append
+        append_df = pd.read_csv(csv_to_append)
+        print(f"CSV to append has {len(append_df)} rows")
+        
+        # Concatenate the dataframes
+        combined_df = pd.concat([base_df, append_df], ignore_index=True)
+        print(f"Combined CSV has {len(combined_df)} rows")
+        
+        # Save the combined dataframe to the destination path
+        combined_df.to_csv(dest_path, index=False)
+        
+        print(f"Successfully appended CSV and saved to: {dest_path}")
+        
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
 # change past csv market data files to include the new volatility %
 # (atr14 / price) * 100
 def Add_Volatility_Percent():
     try:
         dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
-        csv_files_list = ["Raw_Market_Data_06-25-2025_Final.csv"]
+        csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
         
         for csv_file in csv_files_list:
-            file_path = os.path.join(dir, csv_file)
-            temp_file_path = os.path.join(dir, f'temp_{csv_file}')
+            file_path = f"{dir}/{csv_file}"
+            temp_file_path = f"{dir}/'temp_{csv_file}"
             
             print(f"Processing {csv_file}...")
             
@@ -445,11 +473,11 @@ def Add_Volatility_Percent():
 # REQUIRED: must have volatility percent already
 def Add_Volatility_Ratio():
     dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
-    csv_files_list = ["Raw_Market_Data_06-25-2025_Final.csv"]
-    
+    csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
+
     for csv_file in csv_files_list:
-        file_path = os.path.join(dir, csv_file)
-        temp_file_path = os.path.join(dir, f'temp_{csv_file}')
+        file_path = f"{dir}/{csv_file}"
+        temp_file_path = f"{dir}/'temp_{csv_file}"
         
         print(f"Processing {csv_file}...")
         
@@ -592,7 +620,7 @@ def Edit_Values():
 # swtich the order of columns
 def Re_Order_Columns():
     # --- Load and reorder columns for Raw_Market_Data_06-20-2025_Final.csv ---
-    csv_path = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-20-2025_Final.csv"
+    csv_path = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025.csv"
     desired_order = [
         'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
         'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time'
@@ -609,14 +637,63 @@ def Re_Order_Columns():
         print(f"Error loading or reordering columns: {e}")
 
 
+# split a csv into 2 csv's. for when a csv has data up to a certain point
+def Make_New_Csv_At_X_Line():
+    try:
+        csv_path = "Csv_Files/csvs_to_edit/Raw_Market_Data_06-11-2025_On_Demand.csv"
+        dest_path = "Csv_Files/csvs_to_edit/6-11 vol data added.csv"
+        split_line = 62832  # This is the line number in the file (1-based)
+
+        print(f"Reading all lines from {csv_path}...")
+        with open(csv_path, 'r', encoding='utf-8') as f_in:
+            lines = f_in.readlines()
+        
+        print(f"Read {len(lines)} lines from the file.")
+
+        # The split_line is 1-based, list of lines is 0-indexed.
+        split_index = split_line - 1
+
+        if split_index <= 0 or split_index >= len(lines):
+            print(f"Split line {split_line} is out of bounds for the file with {len(lines)} lines. No changes made.")
+            return
+
+        # The new file needs the header, which is the first line of the original file.
+        header_line = lines[0]
+        
+        # Lines for the original file (up to the split point)
+        original_lines = lines[:split_index]
+        
+        # Lines for the new file (header + lines from the split point)
+        new_csv_lines = [header_line] + lines[split_index:]
+
+        # Write to the destination file
+        print(f"Writing {len(new_csv_lines)} lines to {dest_path}...")
+        with open(dest_path, 'w', encoding='utf-8') as f_out_new:
+            f_out_new.writelines(new_csv_lines)
+        print(f"Created new CSV file: {dest_path}")
+
+        # Write back to the original file
+        print(f"Writing {len(original_lines)} lines back to {csv_path}...")
+        with open(csv_path, 'w', encoding='utf-8') as f_out_orig:
+            f_out_orig.writelines(original_lines)
+        print(f"Modified original CSV file: {csv_path}")
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+
+
 #Print_Volatility_Counts()
 #Volatility_Time_By_Ticker()
 #move_all_csvs_back()
 #Change_Timestamps_of_Market_Data()
 #Merge_Market_Data()
+#Append_Csv_To_Other_Csv()
 #Add_Volatility_Percent()
 #Add_Volatility_Ratio()
 #Re_Order_Columns()
+#Make_New_Csv_At_X_Line()
 
 
 
