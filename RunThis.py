@@ -150,6 +150,8 @@ def Bulk_Create_Summary_Csvs():
         combined_df.to_csv(combined_file_path, index=False)
         print(f"\nCombined file saved to: {combined_file_path}")
         print(f"Total rows in combined file: {len(combined_df)}")
+        
+        print("Sum of 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4' column:", combined_df['Target 0.4,-0.3,0.5,-0.1,0.6,0.4'].sum())
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
