@@ -42,19 +42,22 @@ def process_combinations_optimized(all_filtered_rows_flat, all_filtered_prices_f
             
         t1_map_idx = t1_idx_dict[t1]
         sl1_map_idx = sl1_idx_dict[sl1]
-        t3_map_idx = t3_idx_dict[t3]
         sl2_map_idx = sl2_idx_dict[sl2]
         t2_map_idx = t2_idx_dict[t2]
-        sl3_map_idx = sl3_idx_dict[sl3]
         
         # Select the correct pre-computed index arrays
         t1_idx_array = t1_idx_arrays[t1_map_idx]
-        sl1_idx_array = sl1_idx_arrays[sl1_map_idx]
-        t3_idx_array = t3_idx_arrays[t1_map_idx, t3_map_idx]
-        sl2_idx_array = sl2_idx_arrays[t1_map_idx, sl2_map_idx]
         t2_idx_array = t2_idx_arrays[t1_map_idx, t2_map_idx]
-        sl3_idx_array = sl3_idx_arrays[t1_map_idx, sl3_map_idx]
+        sl1_idx_array = sl1_idx_arrays[sl1_map_idx]
+        sl2_idx_array = sl2_idx_arrays[t1_map_idx, sl2_map_idx]
         
+        # only do these if we're doing the extended calculation
+        if (how_many_final_parameters == 6):
+            t3_map_idx = t3_idx_dict[t3]
+            sl3_map_idx = sl3_idx_dict[sl3]
+            t3_idx_array = t3_idx_arrays[t1_map_idx, t3_map_idx]
+            sl3_idx_array = sl3_idx_arrays[t1_map_idx, sl3_map_idx]
+            
         # Initialize counters for this combination
         current_sum = 0.0
         current_wins = 0

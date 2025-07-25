@@ -191,6 +191,8 @@ def Normalize_Raw_Trades(raw_df):
                             'Target 0.5,0.9,-0.1,-0.5': None,
                             'Target 0.4,0.9,-0.3,-0.1': None,
                             'Target 0.5,0.8,-0.3,0.3': None,
+                            'Target 0.4,0.5,-0.3,-0.1': None,
+                            'Target 0.4,0.6,-0.3,-0.1': None,
                             'Target 0.4,-0.3,0.5,-0.1,0.6,0.4': None,
                             'Price Movement': None
                         })
@@ -464,6 +466,12 @@ def Was_Target_Hit(price_movement, target):
         
         elif (target == 'Target 0.5,0.8,-0.3,0.3'):
             return Helper_Was_Target_Hit_4(price_movement, t1=0.5,sl1=-0.3,t2=0.8,sl2=0.3)
+        
+        elif (target == 'Target 0.4,0.5,-0.3,-0.1'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.4,sl1=-0.3,t2=0.5,sl2=-0.1)
+        
+        elif (target == 'Target 0.4,0.6,-0.3,-0.1'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.4,sl1=-0.3,t2=0.6,sl2=-0.1)
             
         elif (target == 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'):
             return Helper_Was_Target_Hit_6(price_movement, nt=0.4,nsl=-0.3,sub_ut=0.5,usl=-0.1,ut=0.6,sub_usl=0.4)
@@ -554,6 +562,8 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
                 normalized_df.at[idx, 'Target 0.5,0.9,-0.1,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.1,-0.5')
                 normalized_df.at[idx, 'Target 0.4,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.9,-0.3,-0.1')
                 normalized_df.at[idx, 'Target 0.5,0.8,-0.3,0.3'] = Was_Target_Hit(price_movement, 'Target 0.5,0.8,-0.3,0.3')
+                normalized_df.at[idx, 'Target 0.4,0.5,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.5,-0.3,-0.1')
+                normalized_df.at[idx, 'Target 0.4,0.6,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.6,-0.3,-0.1' )
                 normalized_df.at[idx, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'] = Was_Target_Hit(price_movement, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4')
                 normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
                 normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
