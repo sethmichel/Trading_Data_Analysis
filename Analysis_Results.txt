@@ -1,27 +1,137 @@
-TEST 1: testing all combos of parameters
-Results (Top 10 for each volatility level):
-volatility, ratio, adx28, 14, 7, abs zscore, rsi_type, t1, t2, sl1, sl2
+TEST 3: testing all combos of parameters by time
+User Mode: 3 - Best Combos for time ranges:
+entry time, volatility%, ratio, adx28, 14, 7, abs zscore, rsi_type, t1, t2, sl1, sl2
+
+--- Top 10 results for time between 6:30:00 and 30 min after (exclusive) ---
+1) id: (6:30:00, 0.5, 0.0, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+2) id: (6:30:00, 0.5, 0.2, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+3) id: (6:30:00, 0.5, 0.5, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+4) id: (6:30:00, 0.5, 0.6, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+5) id: (6:30:00, 0.5, 0.7, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+6) id: (6:30:00, 0.5, 0.8, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+7) id: (6:30:00, 0.5, 0.9, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+8) id: (6:30:00, 0.5, 1.0, 0.0, 0.0, 0.0, 1.0, either, 0.4, 0.9, -0.4, -0.1), sum: 10.0, count: 57, wins: 20, losses: 28, neither: 9
+9) id: (6:30:00, 0.4, 0.0, 0.0, 0.0, 0.0, 1.0, either, 0.5, 0.9, -0.4, -0.1), sum: 9.8, count: 74, wins: 24, losses: 34, neither: 16
+10) id: (6:30:00, 0.4, 0.2, 0.0, 0.0, 0.0, 1.0, either, 0.5, 0.9, -0.4, -0.1), sum: 9.8, count: 74, wins: 24, losses: 34, neither: 16
+
+--- Top 10 results for time between 7:00:00 and 30 min after (exclusive) ---
+1) id: (7:00:00, 0.0, 0.0, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+2) id: (7:00:00, 0.0, 0.0, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+3) id: (7:00:00, 0.0, 0.2, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+4) id: (7:00:00, 0.0, 0.2, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+5) id: (7:00:00, 0.0, 0.5, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+6) id: (7:00:00, 0.0, 0.5, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+7) id: (7:00:00, 0.0, 0.6, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+8) id: (7:00:00, 0.0, 0.6, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+9) id: (7:00:00, 0.0, 0.7, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+10) id: (7:00:00, 0.0, 0.7, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+
+--- Top 10 results for time between 7:30:00 and 30 min after (exclusive) ---
+1) id: (7:30:00, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+2) id: (7:30:00, 0.6, 0.0, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+3) id: (7:30:00, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+4) id: (7:30:00, 0.6, 0.2, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+5) id: (7:30:00, 0.6, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+6) id: (7:30:00, 0.6, 0.5, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+7) id: (7:30:00, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+8) id: (7:30:00, 0.6, 0.6, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+9) id: (7:30:00, 0.6, 0.7, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+10) id: (7:30:00, 0.6, 0.7, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.3, 0.3), sum: 1.5, count: 9, wins: 2, losses: 5, neither: 2
+
+--- Top 10 results for time between 8:00:00 and 30 min after (exclusive) ---
+1) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.5, -0.4), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+2) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.5, -0.3), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+3) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.5, -0.2), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+4) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.5, -0.1), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+5) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.5, 0.0), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+6) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.4, -0.4), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+7) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.4, -0.3), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+8) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.4, -0.2), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+9) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.4, -0.1), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+10) id: (8:00:00, 0.0, 0.0, 20.0, 0.0, 0.0, 0.0, True, 0.2, 0.9, -0.4, 0.0), sum: 1.1, count: 2, wins: 1, losses: 0, neither: 1
+
+
+TEST 2: testing all combos for volatility % ranges
+User Mode: 2 - Best Combos for volatilty ranges. only using ratio:
+volatility%, ratio, t1, t2, sl1, sl2
 
 --- Top 10 results for Volatility between 0.0 and 0.6 (exclusive) ---
-1) id: (0.0, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.5, count: 84, wins: 15, losses: 32, neither: 37
-2) id: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.4, count: 85, wins: 15, losses: 32, neither: 38
-3) id: (0.0, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.4, count: 85, wins: 15, losses: 32, neither: 38
-4) id: (0.0, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.4, count: 85, wins: 15, losses: 32, neither: 38
-5) id: (0.0, 0.6, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.4, count: 85, wins: 15, losses: 32, neither: 38
-6) id: (0.0, 0.7, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.9, -0.3, -0.1), sum: 6.4, count: 85, wins: 15, losses: 32, neither: 38
-7) id: (0.0, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 6.3, count: 84, wins: 15, losses: 32, neither: 37
-8) id: (0.0, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.2, 0.9, -0.3, -0.2), sum: 6.3, count: 84, wins: 15, losses: 31, neither: 38
-9) id: (0.0, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 6.2, count: 85, wins: 15, losses: 32, neither: 38
-10) id: (0.0, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 6.2, count: 85, wins: 15, losses: 32, neither: 38
+1) id: (None, 0.0, 0.8, 0.0, 20.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.1, count: 77, wins: 18, losses: 32, neither: 27
+2) id: (None, 0.0, 0.8, 0.0, 20.0, 20.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.1, count: 77, wins: 18, losses: 32, neither: 27
+3) id: (None, 0.0, 0.0, 0.0, 20.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+4) id: (None, 0.0, 0.0, 0.0, 20.0, 20.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+5) id: (None, 0.0, 0.2, 0.0, 20.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+6) id: (None, 0.0, 0.2, 0.0, 20.0, 20.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+7) id: (None, 0.0, 0.5, 0.0, 20.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+8) id: (None, 0.0, 0.5, 0.0, 20.0, 20.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+9) id: (None, 0.0, 0.6, 0.0, 20.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
+10) id: (None, 0.0, 0.6, 0.0, 20.0, 20.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 9.0, count: 78, wins: 18, losses: 32, neither: 28
 
 --- Top 10 results for Volatility between 0.6 and 3.0 (exclusive) ---
-1) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.5, -0.3, -0.1), sum: 5.7, count: 38, wins: 19, losses: 14, neither: 5
-2) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.2, 0.6, -0.3, -0.1), sum: 5.7, count: 38, wins: 15, losses: 19, neither: 4
-3) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.6, -0.3, 0.2), sum: 5.6, count: 38, wins: 15, losses: 18, neither: 5
-4) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.2, 0.5, -0.3, -0.4), sum: 5.6, count: 38, wins: 20, losses: 12, neither: 6
-5) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.2, 0.7, -0.3, -0.1), sum: 5.6, count: 38, wins: 13, losses: 21, neither: 4
-6) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.5, -0.3, -0.2), sum: 5.5, count: 38, wins: 19, losses: 14, neither: 5
-7) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.5, -0.3, 0.3), sum: 5.5, count: 38, wins: 14, losses: 19, neither: 5
-8) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.6, -0.3, -0.1), sum: 5.5, count: 38, wins: 16, losses: 17, neither: 5
-9) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.7, -0.3, -0.1), sum: 5.5, count: 38, wins: 14, losses: 19, neither: 5
-10) id: (0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.4, 0.6, -0.3, 0.2), sum: 5.4, count: 38, wins: 12, losses: 21, neither: 5
+1) id: (None, 0.6, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.4, -0.1), sum: 7.9, count: 61, wins: 19, losses: 31, neither: 11
+2) id: (None, 0.6, 1.0, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.4, -0.1), sum: 7.9, count: 61, wins: 19, losses: 31, neither: 11
+3) id: (None, 0.6, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+4) id: (None, 0.6, 0.0, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+5) id: (None, 0.6, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+6) id: (None, 0.6, 0.2, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+7) id: (None, 0.6, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+8) id: (None, 0.6, 0.5, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+9) id: (None, 0.6, 0.6, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+10) id: (None, 0.6, 0.6, 0.0, 0.0, 0.0, 0.5, either, 0.5, 0.9, -0.4, -0.1), sum: 7.6, count: 66, wins: 20, losses: 34, neither: 12
+
+
+TEST 1: testing all combos of parameters
+User Mode: 1 - Best Combos Overall:
+time, volatility%, ratio, adx28, 14, 7, abs zscore, rsi_type, t1, t2, sl1, sl2
+
+1) id: (None, 0.0, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.7, count: 166, wins: 37, losses: 80, neither: 49
+2) id: (None, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.6, count: 167, wins: 37, losses: 80, neither: 50
+3) id: (None, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.6, count: 167, wins: 37, losses: 80, neither: 50
+4) id: (None, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.6, count: 167, wins: 37, losses: 80, neither: 50
+5) id: (None, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.6, count: 167, wins: 37, losses: 80, neither: 50
+6) id: (None, 0.0, 0.7, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.3, -0.1), sum: 14.6, count: 167, wins: 37, losses: 80, neither: 50
+7) id: (None, 0.0, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 14.5, count: 166, wins: 41, losses: 49, neither: 76
+8) id: (None, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 14.4, count: 167, wins: 41, losses: 49, neither: 77
+9) id: (None, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 14.4, count: 167, wins: 41, losses: 49, neither: 77
+10) id: (None, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 14.4, count: 167, wins: 41, losses: 49, neither: 77
+
+
+TEST 3: testing all combos of parameters by time
+User Mode: 3 - Best Combos for time ranges:
+entry time, volatility%, ratio, adx28, 14, 7, abs zscore, rsi_type, t1, t2, sl1, sl2
+
+--- Top 10 results for time between 6:30:00 and 15 min after (exclusive) ---
+1) id: (6:30:00, 0.3, 0.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+2) id: (6:30:00, 0.3, 0.2, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+3) id: (6:30:00, 0.3, 0.5, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+4) id: (6:30:00, 0.3, 0.6, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+5) id: (6:30:00, 0.3, 0.7, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+6) id: (6:30:00, 0.3, 0.8, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+7) id: (6:30:00, 0.3, 0.9, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+8) id: (6:30:00, 0.3, 1.0, 0.0, 0.0, 0.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.7, count: 39, wins: 15, losses: 11, neither: 13
+9) id: (6:30:00, 0.3, 0.0, 0.0, 0.0, 30.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.4, count: 19, wins: 11, losses: 3, neither: 5
+10) id: (6:30:00, 0.3, 0.0, 0.0, 20.0, 30.0, 0.0, either, 0.5, 0.9, -0.5, -0.1), sum: 8.4, count: 19, wins: 11, losses: 3, neither: 5
+
+--- Top 10 results for time between 6:45:00 and 15 min after (exclusive) ---
+1) id: (6:45:00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+2) id: (6:45:00, 0.0, 0.0, 0.0, 0.0, 0.0, 0.5, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+3) id: (6:45:00, 0.0, 0.0, 0.0, 0.0, 0.0, 1.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+4) id: (6:45:00, 0.0, 0.2, 0.0, 0.0, 0.0, 0.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+5) id: (6:45:00, 0.0, 0.2, 0.0, 0.0, 0.0, 0.5, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+6) id: (6:45:00, 0.0, 0.2, 0.0, 0.0, 0.0, 1.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+7) id: (6:45:00, 0.0, 0.5, 0.0, 0.0, 0.0, 0.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+8) id: (6:45:00, 0.0, 0.5, 0.0, 0.0, 0.0, 0.5, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+9) id: (6:45:00, 0.0, 0.5, 0.0, 0.0, 0.0, 1.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+10) id: (6:45:00, 0.0, 0.6, 0.0, 0.0, 0.0, 0.0, False, 0.2, 0.9, -0.3, -0.1), sum: 7.1, count: 16, wins: 9, losses: 6, neither: 1
+
+--- Top 10 results for time between 7:00:00 and 30 min after (exclusive) ---
+1) id: (7:00:00, 0.0, 0.0, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+2) id: (7:00:00, 0.0, 0.0, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+3) id: (7:00:00, 0.0, 0.2, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+4) id: (7:00:00, 0.0, 0.2, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+5) id: (7:00:00, 0.0, 0.5, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+6) id: (7:00:00, 0.0, 0.5, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+7) id: (7:00:00, 0.0, 0.6, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+8) id: (7:00:00, 0.0, 0.6, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+9) id: (7:00:00, 0.0, 0.7, 0.0, 0.0, 20.0, 0.0, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17
+10) id: (7:00:00, 0.0, 0.7, 0.0, 0.0, 20.0, 0.5, either, 0.2, 0.9, -0.5, -0.2), sum: 7.9, count: 37, wins: 11, losses: 9, neither: 17

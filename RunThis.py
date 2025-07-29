@@ -77,6 +77,7 @@ def Create_Summary_Csv(date):
 
         raw_trade_df = Parser.CreateDf(raw_trades_name)            # creates the df of unreadable raw data
         normalized_df = Parser.Normalize_Raw_Trades(raw_trade_df)  # makes the data readable (not adding market data yet)
+        normalized_df = Parser.Add_Running_Sums(normalized_df)
 
         # 3) add market data to the trade summary
         final_df = Parser.Add_Market_Data(normalized_df, raw_market_data_name)
@@ -151,8 +152,6 @@ def Bulk_Create_Summary_Csvs():
         print(f"\nCombined file saved to: {combined_file_path}")
         print(f"Total rows in combined file: {len(combined_df)}")
         
-        print("Sum of 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4' column:", combined_df['Target 0.4,-0.3,0.5,-0.1,0.6,0.4'].sum())
-
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 

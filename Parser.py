@@ -166,6 +166,7 @@ def Normalize_Raw_Trades(raw_df):
                             'Time in Trade': time_in_trade,
                             'Dollar Change': round(dollar_change, 2),
                             'Percent Change': round(percent_change, 2),
+                            'Running Sum': None,
                             'Total Investment': round(total_investment, 2),
                             'Entry Price': round(entry_price, 4),
                             'Exit Price': round(exit_price, 4),
@@ -188,11 +189,15 @@ def Normalize_Raw_Trades(raw_df):
                             'Entry Adx14': None,
                             'Entry Adx7': None,
                             'Target 0.3,-0.3': None,
+                            'Target 0.2,-0.5': None,
                             'Target 0.5,0.9,-0.1,-0.5': None,
+                            'Target 0.2,0.9,-0.3,-0.1': None,
                             'Target 0.4,0.9,-0.3,-0.1': None,
                             'Target 0.5,0.8,-0.3,0.3': None,
                             'Target 0.4,0.5,-0.3,-0.1': None,
                             'Target 0.4,0.6,-0.3,-0.1': None,
+                            'Target 0.5,0.9,-0.4,-0.1': None,
+                            'Target 0.2,0.9,-0.5,-0.2': None,
                             'Target 0.4,-0.3,0.5,-0.1,0.6,0.4': None,
                             'Price Movement': None
                         })
@@ -203,6 +208,23 @@ def Normalize_Raw_Trades(raw_df):
         
         return noralized_df
     
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+# after all trades have been added to 1 df but before market data is added
+# adds new column summing the trades for that day so I can see change over time for each day
+def Add_Running_Sums(normalized_df):
+    try:
+        days_sum = 0
+        normalized_df['Running Sum'] = 0.0
+
+        for i, row in normalized_df.iterrows():
+            days_sum += row['Percent Change']
+            normalized_df.at[i, 'Running Sum'] = round(days_sum, 2)
+
+        return normalized_df
+
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
@@ -390,6 +412,22 @@ def Post_Process_Price_Movement(price_movement):
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+def Helper_Was_Target_Hit_2(price_movement, t1, sl1):
+    try:
+        # Scan through price_movement to find which appears first
+        for value in price_movement:
+            if value >= t1:
+                return t1
+            elif value <= sl1:
+                return sl1
+        
+        # If neither target nor stop_loss was hit
+        return price_movement[-1]
+    
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
 def Helper_Was_Target_Hit_4(price_movement, t1, sl1, t2, sl2):
     # First phase: scan for normal_target or normal_stop_loss
     for i, value in enumerate(price_movement):
@@ -410,32 +448,32 @@ def Helper_Was_Target_Hit_4(price_movement, t1, sl1, t2, sl2):
     return price_movement[-1]
 
 
-def Helper_Was_Target_Hit_6(price_movement, nt,nsl,sub_ut,usl,ut,sub_usl):
+def Helper_Was_Target_Hit_6(price_movement, t1,sl1,t2,sl2,t3,sl3):
     # First phase: scan for normal_target or normal_stop_loss
     for i, value in enumerate(price_movement):
-        # if nsl is first
-        if value <= nsl:
-            return nsl
+        # if sl1 is first
+        if value <= sl1:
+            return sl1
         
-        # if nt is first
-        elif value >= nt:
-            # Second phase: scan from this point for sub_ut and usl
+        # if t1 is first
+        elif value >= t1:
+            # Second phase: scan from this point+1 for t2 and sl2
             for j in range(i + 1, len(price_movement)):
-                # if usl is first
-                if price_movement[j] <= usl:
-                    return usl
+                # if sl2 is first
+                if price_movement[j] <= sl2:
+                    return sl2
             
-                # if sub_ut is first
-                elif price_movement[j] >= sub_ut:
-                    # phase 3: scan from this point for ut and sub_usl
+                # if t2 is first
+                elif price_movement[j] >= t2:
+                    # phase 3: scan from this point+1 for t3 and sl3
                     for k in range(j + 1, len(price_movement)):
-                        # if sub_usl is first
-                        if price_movement[k] <= sub_usl:
-                            return sub_usl
+                        # if sl3 is first
+                        if price_movement[k] <= sl3:
+                            return sl3
                         
-                        # if ut is first
-                        elif price_movement[k] >= ut:
-                            return ut                
+                        # if t3 is first
+                        elif price_movement[k] >= t3:
+                            return t3                
                         
                     return price_movement[-1]
     
@@ -445,24 +483,19 @@ def Helper_Was_Target_Hit_6(price_movement, nt,nsl,sub_ut,usl,ut,sub_usl):
 def Was_Target_Hit(price_movement, target):
     try:
         if (target == 'Target 0.3,-0.3'):
-            target = 0.3
-            stop_loss = -0.3
-            
-            # Scan through price_movement to find which appears first
-            for value in price_movement:
-                if value >= target:
-                    return target
-                elif value <= stop_loss:
-                    return stop_loss
-            
-            # If neither target nor stop_loss was hit
-            return price_movement[-1]
+            return Helper_Was_Target_Hit_2(price_movement, t1=0.3, sl1=-0.3)
+
+        elif (target == 'Target 0.2,-0.5'):
+            return Helper_Was_Target_Hit_2(price_movement, t1=0.2, sl1=-0.5)
 
         elif (target == 'Target 0.5,0.9,-0.1,-0.5'):
-            return Helper_Was_Target_Hit_4(price_movement, 0.5,-0.5,0.9,-0.1)
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.5,sl1=-0.5,t2=0.9,sl2=-0.1)
+        
+        elif (target == 'Target 0.2,0.9,-0.3,-0.1'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.2,sl1=-0.3,t2=0.9,sl2=-0.1)
         
         elif (target == 'Target 0.4,0.9,-0.3,-0.1'):
-            return Helper_Was_Target_Hit_4(price_movement, 0.4,-0.3,0.9,-0.1)
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.4,sl1=-0.3,t2=0.9,sl2=-0.1)
         
         elif (target == 'Target 0.5,0.8,-0.3,0.3'):
             return Helper_Was_Target_Hit_4(price_movement, t1=0.5,sl1=-0.3,t2=0.8,sl2=0.3)
@@ -472,9 +505,15 @@ def Was_Target_Hit(price_movement, target):
         
         elif (target == 'Target 0.4,0.6,-0.3,-0.1'):
             return Helper_Was_Target_Hit_4(price_movement, t1=0.4,sl1=-0.3,t2=0.6,sl2=-0.1)
+        
+        elif (target == 'Target 0.5,0.9,-0.4,-0.1'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.5,sl1=-0.4,t2=0.9,sl2=-0.1)
+        
+        elif (target == 'Target 0.2,0.9,-0.5,-0.2'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.2,sl1=-0.5,t2=0.9,sl2=-0.2)
             
         elif (target == 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'):
-            return Helper_Was_Target_Hit_6(price_movement, nt=0.4,nsl=-0.3,sub_ut=0.5,usl=-0.1,ut=0.6,sub_usl=0.4)
+            return Helper_Was_Target_Hit_6(price_movement, t1=0.4,sl1=-0.3,t2=0.5,sl2=-0.1,t3=0.6,sl3=0.4)
     
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -559,11 +598,15 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
             if (exit_time_reached == True and macd_cross_reached == True):
                 #processed_price_movement = Post_Process_Price_Movement(price_movement)
                 normalized_df.at[idx, 'Target 0.3,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.3,-0.3')
+                normalized_df.at[idx, 'Target 0.2,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.2,-0.5')
                 normalized_df.at[idx, 'Target 0.5,0.9,-0.1,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.1,-0.5')
+                normalized_df.at[idx, 'Target 0.2,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.3,-0.1')
                 normalized_df.at[idx, 'Target 0.4,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.9,-0.3,-0.1')
                 normalized_df.at[idx, 'Target 0.5,0.8,-0.3,0.3'] = Was_Target_Hit(price_movement, 'Target 0.5,0.8,-0.3,0.3')
                 normalized_df.at[idx, 'Target 0.4,0.5,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.5,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.4,0.6,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.6,-0.3,-0.1' )
+                normalized_df.at[idx, 'Target 0.4,0.6,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.6,-0.3,-0.1')
+                normalized_df.at[idx, 'Target 0.5,0.9,-0.4,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.4,-0.1')
+                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.2'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.2')
                 normalized_df.at[idx, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'] = Was_Target_Hit(price_movement, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4')
                 normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
                 normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
