@@ -49,3 +49,72 @@ explaination prompt: your alternative approach sounds interesting. it might be s
 This is undoable because we can't prune sublists until the end - I'd run out of ram
 
 ------------------------------------------------------------------------------------------------------------------------
+
+current state. it's doing 1.4% in 1:17 minutes. issue is probably not using enough vectorization and not using numba enough. It also likely does a lot of redundant calculations and it probably has bugs. It actually got slower when I removed the combination redundancy
+
+------------------------------------------------------------------------------------------------------------------------
+
+
+----------------------------------------------------------------------------------------------------------------
+resign prompts
+
+new chat prompt
+look at the functions of this file, they all relate to the overall grid search algorithm which test combos of lists on a dataset to find the combos yeilding the highest sums. the dataframe's price_movement list is iterated over at the start and various indexes are found and stored; these indexes are used for comparisons to find a combinations sum. The dataframe of data is changed to a 2d list (data_holder) containing only critical information. 
+
+do you see any errors anywhere in the code?
+
+
+
+
+
+data_holder = [[idx of original df, [values], last price]]
+normal_indexes = {normal para: [{original df idx: idx of that normal para}]}
+upper_indexes = {normal para: [{upper para}: [{original df idx: idx of that normal para}]]}
+
+numpy
+data_rows = index 0 of data_holder
+data_values = index 1 of data_holder
+data_prices = index 2 of data_holder
+
+nt/nsl map = array of the list
+
+
+nt map and nt array are the same. why?
+
+makeing 2 batch functions seems unnessary. idk process_batch_numba_large mostly uses python code. idk why we both making all those lists like all_filtered_rows too
+    I bet I can easily combine adding it to sublist and the computation. this would remove 1 for loop. (add to local sublist if it's valid live)
+
+
+pure python results
+        volatilities = [0.6]
+        ratios = [1.1]
+        adx28s = [20,]
+        adx14s = [20]
+        adx7s = [20]
+        abs_macd_zScores = [1.0]   # absolute value of z-score, not normal z-score
+        extreme_rsis = [True, False, "either"]
+        normal_targets = [0.3,0.4,0.5]
+        upper_targets = [0.6,0.7,0.8,0.9]
+        upper_stop_losss = [-0.1]
+        normal_stop_losss = [-0.5]
+
+first loop: 9 rows
+nt index = 3
+nsl index = 101
+ut = 18
+usl = 85
+row index = 1 (so dataframe row 1, means the 2nd row of data)
+row is a win of 0.6
+correct wins, losses, sum compared to google sheets
+
+0.0|0.1|0.2|0.3|0.4|0.3|0.2|0.1|0.0|0.1|0.0|0.1|0.2|0.3|0.4|0.3|0.4|0.5|0.6|0.7|0.8|0.7|0.6|0.5|0.6|0.7|0.6|0.5|0.6|0.7|0.8|0.9|0.8|0.9|1.0|0.9|0.8|0.7|0.6|0.7|0.8|0.9|0.8|0.9|1.0|1.1|1.2|1.1|1.0|1.1|1.2|1.3|1.2|1.3|1.2|1.1|1.0|0.9|0.8|0.7|0.8|0.7|0.8|0.9|0.8|0.7|0.6|0.7|0.8|0.7|0.6|0.5|0.4|0.3|0.2|0.3|0.4|0.3|0.2|0.1|0.2|0.3|0.2|0.1|0.0|-0.1|0.0|0.1|0.0|-0.1|-0.2|-0.3|-0.4|-0.3|-0.2|-0.1|0.0|-0.1|-0.2|-0.3|-0.4|-0.5|-0.6|-0.7|-0.8|-0.9|-1.0|-1.1|-1.2|-1.1|-1.0|-0.9|-1.0|-1.1|-1.0|-0.9|-0.8|-0.7|-0.6|-0.5|-0.4|-0.5|-0.6|-0.7|-0.8|-0.7|-0.6|-0.5|-0.6|-0.7|-0.8|-0.9|-1.0|-1.1|-1.2|-1.3|-1.2|-1.1|-1.0|-1.1|-1.2|-1.3|-1.2|-1.1|-1.2|-1.3|-1.4|-1.5|-1.6|-1.7|-1.8|-1.9|-1.8|-1.9|-2.0|-2.1|-2.0|-1.9|-1.8|-1.9|-1.8|-1.9|-2.0|-2.1|-2.2
+
+numba version gets correct indexes for row 1
+correct # of rows 1 2 3 4 13 22 24 27 38
+    first few prices: -2.2 -0.6 -0.2
+first data row worked perfect
+
+all 36 of the first batch have the same sums. also same final ranking
+correct wins, losses, sum compared to google sheets
+
+if python is right, then this numba is right

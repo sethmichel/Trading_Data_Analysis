@@ -1,4 +1,0 @@
-my data looks like this (this is the headers and 1 row of data)
-Date	Ticker	Entry Time	Exit Time	Time in Trade	Dollar Change	Percent Change	Total Investment	Entry Price	Exit Price	Trade Type	Qty	Best Exit Price	Best Exit Percent	Worst Exit Price	Worst Exit Percent	Entry Rsi	Entry Macd Val	Entry Macd Avg	Entry Atr14	Entry Atr28	Entry Volatility Percent	Entry Volatility Ratio	0.3
-4-9-25	MARA	6:37:06	6:37:24	0:00:18	3.80	0.38	998.45	10.51	10.47	short	95	10.380	1.420	10.70	-1.61	49.20	0.04	0.04	0.08	0.06	0.73	1.3	1
-'ticker' tells the stock id (there are 7 different ones), entry time, exit time, time in trade are timstamps, most other columns are floats, trade type is 'short' or 'buy', and the column '0.3' basically tells if the trade was a success or not; it says if it reached the target price, and it's 1 or 0

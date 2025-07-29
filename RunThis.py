@@ -31,7 +31,8 @@ def Get_File_Names(month, day, year):
         if (os.path.exists(raw_trades_name) == False):
             raw_trades_name_on_demand = raw_trades_name.replace('.csv', '_On_Demand.csv')
             if (os.path.exists(raw_trades_name_on_demand) == False):
-                raise FileNotFoundError(f"Could not find file {raw_trades_name} or {raw_trades_name_on_demand}")
+                print(f"--SKIPPING: Could not find file {raw_trades_name.split('/')[3]} or {raw_trades_name_on_demand.split('/')[3]}")
+                return None, None
             else:
                 file_names.append(raw_trades_name_on_demand)
         else:
@@ -40,7 +41,8 @@ def Get_File_Names(month, day, year):
         if (os.path.exists(raw_market_data_name) == False):
             raw_market_data_name_on_demand = raw_market_data_name.replace('.csv', '_On_Demand.csv')
             if (os.path.exists(raw_market_data_name_on_demand) == False):
-                raise FileNotFoundError(f"Could not find file {raw_market_data_name} or {raw_market_data_name_on_demand}")
+                print(f"--SKIPPING: Could not find file {raw_market_data_name.split('/')[3]} or {raw_market_data_name_on_demand.split('/')[3]}")
+                return None, None
             else:  
                 file_names.append(raw_market_data_name_on_demand)
         else:
@@ -65,15 +67,17 @@ def Create_Summary_Csv(date):
 
         # use a function bec some files have 'On_Demand' in them (I want to keep that special title)
         raw_trades_name, raw_market_data_name = Get_File_Names(month, day, year)
+        if (raw_trades_name == None or raw_market_data_name == None):
+            return
+        
         trade_summary_name = f"{summarized_final_trades_dir}/Summary_{date}.csv"
 
         # 2) normalize raw trades so it's readable and each trade is 1 line.
-        #   -- uses raw trades in 1tosRawCsvs-TODO
-        print(f"1) Normalizing raw trades")
-        print(f"file names -> \nraw trades: {raw_trades_name}, \nraw market data {raw_market_data_name}\n")
+        print(f"--{raw_trades_name.split('/')[3]} & {raw_market_data_name.split('/')[3]}")
 
         raw_trade_df = Parser.CreateDf(raw_trades_name)            # creates the df of unreadable raw data
         normalized_df = Parser.Normalize_Raw_Trades(raw_trade_df)  # makes the data readable (not adding market data yet)
+        normalized_df = Parser.Add_Running_Sums(normalized_df)
 
         # 3) add market data to the trade summary
         final_df = Parser.Add_Market_Data(normalized_df, raw_market_data_name)
@@ -102,10 +106,10 @@ def Bulk_Create_Summary_Csvs():
         deletion_dir = 'Csv_Files/3_Final_Trade_Csvs'
         if os.path.exists(deletion_dir):
             for filename in os.listdir(deletion_dir):
-                file_path = os.path.join(deletion_dir, filename)
+                file_path = f"{deletion_dir}/{filename}"
                 if os.path.isfile(file_path):
                     os.remove(file_path)
-                    print(f"Deleted: {file_path}")
+                    print(f"Deleted: {file_path.split('/')[2]}")
         print("\n")
 
         # Create dates list by going over all files in dates_source
@@ -130,7 +134,7 @@ def Bulk_Create_Summary_Csvs():
                 print(f"error for date: {date}. this process uses each date in tos raw todo trades. it's doing it in bulk so I probably don't have market data for this day. error: {e}")
         
         # Combine all individual CSV files into one combined file
-        print("Combining all individual CSV files into Bulk_Combined.csv...")
+        print("\nCombining all individual CSV files into Bulk_Combined.csv...")
         combined_df = pd.DataFrame()
         
         for date in valid_dates:
@@ -138,16 +142,16 @@ def Bulk_Create_Summary_Csvs():
             if os.path.exists(csv_file_path):
                 df = pd.read_csv(csv_file_path)
                 combined_df = pd.concat([combined_df, df], ignore_index=True)
-                print(f"Added {csv_file_path} to combined file")
+                print(f"Added {csv_file_path.split('/')[2]} to combined file")
             else:
-                print(f"Warning: {csv_file_path} not found, skipping...")
+                print(f"SKIPPING: {csv_file_path.split('/')[2]} not found")
         
         # Save the combined file
         combined_file_path = f"{summarized_final_trades_dir}/Bulk_Combined.csv"
         combined_df.to_csv(combined_file_path, index=False)
-        print(f"Combined file saved to: {combined_file_path}")
+        print(f"\nCombined file saved to: {combined_file_path}")
         print(f"Total rows in combined file: {len(combined_df)}")
-
+        
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
