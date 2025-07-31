@@ -682,6 +682,65 @@ def Make_New_Csv_At_X_Line():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+def Check_Timestamp_Gaps():
+    try:
+        gap_size = 7 # seconds
+        source_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        
+        def time_to_seconds(time_str):
+            """Convert HH:MM:SS to total seconds"""
+            parts = time_str.split(':')
+            hours = int(parts[0])
+            minutes = int(parts[1])
+            seconds = int(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        
+        # Process each CSV file in the directory
+        csv_files = [f for f in os.listdir(source_dir) if f.endswith('.csv')]
+        
+        for filename in csv_files:
+            file_path = os.path.join(source_dir, filename)            
+            df = pd.read_csv(file_path)
+            
+            # Check if Time column exists
+            if 'Time' not in df.columns:
+                print(f"  Warning: No 'Time' column found in {filename}")
+                return
+            
+            # Convert timestamps to seconds for comparison
+            time_seconds = []
+            for time_str in df['Time']:
+                try:
+                    seconds = time_to_seconds(str(time_str))
+                    time_seconds.append(seconds)
+                except:
+                    print(f"  Warning: Invalid time format '{time_str}' in {filename}")
+                    return
+            
+            # Check for gaps of x seconds or more
+            gaps_found = False
+            for i in range(1, len(time_seconds)):
+                if time_seconds[i] is None or time_seconds[i-1] is None:
+                    continue
+                    
+                gap = time_seconds[i] - time_seconds[i-1]
+                
+                # Check for gaps of X seconds or more
+                if gap >= gap_size:
+                    if not gaps_found:
+                        print(f"  **BAD Gaps found in {filename}:")
+                        gaps_found = True
+                    
+                    # Line number is i+2 because: i is 0-indexed, +1 for 1-indexed, +1 for header
+                    line_number = i + 2
+                    print(f"    Line {line_number}: Gap of {gap} seconds")
+            
+            if not gaps_found:
+                print(f"  GOOD No gaps of {gap_size}+ seconds found in {filename}")
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+    
 
 
 #Print_Volatility_Counts()
@@ -694,6 +753,7 @@ def Make_New_Csv_At_X_Line():
 #Add_Volatility_Ratio()
 #Re_Order_Columns()
 #Make_New_Csv_At_X_Line()
+#Check_Timestamp_Gaps()
 
 
 
