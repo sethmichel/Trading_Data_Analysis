@@ -47,13 +47,13 @@ def Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_D
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-
+# actual logs have qty as a string, cross logs have it as a float. no idea why
 def QTYCorrector(qty):
     try:
         # Convert qty to a number, remove '+' if it's present
-        if qty.startswith("+"):
-            qty = qty[1:]
         if isinstance(qty, str):
+            if qty.startswith("+"):
+                qty = qty[1:]
             qty = float(qty)
         return qty
     except Exception as e:
@@ -511,7 +511,19 @@ def Was_Target_Hit(price_movement, target):
         
         elif (target == 'Target 0.2,0.9,-0.5,-0.2'):
             return Helper_Was_Target_Hit_4(price_movement, t1=0.2,sl1=-0.5,t2=0.9,sl2=-0.2)
-            
+
+        elif (target == 'Target 0.3,0.9,-0.5,-0.3'):
+            return Helper_Was_Target_Hit_4(price_movement, t1=0.3,sl1=-0.5,t2=0.9,sl2=-0.3)
+    
+        elif (target == 'Target 0.2,0.9,-0.5,-0.3'):
+                return Helper_Was_Target_Hit_4(price_movement, t1=0.2,sl1=-0.5,t2=0.9,sl2=-0.3)
+
+        elif (target == 'Target 0.5,0.9,-0.4,-0.3'):
+                    return Helper_Was_Target_Hit_4(price_movement, t1=0.5,sl1=-0.4,t2=0.9,sl2=-0.3)
+
+        elif (target == 'Target 0.2,0.9,-0.5,-0.1'):
+                return Helper_Was_Target_Hit_4(price_movement, t1=0.2,sl1=-0.5,t2=0.9,sl2=-0.1)
+
         elif (target == 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'):
             return Helper_Was_Target_Hit_6(price_movement, t1=0.4,sl1=-0.3,t2=0.5,sl2=-0.1,t3=0.6,sl3=0.4)
     
@@ -597,17 +609,15 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
 
             if (exit_time_reached == True and macd_cross_reached == True):
                 #processed_price_movement = Post_Process_Price_Movement(price_movement)
-                normalized_df.at[idx, 'Target 0.3,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.3,-0.3')
-                normalized_df.at[idx, 'Target 0.2,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.2,-0.5')
                 normalized_df.at[idx, 'Target 0.5,0.9,-0.1,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.1,-0.5')
                 normalized_df.at[idx, 'Target 0.2,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.4,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.9,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.5,0.8,-0.3,0.3'] = Was_Target_Hit(price_movement, 'Target 0.5,0.8,-0.3,0.3')
-                normalized_df.at[idx, 'Target 0.4,0.5,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.5,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.4,0.6,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.4,0.6,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.5,0.9,-0.4,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.4,-0.1')
                 normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.2'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.2')
-                normalized_df.at[idx, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4'] = Was_Target_Hit(price_movement, 'Target 0.4,-0.3,0.5,-0.1,0.6,0.4')
+
+                normalized_df.at[idx, 'Target 0.3,0.9,-0.5,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.3,0.9,-0.5,-0.3')
+                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.3')
+                normalized_df.at[idx, 'Target 0.5,0.9,-0.4,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.4,-0.3')
+                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.1')
+
                 normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
                 normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
                 normalized_df.at[idx, 'Best Exit Percent'] = round(curr_best_percent, 2)
@@ -615,6 +625,8 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
                 normalized_df.at[idx, 'Price Movement'] = '|'.join(map(str, price_movement))
 
                 return normalized_df
+        
+        raise ValueError(f"never hit an exit condition. ticker: {ticker}")
             
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)

@@ -63,18 +63,7 @@ def Check_logical_overlap_of_volatility_metrics():
     plt.show()
 
 
-'''
-Check_logical_overlap_of_volatility_metrics() tells us if a metric is duplicate info on other metrics
-This will tell us when/how to use the metric 
-'''
-def Grid_Search_Bayesian_Optimization_on_Volatility_Metrics():
-    pass
-
-
 
 # tells us if a metric is duplicate info on other metrics
 Check_logical_overlap_of_volatility_metrics()
 
-# What is the best combination of all my filters and thresholds that gives the highest return, win rate, or Sharpe over my historical trades?
-# this is also parameter tuning
-Grid_Search_Bayesian_Optimization_on_Volatility_Metrics()
