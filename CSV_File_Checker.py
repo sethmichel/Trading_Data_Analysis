@@ -12,6 +12,29 @@ import csv
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
+'''
+each bullet is its own function in this file
+
+Editing:
+-create a new csv of all 1 ticker (so split csv files into ticker files)
+-reorganize csv by columns
+-drop certain columns
+-merge market data files into 1 file. works with the files having different columns
+-move all files in a folder to another folder
+-change all timestamps in 1 file. good for if I forget to set the starting timestamp in on demand
+-add volatility $ column
+
+Anaylsis
+-find the avg time that each ticker takes to reach volatility % x. useful for seeing how long a ticker 
+        takes to "normalize" at market open
+
+
+Checking:
+??check each csv columns are in right order
+??Check counts of each ticker to tell if one was forgotten for some reason
+'''
+
+
 
 # make a new csv of all 1 ticker
 def Ticker_Csv():
@@ -73,6 +96,7 @@ def Column_Sort_Csv():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+# drop certain columns
 def Only_Keep_Some_Columns_Csv():
     try:
         columns_to_keep = ['Atr14', 'Volatility', 'Time']
@@ -98,60 +122,8 @@ def Only_Keep_Some_Columns_Csv():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-# prints a list of all dates of csv's in a dir
-def Get_Group_Of_Dates():
-    try:
-        file_path = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
-        
-        # Get all CSV files in the directory
-        csv_files = [f for f in os.listdir(file_path) if f.endswith('.csv')]
-        
-        # Extract dates from filenames
-        dates = []
-        for filename in csv_files:
-            if filename.startswith('Raw_Market_Data_'):
-                # Extract the date part after "Raw_Market_Data_"
-                date_part = filename.replace('Raw_Market_Data_', '').replace('.csv', '')
-                
-                # Remove "_On_Demand" suffix if present
-                if '_On_Demand' in date_part:
-                    date_part = date_part.replace('_On_Demand', '')
-                
-                dates.append(date_part)
-        
-        # Sort dates chronologically
-        dates.sort()
-        
-        # Output to terminal
-        print("Available dates in CSV files:")
-        print("['" + "', '".join(dates) + "']")
-        
-        print(f"\nTotal number of dates: {len(dates)}")
-        
-        return dates
-    
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-def Print_Volatility_Counts():
-    try:
-        volatilities = [0.5, 0.6, 0.7, 0.8, 0.9]
-        bulk_csv_data = "Csv_Files/3_Final_Trade_Csvs/Bulk_Combined.csv"
-        df = pd.read_csv(bulk_csv_data)
-        counts = {}
-
-        for volatility in volatilities:
-            filtered_df = df[(df['Entry Volatility Percent'] >= volatility) & (df['Entry Volatility Ratio'] >= 1)]
-            counts[str(volatility)] = filtered_df.shape[0]
-
-        print(counts)
-        
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-# finds the average time that ecah ticker reaches volatility x. reason is if it's still under by like 6:45 is that normal or bad?
+# finds the average time that each ticker reaches volatility x. reason is if it's still under by like 6:45 is 
+#      that normal or bad?
 def Volatility_Time_By_Ticker():
     try:
         data_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
@@ -315,99 +287,6 @@ def Change_Timestamps_of_Market_Data():
         
         print(f"Timestamps corrected and saved to: {output_filename}")
 
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-# for if you have market data, but take it again adding new indicators
-# huge issue is idk if either of them used threading so the order might be off and the timestamps might be 1 second off
-# strat: split them into ticker df's, find the start point, and just copy they by row. then merge them and order by timestamp
-def Merge_Market_Data():
-    try:
-        original_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025.csv"  # all other data
-        new_data_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025_On_Demand.csv"  # new indicator columns
-        output_csv_path = f"Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025_Final.csv"
-
-        df1 = pd.read_csv(original_path)
-        df2 = pd.read_csv(new_data_path)
-        
-        # Get unique tickers
-        tickers = df1['Ticker'].unique()
-        
-        merged_ticker_dfs = []
-        
-        for ticker in tickers:
-            # Group each ticker into its own dataframe
-            ticker_df1 = df1[df1['Ticker'] == ticker].copy()
-            ticker_df2 = df2[df2['Ticker'] == ticker].copy()
-            
-            # Make sure the timestamps are in ascending order
-            ticker_df1 = ticker_df1.sort_values(by='Time').reset_index(drop=True)
-            ticker_df2 = ticker_df2.sort_values(by='Time').reset_index(drop=True)
-            
-            # Columns to merge from csv2
-            columns_to_merge = ['Adx28', 'Adx14', 'Adx7']
-            
-            # Copy the columns
-            for col in columns_to_merge:
-                if col in ticker_df2.columns:
-                    ticker_df1[col] = ticker_df2[col]
-            
-            merged_ticker_dfs.append(ticker_df1)
-            
-        # Merge the ticker dataframes back together
-        final_df = pd.concat(merged_ticker_dfs, ignore_index=True)
-        
-        # Reorder the columns of the final dataframe
-        final_column_order = [
-            'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
-            'Adx28', 'Adx14', 'Adx7', 'Time'
-        ]
-        
-        # Ensure all requested columns exist, creating them if they don't
-        for col in final_column_order:
-            if col not in final_df.columns:
-                final_df[col] = None
-        
-        final_df = final_df[final_column_order]
-        
-        # Sort the final dataframe by time
-        final_df = final_df.sort_values(by='Time').reset_index(drop=True)
-        
-        # Save the dataframe as a new csv file
-        final_df.to_csv(output_csv_path, index=False)
-        
-        print(f"Successfully merged CSVs and saved to {output_csv_path}")
-
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-def Append_Csv_To_Other_Csv():
-    try:
-        base_csv = f"Csv_Files/csvs_to_edit/Raw_Market_Data_06-11-2025_On_Demand.csv"
-        csv_to_append = f"Csv_Files/csvs_to_edit/6-11 vol data added.csv"
-        dest_path = f"Csv_Files/csvs_to_edit/Raw_Market_Data_06-11-2025_On_Demand_Final.csv"
-        
-        print(f"Appending {csv_to_append} to {base_csv}...")
-        
-        # Read the base CSV
-        base_df = pd.read_csv(base_csv)
-        print(f"Base CSV has {len(base_df)} rows")
-        
-        # Read the CSV to append
-        append_df = pd.read_csv(csv_to_append)
-        print(f"CSV to append has {len(append_df)} rows")
-        
-        # Concatenate the dataframes
-        combined_df = pd.concat([base_df, append_df], ignore_index=True)
-        print(f"Combined CSV has {len(combined_df)} rows")
-        
-        # Save the combined dataframe to the destination path
-        combined_df.to_csv(dest_path, index=False)
-        
-        print(f"Successfully appended CSV and saved to: {dest_path}")
-        
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
@@ -682,40 +561,117 @@ def Make_New_Csv_At_X_Line():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-def Check_Timestamp_Gaps():
+
+    
+#------------------------------------------------------------------------------------------
+
+# validate the file name is right and the date is correct format
+def Check_File_Name(file_path, market_data_file):
+    try:
+        parts = market_data_file.split("_")
+        parts[-1] = parts[-1][:-4]  # cut off '.csv' from the end (we already know it's there)
+
+        if parts[:3] != ["Raw", "Market", "Data"]:
+            print(f"BAD: bad filename: {market_data_file}")
+            return False
+        
+        if len(parts) > 4:
+            if (parts[4:6] != ['On', 'Demand']):
+                print(f"BAD: bad filename: {market_data_file}")
+                return False
+        
+        month, day, year = parts[3].split("-")
+        if (len(month) != 2 or len(day) != 2 or len(year) != 4):
+            print(f"BAD: bad filename: {market_data_file}")
+            return False
+        
+        print(f"Filename valid: {market_data_file}")
+        return True
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+    
+
+# checks that each required column has values for each row. not all columns are checked
+# if it's missing values I either must calculate it and add it, or there was an error in data recording
+def Check_Required_Market_Values(file_path, market_data_file):
+    try:
+        required_column_values = ["Ticker","Price","Val","Avg","Atr14","Atr28","Rsi","Volume","Adx28","Adx14",
+                                  "Adx7","Volatility Percent","Volatility Ratio","Time"]
+        
+        df = pd.read_csv(file_path)
+        missing_counts = {col: 0 for col in required_column_values}
+        missing_row_numbers = []
+        
+        for row_idx, row in df.iterrows():
+            row_number = row_idx + 2  # +2 because: row_idx is 0-indexed, +1 for 1-indexed, +1 for header
+            row_has_missing = False
+            
+            # Check each required column
+            for col in required_column_values:
+                if pd.isna(row[col]) or str(row[col]).strip() == '':
+                    missing_counts[col] += 1
+                    row_has_missing = True
+            
+            # If this row has any missing values, add to the list (limit to first 5)
+            if row_has_missing and len(missing_row_numbers) < 5:
+                missing_row_numbers.append(row_number)
+        
+        # Check if there are any missing values
+        total_missing = sum(missing_counts.values())
+        
+        if total_missing > 0:
+            print(f"  ✗ BAD: Missing values found in {market_data_file}")
+            print(f"    Total missing values: {total_missing}")
+            
+            # Print missing counts for each column
+            print("    Missing values by column:")
+            for col, count in missing_counts.items():
+                if count > 0:
+                    print(f"      {col}: {count} missing")
+            
+            # Print first 5 row numbers with missing values
+            if missing_row_numbers:
+                print(f"    First {len(missing_row_numbers)} row(s) with missing values (regardless of column): {missing_row_numbers}")
+            
+            return False
+        else:
+            print(f"  ✓ GOOD: No missing values found in {market_data_file}")
+            return True
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+    
+
+# checks market data file and returns false if a row has a gap of at least x seconds compared to the previous row
+def Check_Timestamp_Gaps(market_file_path, market_file):
     try:
         gap_size = 7 # seconds
-        source_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
         
         def time_to_seconds(time_str):
-            """Convert HH:MM:SS to total seconds"""
+            # Convert HH:MM:SS to total seconds
             parts = time_str.split(':')
             hours = int(parts[0])
             minutes = int(parts[1])
             seconds = int(parts[2])
             return hours * 3600 + minutes * 60 + seconds
         
-        # Process each CSV file in the directory
-        csv_files = [f for f in os.listdir(source_dir) if f.endswith('.csv')]
+        df = pd.read_csv(market_file_path)
         
-        for filename in csv_files:
-            file_path = os.path.join(source_dir, filename)            
-            df = pd.read_csv(file_path)
-            
-            # Check if Time column exists
-            if 'Time' not in df.columns:
-                print(f"  Warning: No 'Time' column found in {filename}")
-                return
-            
-            # Convert timestamps to seconds for comparison
-            time_seconds = []
-            for time_str in df['Time']:
-                try:
-                    seconds = time_to_seconds(str(time_str))
-                    time_seconds.append(seconds)
-                except:
-                    print(f"  Warning: Invalid time format '{time_str}' in {filename}")
-                    return
+        # Check if Time column exists
+        if 'Time' not in df.columns:
+            print(f"  Warning: No 'Time' column found in {market_file}")
+            return False
+        
+        # Convert timestamps to seconds for comparison
+        time_seconds = []
+        for time_str in df['Time']:
+            try:
+                seconds = time_to_seconds(str(time_str))
+                time_seconds.append(seconds)
+            except:
+                print(f"  Warning: Invalid time format '{time_str}' in {market_file}")
+                return False
             
             # Check for gaps of x seconds or more
             gaps_found = False
@@ -728,7 +684,7 @@ def Check_Timestamp_Gaps():
                 # Check for gaps of X seconds or more
                 if gap >= gap_size:
                     if not gaps_found:
-                        print(f"  **BAD Gaps found in {filename}:")
+                        print(f"  **BAD Gaps found in {market_file}:")
                         gaps_found = True
                     
                     # Line number is i+2 because: i is 0-indexed, +1 for 1-indexed, +1 for header
@@ -736,24 +692,148 @@ def Check_Timestamp_Gaps():
                     print(f"    Line {line_number}: Gap of {gap} seconds")
             
             if not gaps_found:
-                print(f"  GOOD No gaps of {gap_size}+ seconds found in {filename}")
+                print(f"  GOOD No gaps of {gap_size}+ seconds found in {market_file}")
+                return True
+            else:
+                return False
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
+# checks if any tickers in market data were dropped from recording. it counts them and returns false if the max-min is > x
+def Check_Ticker_Counts_Consistancy(market_file_path, market_file):
+    try:
+        df = pd.read_csv(market_file_path)
+        
+        # Count occurrences of each ticker in the 'Ticker' column
+        ticker_counts = df['Ticker'].value_counts().to_dict()
+        
+        # Print the count of each ticker
+        print(f"\nTicker counts for {market_file}:")
+        print("  " + ", ".join(f"{ticker}: {count}" for ticker, count in ticker_counts.items()))
+        
+        # Check if the difference between largest and smallest count is >= 5
+        if len(ticker_counts) > 0:
+            max_count = max(ticker_counts.values())
+            min_count = min(ticker_counts.values())
+            difference = max_count - min_count
+            
+            if difference >= 5:
+                print(f"  ✗ BAD: Ticker count inconsistency detected in {market_file}")
+                print(f"    Difference ({difference}) >= 5")
+                if (min_count == 16302 and difference == 79):
+                    print("you know about this one, it's 5-20-2025, tesla, 79 difference. I don't really care so I'm skipping it")
+                    return True
+                return False
+            else:
+                print(f"  ✓ GOOD: Ticker counts are consistent in {market_file}")
+                print(f"    Difference ({difference}) < 5")
+                return True
+        else:
+            print(f"  ✗ BAD: No tickers found in {market_file}")
+            return False
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
     
 
+# checks if market data header row is in right order AND if there's no duplicate header rows
+def Check_Market_Data_Column_Order(market_file_path, market_file):
+    try:
+        expected_headers = ["Ticker", "Price", "Val", "Avg", "Macd Z-Score", "Atr14", "Atr28", "Rsi", "Volume", "Adx28", 
+                            "Adx14", "Adx7", "Volatility Percent", "Volatility Ratio", "Time"]
+        
+        df = pd.read_csv(market_file_path)
+        actual_headers = list(df.columns)
+        
+        if actual_headers != expected_headers:
+            print(f"✗ BAD: Header order mismatch in {market_file}")
+            print(f"  Expected: {expected_headers}")
+            print(f"  Actual:   {actual_headers}")
+            return False
+        
+        # Check for duplicate header rows throughout the file
+        with open(market_file_path, 'r', newline='', encoding='utf-8') as file:
+            csv_reader = csv.reader(file)
+            header_row = next(csv_reader)  # Get the first header row
+            
+            line_number = 2  # Start from line 2 (after header)
+            duplicate_headers_found = []
+            
+            for row in csv_reader:
+                # Check if this row matches the header row
+                if row == header_row:
+                    duplicate_headers_found.append(line_number)
+                    print(f"    ✗ Duplicate header found at line {line_number}")
+                
+                line_number += 1
+        
+        if duplicate_headers_found:
+            print(f"  ✗ BAD: Found {len(duplicate_headers_found)} duplicate header row(s) at lines: {duplicate_headers_found}")
+            return False
+        else:
+            print(f"    ✓ No duplicate header rows and headers are in right order for: {market_file}")
+            return True
 
-#Print_Volatility_Counts()
-#Volatility_Time_By_Ticker()
-#move_all_csvs_back()
-#Change_Timestamps_of_Market_Data()
-#Merge_Market_Data()
-#Append_Csv_To_Other_Csv()
-#Add_Volatility_Percent()
-#Add_Volatility_Ratio()
-#Re_Order_Columns()
-#Make_New_Csv_At_X_Line()
-#Check_Timestamp_Gaps()
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+    
+
+# controller to handle all validity checks of csv files
+def Authenticator_Freeway():
+    try:
+        market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
+
+        # the reason I split it into for loops and not 1 big for loop is so the results are organized
+
+        # 1) check market order header is correct and there's not duplicate headers
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Check_Market_Data_Column_Order(file_path, market_data_file) == False):
+                return False
+        
+        # 2) check counts of tickers for each file. this'll tell if a ticker stopped being recorded for some reason
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Check_Ticker_Counts_Consistancy(file_path, market_data_file) == False):
+                return False
+        print("\n")
+        
+        # 3) check time gaps (if there's a big gap in recording)
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Check_Timestamp_Gaps(file_path, market_data_file) == False):
+                return False
+        print("\n")
+            
+        # 4) check required row values: every row has Ticker,Price,Val,Avg,Atr14,Atr28,Rsi,Volume,Adx28,Adx14,Adx7,Volatility Percent,Volatility Ratio,Time
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Check_Required_Market_Values(file_path, market_data_file) == False):
+                return False
+
+        # 5) make sure the file name is correct and date is correct format
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Check_File_Name(file_path, market_data_file) == False):
+                return False
+
+        print("\nFiles are valid")
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+    
+
+Authenticator_Freeway()
+
+
+
+
+
+
+
 
 
 
