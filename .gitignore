@@ -1,14 +1,19 @@
 ### Python ###
 
 # my stuff to ignore
-Csv_Files/
+Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data/
+Csv_Files/1_tos_Raw_Trades/trade_Data/
+Csv_Files/1_tos_Raw_Trades/Unedited_All_Trades_Data/
+Csv_Files/2_Raw_Market_Data/Market_Data/
+Csv_Files/3_Final_Trade_Csvs/
+
 XG_Boost/Output/1_overview
 XG_Boost/Output/2_interactions_and_ranges
 XG_Boost/Output/3_correlations
 XG_Boost/Output/4_datapoint_analysis
 XG_Boost/Data.csv
-Logs.txt
 
+Logs.txt
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

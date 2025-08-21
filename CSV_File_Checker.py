@@ -40,7 +40,7 @@ Checking:
 def Ticker_Csv():
     try:
         ticker = 'SOXL'
-        file_path = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-18-2025.csv'
+        file_path = 'Csv_Files/2_Raw_Market_Data/Market_Data/Raw_Market_Data_06-18-2025.csv'
         df = pd.read_csv(file_path)
         
         # Filter rows where the "Ticker" column matches the specified ticker
@@ -209,55 +209,6 @@ def Volatility_Time_By_Ticker():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-'''
-moves all raw trades and raw market data csv's back to the todo folder
-'''
-def move_all_csvs_back():
-    try:
-        used_market_data_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
-        todo_market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
-        used_trade_data_dir = "Csv_Files/1_tos_Raw_Trades/Used_Trade_Data"
-        todo_trade_data_dir = "Csv_Files/1_tos_Raw_Trades/TODO_Trade_Data"
-        
-        # Ensure the TODO directories exist
-        os.makedirs(todo_market_data_dir, exist_ok=True)
-        os.makedirs(todo_trade_data_dir, exist_ok=True)
-        
-        # Move files from used_market_data_dir to todo_market_data_dir
-        market_files_moved = 0
-        if os.path.exists(used_market_data_dir):
-            for filename in os.listdir(used_market_data_dir):
-                if filename.endswith('.csv'):
-                    source_path = os.path.join(used_market_data_dir, filename)
-                    destination_path = os.path.join(todo_market_data_dir, filename)
-                    
-                    # Move the file
-                    shutil.move(source_path, destination_path)
-                    market_files_moved += 1
-                    print(f"Moved market data: {filename}")
-        
-        # Move files from used_trade_data_dir to todo_trade_data_dir
-        trade_files_moved = 0
-        if os.path.exists(used_trade_data_dir):
-            for filename in os.listdir(used_trade_data_dir):
-                if filename.endswith('.csv'):
-                    source_path = os.path.join(used_trade_data_dir, filename)
-                    destination_path = os.path.join(todo_trade_data_dir, filename)
-                    
-                    # Move the file
-                    shutil.move(source_path, destination_path)
-                    trade_files_moved += 1
-                    print(f"Moved trade data: {filename}")
-        
-        print(f"\nFile moving complete!")
-        print(f"Market data files moved: {market_files_moved}")
-        print(f"Trade data files moved: {trade_files_moved}")
-        print(f"Total files moved: {market_files_moved + trade_files_moved}")
-        
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
 # if I use the wrong starting timestamp in on demand, this'll correct it
 def Change_Timestamps_of_Market_Data():
     try:
@@ -295,7 +246,7 @@ def Change_Timestamps_of_Market_Data():
 # (atr14 / price) * 100
 def Add_Volatility_Percent():
     try:
-        dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
         csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
         
         for csv_file in csv_files_list:
@@ -351,7 +302,7 @@ def Add_Volatility_Percent():
 # add volaitlity ratio to all market data csv's
 # REQUIRED: must have volatility percent already
 def Add_Volatility_Ratio():
-    dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+    dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
     csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
 
     for csv_file in csv_files_list:
@@ -408,8 +359,8 @@ def Add_Volatility_Ratio():
 
 # changes 1 column name in all csv files
 def Change_Column_Name():
-    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/USED_Market_Data'
+    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
     original_column_name = "Vol"
@@ -453,7 +404,7 @@ def Change_Column_Name():
 # edits all values in 1 column in 1 csv file
 # need this in case you add 0's to the end of numbers accidently. like 0.5800 instead of 0.58
 def Edit_Values():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     file_path = f"{market_data_dir}/Raw_Market_Data_04-09-2025_On_Demand.csv"
     temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_04-09-2025_On_Demand.csv"
     
@@ -499,7 +450,7 @@ def Edit_Values():
 # swtich the order of columns
 def Re_Order_Columns():
     # --- Load and reorder columns for Raw_Market_Data_06-20-2025_Final.csv ---
-    csv_path = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data/Raw_Market_Data_06-24-2025.csv"
+    csv_path = "Csv_Files/2_Raw_Market_Data/Market_Data/Raw_Market_Data_06-24-2025.csv"
     desired_order = [
         'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
         'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time'
@@ -783,7 +734,7 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
 # controller to handle all validity checks of csv files
 def Authenticator_Freeway():
     try:
-        market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+        market_data_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
         market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
         # the reason I split it into for loops and not 1 big for loop is so the results are organized
@@ -837,7 +788,7 @@ Authenticator_Freeway()
 
 
 
-'''market_data_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+'''market_data_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
 other_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
 
 # Process all files in market_data_dir

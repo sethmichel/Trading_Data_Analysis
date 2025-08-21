@@ -18,6 +18,66 @@ print(f"Setting Numba to use {num_cores} threads")
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
 
+# after analysis_results file is written to, this'll read the file and store the top result for each metric, 
+#    then it'll write this in an easy to read way at the end
+def Write_Easy_To_Read_Summary():
+    try:
+        file_path = "Analysis_Results.txt"
+        top_result_lines = []
+        
+        with open(file_path, "r") as file:
+            for line in file:
+                # Check if line starts with "1)" 
+                if line.strip().startswith("1)"):
+                    top_result_lines.append(line.strip())
+        
+        message = f"\n\nSUMMARY\n"
+        
+        # edit the results
+        # 1) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.23, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
+        for line in top_result_lines:
+            line = line[6:]   # cut "1) id: "
+            comma_splits = line.split(",")
+            param_str = comma_splits[0]   # 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3
+            param_list = param_str.split("|")
+
+            # add parameters
+            message += f"Time:{':'.join(param_list[0].split(':')[:2])}, "  # keep hours and minutes, cut off seconds
+            if (param_list[1] != "0.0"):
+                message += f"vol%: {param_list[1]}, "
+            if (param_list[2] != "0.0"):
+                message += f"ratio: {param_list[2]}, "
+            if (param_list[3] != "0.0"):
+                message += f"adx28: {param_list[3]}, "
+            if (param_list[4] != "0.0"):
+                message += f"adx14: {param_list[4]}, "
+            if (param_list[5] != "0.0"):
+                message += f"adx7: {param_list[5]}, "
+            if (param_list[6] != 'either'):
+                message += f"rsi: {param_list[6]}, "
+
+            # add targets and stop losses
+            message += "\n      "
+            if len(param_list) == 11:  # 4 final parameters (t1, t2, sl1, sl2)
+                message += f"t1: {param_list[7]}, t2: {param_list[8]}, sl1: {param_list[9]}, sl2: {param_list[10]}"
+            elif len(param_list) == 13:  # 6 final parameters (t1, t2, t3, sl1, sl2, sl3)
+                message += f"t1: {param_list[7]}, t2: {param_list[8]}, t3: {param_list[9]}, sl1: {param_list[10]}, sl2: {param_list[11]}, sl3: {param_list[12]}"
+
+            # add metrics like sum and count
+            message += "\n     "
+            message += f"{','.join(comma_splits[1:])}\n\n"
+
+            # just a sparator
+            message += "-------------------------------------------------------------\n"
+        
+        # Write the summary to the end of the file
+        with open(file_path, "a") as file:
+            file.write(message)
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
 def Round_Key_Values(key):
     """
     Rounds all numerical values in a pipe-delimited key string to 1 decimal place.
@@ -79,12 +139,13 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
             message2 = "\n"
             for i, key in enumerate(all_sublists.keys()):
                 sublist = all_sublists[key]
-                rounded_sum = round(sublist['sum'], 2)
+                rounded_sum = round(sublist['sum'], 1)
                 sublist['count'] = sublist['wins'] + sublist['losses'] + sublist['neither']
+                sublist['avg'] = round(rounded_sum/sublist['count'], 2)
                 
                 # Round all numerical values in the key string for display
                 rounded_key = Round_Key_Values(key)
-                message2 += f"{i+1}) id: {rounded_key}, sum: {rounded_sum:.2f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
+                message2 += f"{i+1}) id: {rounded_key}, avg: {sublist['avg']}, sum: {rounded_sum:.1f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
 
         elif (user_mode == 2):
             # Group sublists by volatility - current list is correct but it's all grouped together
@@ -115,12 +176,13 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
                 vol_list = sorted_sublists_by_volatility[vol]
                 for i in range(min(10, len(vol_list))):
                     key, sublist = vol_list[i]
-                    rounded_sum = round(sublist['sum'], 2)
+                    rounded_sum = round(sublist['sum'], 1)
                     sublist['count'] = sublist['wins'] + sublist['losses'] + sublist['neither']
+                    sublist['avg'] = round(rounded_sum/sublist['count'], 2)
                     
                     # Round all numerical values in the key string for display
                     rounded_key = Round_Key_Values(key)
-                    message2 += f"{i+1}) id: {rounded_key}, sum: {rounded_sum:.2f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
+                    message2 += f"{i+1}) id: {rounded_key}, avg: {sublist['avg']}, sum: {rounded_sum:.1f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
 
         elif (user_mode == 3):
             message = ""
@@ -155,12 +217,13 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
 
                     for i in range(min(10, len(time_list))):
                         key, sublist = time_list[i]
-                        rounded_sum = round(sublist['sum'], 2)
+                        rounded_sum = round(sublist['sum'], 1)
                         sublist['count'] = sublist['wins'] + sublist['losses'] + sublist['neither']
+                        sublist['avg'] = round(rounded_sum/sublist['count'], 2)
                         
                         # Round all numerical values in the key string for display
                         rounded_key = Round_Key_Values(key)
-                        message2 += f"{i+1}) id: {rounded_key}, sum: {rounded_sum:.2f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
+                        message2 += f"{i+1}) id: {rounded_key}, avg: {sublist['avg']}, sum: {rounded_sum:.1f}, count: {sublist['count']}, wins: {sublist['wins']}, losses: {sublist['losses']}, neither: {sublist['neither']}\n"
 
                 message = message + message1 + "\n" + message2
                 message1 = ""
@@ -177,6 +240,9 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
         message = message.replace("'", '').replace("{", '').replace("}", '')
 
         Write_Analysis(message)
+
+        Write_Easy_To_Read_Summary()
+
         print("\nCOMPLETE\n")
         
     except Exception as e:
@@ -459,8 +525,10 @@ def Grid_Search_Start(df):
 
         how_many_final_parameters = 4
         
-        time_dict = {'times_1_10m': np.array(['6:30:00', '6:40:00', '6:50:00', '7:00:00', '7:10:00', '7:20:00', '7:30:00', '7:40:00', 
-                                              '7:50:00', '8:00:00', '8:30:00', '8:40:00','8:50:00','9:00:00'])}
+        time_dict = {'times_1_10m': np.array(['6:30:00', '6:40:00', '6:50:00', 
+                                              '7:00:00', '7:10:00', '7:20:00', '7:30:00', '7:40:00', '7:50:00', 
+                                              '8:00:00', '8:10:00', '8:20:00', '8:30:00', '8:40:00', '8:50:00', 
+                                              '9:00:00'])}
                      #'times_2_15m': np.array(['6:30:00', '6:45:00', '7:00:00', '7:15:00', '7:30:00']), 
                      #'times_3_30m': np.array(['6:30:00', '7:00:00', '7:30:00']), 
                      #'times_4_custom_1': np.array(['6:30:00', '6:45:00', '7:00:00', '7:30:00'])}

@@ -188,7 +188,7 @@ def Add_ADX_Comparisons(market_data_csv_path):
 
 
 
-csv_dir = "Csv_Files/2_Raw_Market_Data/TODO_Market_Data"
+csv_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
 
 # macd z score
 '''for filename in os.listdir(csv_dir):

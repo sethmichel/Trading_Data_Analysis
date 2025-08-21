@@ -4,7 +4,7 @@ import csv
 # change past csv market data files to include the new volatility %
 # (atr14 / price) * 100
 def Add_Volatility_Percent():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
     
     for csv_file in csv_files_list:
@@ -54,7 +54,7 @@ def Add_Volatility_Percent():
 # add volaitlity ratio to all market data csv's
 # REQUIRED: must have volatility percent already
 def Add_Volatility_Ratio():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
     
     for csv_file in csv_files_list:
@@ -108,8 +108,8 @@ def Add_Volatility_Ratio():
 
 # changes 1 column name in all csv files
 def Change_Column_Name():
-    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/USED_Market_Data'
+    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
     original_column_name = "Vol"
@@ -153,7 +153,7 @@ def Change_Column_Name():
 # edits all values in 1 column in 1 csv file
 # need this in case you add 0's to the end of numbers accidently. like 0.5800 instead of 0.58
 def Edit_Values():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
     file_path = f"{market_data_dir}/Raw_Market_Data_04-09-2025_On_Demand.csv"
     temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_04-09-2025_On_Demand.csv"
     

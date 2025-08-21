@@ -8,13 +8,10 @@ import datetime
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
-# 1) put raw tos csv's in 1_tos_Raw_Trades-TODO
-# 2) put market data in 2_Raw_Market_Data
-# 3) Running this makes new csv's in 3_Final_Trade_Csvs
 
-actual_trade_logs_dir = 'Csv_Files/1_tos_Raw_Trades/TODO_Trade_Data'          # actual trade logs
+actual_trade_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Trade_Data'               # actual trade logs
 edited_cross_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data'   # edited cross logs
-market_data_logs_dir = 'Csv_Files/2_Raw_Market_Data/TODO_Market_Data'
+market_data_logs_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
 summarized_final_trades_dir = 'Csv_Files/3_Final_Trade_Csvs'
 
 target_dir = None # this'll be either actual_trade_logs_dir or edited_cross_logs_dir
@@ -25,12 +22,6 @@ headers = ["Date", "Amount", "Entry Time", "Exit Time", "Ticker", "Entry", "Exit
 # files are just the filename, not paths
 def Create_Summary_Csv(date, market_data_file, target_log_file, mode):
     try:
-        # prep work
-        # 1: put raw trades in 1_tos_Raw_Trades-TODO
-        # 2: put market data in 2_Raw_Market_Data
-        # when it's done it'll move the tos raw trades csv into 1_tos_Raw_Trades-DONE
-        # when it's done it'll make a new csv in 3_Final_Trade_Csvs
-        
         if (market_data_file == None or target_log_file == None):
             return
         
@@ -42,7 +33,7 @@ def Create_Summary_Csv(date, market_data_file, target_log_file, mode):
             target_path = f"{edited_cross_logs_dir}/{target_log_file}"
         
         # 2) normalize raw trades so it's readable and each trade is 1 line.
-        print(f"--{market_data_file} & {target_log_file}")
+        print(f"--using {market_data_file} with {target_log_file}")
 
         raw_trade_df = Parser.CreateDf(target_path)            # creates the df of readable raw data
         normalized_df = Parser.Normalize_Raw_Trades(raw_trade_df)  # makes the data readable (not adding market data yet)
@@ -53,7 +44,7 @@ def Create_Summary_Csv(date, market_data_file, target_log_file, mode):
 
         # 4) save to new csv file
         final_df.to_csv(trade_summary_name, index=False)
-        print(f"Trade summary saved to: {trade_summary_name}")
+        print(f"Trade summary saved to: {trade_summary_name}\n")
 
         # 5) move the used market data/trade log to used folders
         #Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
@@ -216,6 +207,7 @@ def Bulk_Create_Summary_Csvs():
         # now compare to the dates in target
         valid_dates = []
         target_file_names = []
+        valid_market_file_names = []
         for file in os.listdir(target_dir):
             if file.endswith('.csv'):
                 if (mode == 1):
@@ -227,13 +219,14 @@ def Bulk_Create_Summary_Csvs():
                 if date in market_data_dates:
                     valid_dates.append(date)
                     target_file_names.append(file)
-    
+                    valid_market_file_names.append(market_data_file_names[market_data_dates.index(date)])
+
         # 3) create the data
         for i in range(0, len(valid_dates)):
-            Create_Summary_Csv(valid_dates[i], market_data_file_names[i], target_file_names[i], mode)
+            Create_Summary_Csv(valid_dates[i], valid_market_file_names[i], target_file_names[i], mode)
 
         # 4) Combine all individual CSV files into one combined file
-        print("\nCombining all individual CSV files into Bulk_Combined.csv...")
+        print("Combining all individual CSV files into Bulk_Combined.csv...")
         combined_df = pd.DataFrame()
         
         for date in valid_dates:

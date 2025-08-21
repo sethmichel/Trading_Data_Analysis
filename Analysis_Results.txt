@@ -6,157 +6,259 @@ User Mode: 3 - Best Combos for time ranges
 entry time, volatility%, ratio, adx28, 14, 7, rsi_type, t1, t2, sl1, sl2
 
 --- Top 10 results for time between 6:30:00 and whatever the interval is---
-1) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-2) id: 6:30:00|0.0|0.2|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-3) id: 6:30:00|0.0|0.5|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-4) id: 6:30:00|0.0|0.7|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-5) id: 6:30:00|0.0|0.8|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-6) id: 6:30:00|0.0|0.9|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
-7) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, sum: 17.60, count: 28, wins: 22, losses: 6, neither: 0
-8) id: 6:30:00|0.0|0.2|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, sum: 17.60, count: 28, wins: 22, losses: 6, neither: 0
-9) id: 6:30:00|0.0|0.5|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, sum: 17.60, count: 28, wins: 22, losses: 6, neither: 0
-10) id: 6:30:00|0.0|0.7|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, sum: 17.60, count: 28, wins: 22, losses: 6, neither: 0
+1) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+2) id: 6:30:00|0.0|0.2|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+3) id: 6:30:00|0.0|0.5|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+4) id: 6:30:00|0.0|0.7|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+5) id: 6:30:00|0.0|0.8|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+6) id: 6:30:00|0.0|0.9|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+7) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, avg: 0.57, sum: 18.4, count: 32, wins: 24, losses: 8, neither: 0
+8) id: 6:30:00|0.0|0.2|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, avg: 0.57, sum: 18.4, count: 32, wins: 24, losses: 8, neither: 0
+9) id: 6:30:00|0.0|0.5|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, avg: 0.57, sum: 18.4, count: 32, wins: 24, losses: 8, neither: 0
+10) id: 6:30:00|0.0|0.7|0.0|0.0|20.0|either|0.4|0.9|-0.5|-0.3, avg: 0.57, sum: 18.4, count: 32, wins: 24, losses: 8, neither: 0
 
 --- Top 10 results for time between 6:40:00 and whatever the interval is---
-1) id: 6:40:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-2) id: 6:40:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.9|-0.4|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-3) id: 6:40:00|0.0|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-4) id: 6:40:00|0.0|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.4|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-5) id: 6:40:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-6) id: 6:40:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.9|-0.4|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-7) id: 6:40:00|0.0|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-8) id: 6:40:00|0.0|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.4|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-9) id: 6:40:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
-10) id: 6:40:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.9|-0.4|-0.1, sum: 11.90, count: 29, wins: 16, losses: 13, neither: 0
+1) id: 6:40:00|0.0|0.2|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+2) id: 6:40:00|0.0|0.5|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+3) id: 6:40:00|0.0|0.7|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+4) id: 6:40:00|0.0|0.8|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+5) id: 6:40:00|0.0|0.9|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+6) id: 6:40:00|0.0|1.0|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+7) id: 6:40:00|0.3|0.0|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+8) id: 6:40:00|0.3|0.2|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+9) id: 6:40:00|0.3|0.5|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+10) id: 6:40:00|0.3|0.7|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
 
 --- Top 10 results for time between 6:50:00 and whatever the interval is---
-1) id: 6:50:00|0.6|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-2) id: 6:50:00|0.6|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-3) id: 6:50:00|0.6|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.3|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-4) id: 6:50:00|0.6|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-5) id: 6:50:00|0.6|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-6) id: 6:50:00|0.6|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.3|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-7) id: 6:50:00|0.6|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-8) id: 6:50:00|0.6|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-9) id: 6:50:00|0.6|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.3|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
-10) id: 6:50:00|0.6|0.7|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.2, sum: 6.80, count: 22, wins: 10, losses: 8, neither: 4
+1) id: 6:50:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+2) id: 6:50:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+3) id: 6:50:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+4) id: 6:50:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+5) id: 6:50:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+6) id: 6:50:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+7) id: 6:50:00|0.0|1.0|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+8) id: 6:50:00|0.3|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+9) id: 6:50:00|0.3|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+10) id: 6:50:00|0.3|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.3|-0.1, avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
 
 --- Top 10 results for time between 7:00:00 and whatever the interval is---
-1) id: 7:00:00|0.0|0.0|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-2) id: 7:00:00|0.0|0.2|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-3) id: 7:00:00|0.0|0.5|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-4) id: 7:00:00|0.0|0.7|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-5) id: 7:00:00|0.0|0.8|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-6) id: 7:00:00|0.0|0.9|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-7) id: 7:00:00|0.3|0.0|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-8) id: 7:00:00|0.3|0.2|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-9) id: 7:00:00|0.3|0.5|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
-10) id: 7:00:00|0.3|0.7|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, sum: 9.60, count: 21, wins: 12, losses: 8, neither: 1
+1) id: 7:00:00|0.0|0.0|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+2) id: 7:00:00|0.0|0.2|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+3) id: 7:00:00|0.0|0.5|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+4) id: 7:00:00|0.0|0.7|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+5) id: 7:00:00|0.0|0.8|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+6) id: 7:00:00|0.0|0.9|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+7) id: 7:00:00|0.3|0.0|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+8) id: 7:00:00|0.3|0.2|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+9) id: 7:00:00|0.3|0.5|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+10) id: 7:00:00|0.3|0.7|0.0|0.0|0.0|either|0.5|0.9|-0.3|0.0, avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
 
 --- Top 10 results for time between 7:10:00 and whatever the interval is---
-1) id: 7:10:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-2) id: 7:10:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-3) id: 7:10:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-4) id: 7:10:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-5) id: 7:10:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-6) id: 7:10:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-7) id: 7:10:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-8) id: 7:10:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-9) id: 7:10:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
-10) id: 7:10:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, sum: 2.30, count: 15, wins: 11, losses: 1, neither: 3
+1) id: 7:10:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+2) id: 7:10:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+3) id: 7:10:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+4) id: 7:10:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+5) id: 7:10:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+6) id: 7:10:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+7) id: 7:10:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+8) id: 7:10:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+9) id: 7:10:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.3, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+10) id: 7:10:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.3|-0.5|-0.2, avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
 
 --- Top 10 results for time between 7:20:00 and whatever the interval is---
-1) id: 7:20:00|0.0|0.0|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-2) id: 7:20:00|0.0|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-3) id: 7:20:00|0.0|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-4) id: 7:20:00|0.0|0.7|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-5) id: 7:20:00|0.0|0.8|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-6) id: 7:20:00|0.3|0.0|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-7) id: 7:20:00|0.3|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-8) id: 7:20:00|0.3|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-9) id: 7:20:00|0.3|0.7|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
-10) id: 7:20:00|0.3|0.8|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, sum: 5.10, count: 14, wins: 7, losses: 5, neither: 2
+1) id: 7:20:00|0.4|0.0|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+2) id: 7:20:00|0.4|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+3) id: 7:20:00|0.4|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+4) id: 7:20:00|0.4|0.7|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+5) id: 7:20:00|0.4|0.8|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+6) id: 7:20:00|0.0|0.0|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.31, sum: 4.9, count: 16, wins: 7, losses: 7, neither: 2
+7) id: 7:20:00|0.0|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.31, sum: 4.9, count: 16, wins: 7, losses: 7, neither: 2
+8) id: 7:20:00|0.0|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.31, sum: 4.9, count: 16, wins: 7, losses: 7, neither: 2
+9) id: 7:20:00|0.0|0.7|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.31, sum: 4.9, count: 16, wins: 7, losses: 7, neither: 2
+10) id: 7:20:00|0.0|0.8|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.1, avg: 0.31, sum: 4.9, count: 16, wins: 7, losses: 7, neither: 2
 
 --- Top 10 results for time between 7:30:00 and whatever the interval is---
-1) id: 7:30:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-2) id: 7:30:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-3) id: 7:30:00|0.0|0.0|0.0|0.0|20.0|either|0.2|0.8|-0.5|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-4) id: 7:30:00|0.0|0.0|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-5) id: 7:30:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-6) id: 7:30:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-7) id: 7:30:00|0.0|0.2|0.0|0.0|20.0|either|0.2|0.8|-0.5|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-8) id: 7:30:00|0.0|0.2|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-9) id: 7:30:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.5|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
-10) id: 7:30:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, sum: 9.90, count: 16, wins: 13, losses: 1, neither: 2
+1) id: 7:30:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+2) id: 7:30:00|0.0|0.0|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+3) id: 7:30:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+4) id: 7:30:00|0.0|0.2|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+5) id: 7:30:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+6) id: 7:30:00|0.0|0.5|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+7) id: 7:30:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+8) id: 7:30:00|0.0|0.7|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+9) id: 7:30:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+10) id: 7:30:00|0.0|0.8|0.0|0.0|20.0|either|0.2|0.8|-0.4|-0.3, avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
 
 --- Top 10 results for time between 7:40:00 and whatever the interval is---
-1) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-2) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-3) id: 7:40:00|0.0|0.9|0.0|0.0|20.0|either|0.2|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-4) id: 7:40:00|0.0|0.9|0.0|0.0|20.0|either|0.3|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-5) id: 7:40:00|0.3|0.9|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-6) id: 7:40:00|0.3|0.9|0.0|0.0|0.0|either|0.3|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-7) id: 7:40:00|0.3|0.9|0.0|0.0|20.0|either|0.2|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-8) id: 7:40:00|0.3|0.9|0.0|0.0|20.0|either|0.3|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-9) id: 7:40:00|0.4|0.9|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
-10) id: 7:40:00|0.4|0.9|0.0|0.0|0.0|either|0.3|0.6|-0.4|-0.3, sum: 3.80, count: 14, wins: 9, losses: 4, neither: 1
+1) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.7|-0.4|-0.3, avg: 0.33, sum: 7.7, count: 23, wins: 14, losses: 5, neither: 4
+2) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.7|-0.4|-0.3, avg: 0.33, sum: 7.7, count: 23, wins: 14, losses: 5, neither: 4
+3) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, avg: 0.33, sum: 7.6, count: 23, wins: 16, losses: 4, neither: 3
+4) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.6|-0.4|-0.3, avg: 0.33, sum: 7.6, count: 23, wins: 16, losses: 4, neither: 3
+5) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.7|-0.5|-0.3, avg: 0.33, sum: 7.6, count: 23, wins: 14, losses: 5, neither: 4
+6) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.7|-0.5|-0.3, avg: 0.33, sum: 7.6, count: 23, wins: 14, losses: 5, neither: 4
+7) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.4|0.7|-0.4|-0.3, avg: 0.33, sum: 7.6, count: 23, wins: 14, losses: 5, neither: 4
+8) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.6|-0.5|-0.3, avg: 0.33, sum: 7.5, count: 23, wins: 16, losses: 4, neither: 3
+9) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.5|-0.4|-0.3, avg: 0.33, sum: 7.5, count: 23, wins: 18, losses: 3, neither: 2
+10) id: 7:40:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.6|-0.5|-0.3, avg: 0.33, sum: 7.5, count: 23, wins: 16, losses: 4, neither: 3
 
 --- Top 10 results for time between 7:50:00 and whatever the interval is---
-1) id: 7:50:00|0.0|0.0|0.0|20.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-2) id: 7:50:00|0.0|0.0|0.0|20.0|20.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-3) id: 7:50:00|0.0|0.2|0.0|20.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-4) id: 7:50:00|0.0|0.2|0.0|20.0|20.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-5) id: 7:50:00|0.0|0.5|0.0|20.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-6) id: 7:50:00|0.0|0.5|0.0|20.0|20.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-7) id: 7:50:00|0.0|0.7|0.0|20.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-8) id: 7:50:00|0.0|0.7|0.0|20.0|20.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-9) id: 7:50:00|0.0|0.8|0.0|20.0|0.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
-10) id: 7:50:00|0.0|0.8|0.0|20.0|20.0|either|0.3|0.9|-0.5|-0.1, sum: 3.80, count: 8, wins: 5, losses: 3, neither: 0
+1) id: 7:50:00|0.0|0.0|0.0|20.0|0.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+2) id: 7:50:00|0.0|0.0|0.0|20.0|20.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+3) id: 7:50:00|0.0|0.2|0.0|20.0|0.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+4) id: 7:50:00|0.0|0.2|0.0|20.0|20.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+5) id: 7:50:00|0.0|0.5|0.0|20.0|0.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+6) id: 7:50:00|0.0|0.5|0.0|20.0|20.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+7) id: 7:50:00|0.0|0.7|0.0|20.0|0.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+8) id: 7:50:00|0.0|0.7|0.0|20.0|20.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+9) id: 7:50:00|0.0|0.8|0.0|20.0|0.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+10) id: 7:50:00|0.0|0.8|0.0|20.0|20.0|either|0.3|0.8|-0.5|-0.1, avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
 
 --- Top 10 results for time between 8:00:00 and whatever the interval is---
-1) id: 8:00:00|0.0|0.0|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 52, wins: 19, losses: 24, neither: 9
-2) id: 8:00:00|0.0|0.2|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 52, wins: 19, losses: 24, neither: 9
-3) id: 8:00:00|0.0|0.5|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 52, wins: 19, losses: 24, neither: 9
-4) id: 8:00:00|0.0|0.7|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 52, wins: 19, losses: 24, neither: 9
-5) id: 8:00:00|0.0|0.8|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 52, wins: 19, losses: 24, neither: 9
-6) id: 8:00:00|0.3|0.0|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 51, wins: 19, losses: 24, neither: 8
-7) id: 8:00:00|0.3|0.2|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 51, wins: 19, losses: 24, neither: 8
-8) id: 8:00:00|0.3|0.5|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 51, wins: 19, losses: 24, neither: 8
-9) id: 8:00:00|0.3|0.7|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 51, wins: 19, losses: 24, neither: 8
-10) id: 8:00:00|0.3|0.8|0.0|0.0|0.0|either|0.4|0.9|-0.5|-0.1, sum: 9.80, count: 51, wins: 19, losses: 24, neither: 8
+1) id: 8:00:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+2) id: 8:00:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+3) id: 8:00:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+4) id: 8:00:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+5) id: 8:00:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+6) id: 8:00:00|0.3|0.0|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+7) id: 8:00:00|0.3|0.2|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+8) id: 8:00:00|0.3|0.5|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+9) id: 8:00:00|0.3|0.7|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+10) id: 8:00:00|0.3|0.8|0.0|0.0|0.0|either|0.2|0.9|-0.5|-0.3, avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+
+--- Top 10 results for time between 8:10:00 and whatever the interval is---
+1) id: 8:10:00|0.0|0.0|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.1, avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+2) id: 8:10:00|0.0|0.2|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.1, avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+3) id: 8:10:00|0.0|0.5|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.1, avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+4) id: 8:10:00|0.0|0.7|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.1, avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+5) id: 8:10:00|0.0|0.8|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.1, avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+6) id: 8:10:00|0.0|0.0|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.2, avg: 0.34, sum: 5.5, count: 16, wins: 8, losses: 3, neither: 5
+7) id: 8:10:00|0.0|0.2|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.2, avg: 0.34, sum: 5.5, count: 16, wins: 8, losses: 3, neither: 5
+8) id: 8:10:00|0.0|0.5|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.2, avg: 0.34, sum: 5.5, count: 16, wins: 8, losses: 3, neither: 5
+9) id: 8:10:00|0.0|0.7|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.2, avg: 0.34, sum: 5.5, count: 16, wins: 8, losses: 3, neither: 5
+10) id: 8:10:00|0.0|0.8|0.0|0.0|0.0|False|0.4|0.9|-0.5|-0.2, avg: 0.34, sum: 5.5, count: 16, wins: 8, losses: 3, neither: 5
+
+--- Top 10 results for time between 8:20:00 and whatever the interval is---
+1) id: 8:20:00|0.0|0.0|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+2) id: 8:20:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+3) id: 8:20:00|0.0|0.2|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+4) id: 8:20:00|0.0|0.2|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+5) id: 8:20:00|0.0|0.5|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+6) id: 8:20:00|0.0|0.5|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+7) id: 8:20:00|0.0|0.7|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+8) id: 8:20:00|0.0|0.7|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+9) id: 8:20:00|0.0|0.8|0.0|0.0|0.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+10) id: 8:20:00|0.0|0.8|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.1, avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
 
 --- Top 10 results for time between 8:30:00 and whatever the interval is---
-1) id: 8:30:00|0.0|0.0|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-2) id: 8:30:00|0.0|0.2|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-3) id: 8:30:00|0.0|0.5|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-4) id: 8:30:00|0.0|0.7|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-5) id: 8:30:00|0.0|0.8|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-6) id: 8:30:00|0.3|0.0|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-7) id: 8:30:00|0.3|0.2|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-8) id: 8:30:00|0.3|0.5|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-9) id: 8:30:00|0.3|0.7|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
-10) id: 8:30:00|0.3|0.8|0.0|0.0|0.0|either|0.2|0.6|-0.4|-0.3, sum: 3.30, count: 14, wins: 8, losses: 4, neither: 2
+1) id: 8:30:00|0.0|0.0|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+2) id: 8:30:00|0.0|0.2|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+3) id: 8:30:00|0.0|0.5|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+4) id: 8:30:00|0.0|0.7|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+5) id: 8:30:00|0.0|0.8|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+6) id: 8:30:00|0.3|0.0|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+7) id: 8:30:00|0.3|0.2|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+8) id: 8:30:00|0.3|0.5|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+9) id: 8:30:00|0.3|0.7|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+10) id: 8:30:00|0.3|0.8|0.0|0.0|0.0|either|0.5|0.6|-0.5|-0.1, avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
 
 --- Top 10 results for time between 8:40:00 and whatever the interval is---
-1) id: 8:40:00|0.0|0.0|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-2) id: 8:40:00|0.0|0.0|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-3) id: 8:40:00|0.0|0.2|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-4) id: 8:40:00|0.0|0.2|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-5) id: 8:40:00|0.0|0.5|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-6) id: 8:40:00|0.0|0.5|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-7) id: 8:40:00|0.0|0.7|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-8) id: 8:40:00|0.0|0.7|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-9) id: 8:40:00|0.0|0.8|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
-10) id: 8:40:00|0.0|0.8|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, sum: 5.80, count: 13, wins: 7, losses: 2, neither: 4
+1) id: 8:40:00|0.0|0.0|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+2) id: 8:40:00|0.0|0.0|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+3) id: 8:40:00|0.0|0.2|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+4) id: 8:40:00|0.0|0.2|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+5) id: 8:40:00|0.0|0.5|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+6) id: 8:40:00|0.0|0.5|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+7) id: 8:40:00|0.0|0.7|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+8) id: 8:40:00|0.0|0.7|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+9) id: 8:40:00|0.0|0.8|0.0|0.0|20.0|either|0.4|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+10) id: 8:40:00|0.0|0.8|0.0|0.0|20.0|either|0.5|0.9|-0.4|-0.3, avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
 
 --- Top 10 results for time between 8:50:00 and whatever the interval is---
-1) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.2|0.9|-0.4|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-2) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.2|0.9|-0.3|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-3) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.3|0.9|-0.4|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-4) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.3|0.9|-0.3|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-5) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.4|0.9|-0.4|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-6) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.4|0.9|-0.3|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-7) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.5|0.9|-0.4|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-8) id: 8:50:00|0.0|0.0|0.0|0.0|30.0|either|0.5|0.9|-0.3|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-9) id: 8:50:00|0.0|0.2|0.0|0.0|30.0|either|0.2|0.9|-0.4|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
-10) id: 8:50:00|0.0|0.2|0.0|0.0|30.0|either|0.2|0.9|-0.3|-0.2, sum: 3.00, count: 6, wins: 4, losses: 2, neither: 0
+1) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+2) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+3) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.4|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+4) id: 8:50:00|0.3|0.9|0.0|0.0|0.0|either|0.2|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+5) id: 8:50:00|0.3|0.9|0.0|0.0|0.0|either|0.3|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+6) id: 8:50:00|0.3|0.9|0.0|0.0|0.0|either|0.4|0.9|-0.3|-0.2, avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+7) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.2|0.9|-0.4|-0.2, avg: 0.27, sum: 3.2, count: 12, wins: 5, losses: 5, neither: 2
+8) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.3|0.9|-0.4|-0.2, avg: 0.27, sum: 3.2, count: 12, wins: 5, losses: 5, neither: 2
+9) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.4|0.9|-0.4|-0.2, avg: 0.27, sum: 3.2, count: 12, wins: 5, losses: 5, neither: 2
+10) id: 8:50:00|0.0|0.9|0.0|0.0|0.0|either|0.5|0.9|-0.3|-0.2, avg: 0.27, sum: 3.2, count: 12, wins: 5, losses: 5, neither: 2
+
+
+SUMMARY
+Time: 6:30, adx7: 20.0, 
+      t1: 0.3, t2: 0.9, sl1: -0.5, sl2: -0.3
+      avg: 0.58, sum: 18.6, count: 32, wins: 24, losses: 8, neither: 0
+
+--------------------------------------------------------------------------------------------
+Time: 6:40, ratio: 0.2, 
+      t1: 0.4, t2: 0.9, sl1: -0.5, sl2: -0.1
+      avg: 0.36, sum: 13.0, count: 36, wins: 18, losses: 14, neither: 4
+
+--------------------------------------------------------------------------------------------
+Time: 6:50, 
+      t1: 0.2, t2: 0.3, sl1: -0.3, sl2: -0.1
+      avg: 0.24, sum: 6.6, count: 28, wins: 24, losses: 4, neither: 0
+
+--------------------------------------------------------------------------------------------
+Time: 7:00, 
+      t1: 0.5, t2: 0.9, sl1: -0.3, sl2: 0.0
+      avg: 0.41, sum: 9.9, count: 24, wins: 13, losses: 10, neither: 1
+
+--------------------------------------------------------------------------------------------
+Time: 7:10, 
+      t1: 0.2, t2: 0.3, sl1: -0.5, sl2: -0.3
+      avg: 0.15, sum: 2.3, count: 15, wins: 11, losses: 1, neither: 3
+
+--------------------------------------------------------------------------------------------
+Time: 7:20, vol%: 0.4, 
+      t1: 0.3, t2: 0.9, sl1: -0.3, sl2: -0.1
+      avg: 0.33, sum: 5.0, count: 15, wins: 7, losses: 6, neither: 2
+
+--------------------------------------------------------------------------------------------
+Time: 7:30, 
+      t1: 0.2, t2: 0.8, sl1: -0.4, sl2: -0.3
+      avg: 0.46, sum: 9.2, count: 20, wins: 13, losses: 2, neither: 5
+
+--------------------------------------------------------------------------------------------
+Time: 7:40, ratio: 0.9, 
+      t1: 0.2, t2: 0.7, sl1: -0.4, sl2: -0.3
+      avg: 0.33, sum: 7.7, count: 23, wins: 14, losses: 5, neither: 4
+
+--------------------------------------------------------------------------------------------
+Time: 7:50, adx14: 20.0, 
+      t1: 0.3, t2: 0.8, sl1: -0.5, sl2: -0.1
+      avg: 0.36, sum: 3.6, count: 10, wins: 6, losses: 4, neither: 0
+
+--------------------------------------------------------------------------------------------
+Time: 8:00, 
+      t1: 0.2, t2: 0.9, sl1: -0.5, sl2: -0.3
+      avg: 0.23, sum: 6.2, count: 27, wins: 12, losses: 12, neither: 3
+
+--------------------------------------------------------------------------------------------
+Time: 8:10, rsi: False, 
+      t1: 0.4, t2: 0.9, sl1: -0.5, sl2: -0.1
+      avg: 0.35, sum: 5.6, count: 16, wins: 8, losses: 3, neither: 5
+
+--------------------------------------------------------------------------------------------
+Time: 8:20, 
+      t1: 0.3, t2: 0.9, sl1: -0.5, sl2: -0.1
+      avg: 0.27, sum: 3.0, count: 11, wins: 4, losses: 5, neither: 2
+
+--------------------------------------------------------------------------------------------
+Time: 8:30, 
+      t1: 0.5, t2: 0.6, sl1: -0.5, sl2: -0.1
+      avg: 0.23, sum: 4.4, count: 19, wins: 11, losses: 4, neither: 4
+
+--------------------------------------------------------------------------------------------
+Time: 8:40, adx7: 20.0, 
+      t1: 0.4, t2: 0.9, sl1: -0.4, sl2: -0.3
+      avg: 0.41, sum: 5.8, count: 14, wins: 7, losses: 2, neither: 5
+
+--------------------------------------------------------------------------------------------
+Time: 8:50, ratio: 0.9, 
+      t1: 0.2, t2: 0.9, sl1: -0.3, sl2: -0.2
+      avg: 0.27, sum: 3.3, count: 12, wins: 5, losses: 5, neither: 2
+
+--------------------------------------------------------------------------------------------

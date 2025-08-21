@@ -643,8 +643,8 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
         
         local_sublists = {}
         total_combinations_tested = 0
-        batch_size = 3500000     # large batch size for better parallelization
-        prune_size = 600000      # only allow _sublists to reach this length before pruning them
+        batch_size = 1000000     # large batch size for better parallelization
+        prune_size = 400000      # only allow _sublists to reach this length before pruning them
         batch_count = 0          # how many batches have been processed - used to update user with progress
         combination_batch = None # Struct-of-arrays for combinations
         
