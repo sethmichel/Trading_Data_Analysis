@@ -8,9 +8,21 @@ import datetime
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
+'''
+TODO: 
+--error handling is terrible
 
-actual_trade_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Trade_Data'               # actual trade logs
-edited_cross_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data'   # edited cross logs
+--cross data and market data often naturally argue. cross data will be tracking something when I cut it off so market data won't have 
+   the end to that cross. So, check if the latest time of cross data is in market data, if not delete cross data rows until the times
+   line up. however, then you'll need to check the count of each ticker is even (entry/exit), if not then delete the newest line 
+   containing the ticker
+'''
+
+
+
+actual_trade_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Trade_Data'                 # actual trade logs
+edited_cross_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data'     # edited cross logs
+unedited_cross_logs_dir = 'Csv_Files/1_tos_Raw_Trades/Unedited_All_Trades_Data' # uneedited cross logs
 market_data_logs_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
 summarized_final_trades_dir = 'Csv_Files/3_Final_Trade_Csvs'
 
@@ -31,16 +43,30 @@ def Create_Summary_Csv(date, market_data_file, target_log_file, mode):
             target_path = f"{actual_trade_logs_dir}/{target_log_file}"
         elif mode == 2:
             target_path = f"{edited_cross_logs_dir}/{target_log_file}"
+        elif mode == 3:
+            target_path = f"{unedited_cross_logs_dir}/{target_log_file}"
         
         # 2) normalize raw trades so it's readable and each trade is 1 line.
         print(f"--using {market_data_file} with {target_log_file}")
 
         raw_trade_df = Parser.CreateDf(target_path)            # creates the df of readable raw data
+        if not isinstance(raw_trade_df, pd.DataFrame):
+            return None
         normalized_df = Parser.Normalize_Raw_Trades(raw_trade_df)  # makes the data readable (not adding market data yet)
+        if not isinstance(raw_trade_df, pd.DataFrame):
+            return None
         normalized_df = Parser.Add_Running_Sums(normalized_df)
+        if not isinstance(raw_trade_df, pd.DataFrame):
+            return None
 
         # 3) add market data to the trade summary
-        final_df = Parser.Add_Market_Data(normalized_df, market_file_path)
+        normalized_df = Parser.Add_Market_Data(normalized_df, market_file_path)
+        if not isinstance(normalized_df, pd.DataFrame):
+            return None
+
+        final_df = Parser.Add_Final_Info(normalized_df)
+        if not isinstance(final_df, pd.DataFrame):
+            return None
 
         # 4) save to new csv file
         final_df.to_csv(trade_summary_name, index=False)
@@ -49,6 +75,8 @@ def Create_Summary_Csv(date, market_data_file, target_log_file, mode):
         # 5) move the used market data/trade log to used folders
         #Parser.Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir)
     
+        return True
+
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
@@ -58,15 +86,18 @@ def Get_User_Input():
     global target_dir
 
     while True:
-        mode = int(input("Select mode:\n1 - Use actual trade logs\n2 - Use edited cross logs\nEnter 1 or 2: "))
+        mode = int(input("Select mode:\n1 - Use actual trade logs\n2 - Use edited cross logs\n3 - Use unedited cross logs\nEnter 1, 2, or 3: "))
         if mode == 1:
             target_dir = actual_trade_logs_dir
             return mode
         elif mode == 2:
             target_dir = edited_cross_logs_dir
             return mode
+        elif (mode == 3):
+            target_dir = unedited_cross_logs_dir
+            return mode
         else:
-            print("Invalid input. Please enter 1 or 2.")
+            print("Invalid input. Please enter 1, 2, or 3")
 
 
 # create any directories that don't exist for whatever reason
@@ -76,6 +107,7 @@ def Create_Directories_If_Not_Exist():
     directories = [
         actual_trade_logs_dir,
         edited_cross_logs_dir,
+        unedited_cross_logs_dir,
         market_data_logs_dir,
         summarized_final_trades_dir
     ]
@@ -90,16 +122,16 @@ def Create_Directories_If_Not_Exist():
 
 # actual trade logs are ordered bottom up, meaning earlist trades are the last row, newest trade is first row
 # cross logs are opposite, so they need to be reordered
-def Check_Edited_Cross_Times():
+def Check_Cross_Times(mode):
     try:
         print("Checking and fixing time order in edited cross logs...")
         files_processed = 0
         files_reordered = 0
         
-        # Loop through all CSV files in the edited_cross_logs_dir
-        for filename in os.listdir(edited_cross_logs_dir):
+        # Loop through all CSV files in the dir
+        for filename in os.listdir(target_dir):
             if filename.endswith('.csv'):
-                file_path = os.path.join(edited_cross_logs_dir, filename)
+                file_path = os.path.join(target_dir, filename)
                 print(f"Processing: {filename}")
                 
                 # Read the entire file to preserve structure
@@ -131,7 +163,11 @@ def Check_Edited_Cross_Times():
                                 exec_time_str = parts[1].strip()
                                 try:
                                     # Parse datetime: MM/DD/YYYY HH:MM:SS
-                                    exec_datetime = datetime.datetime.strptime(exec_time_str, '%m/%d/%Y %H:%M:%S')
+                                    if ('/' in exec_time_str):
+                                        exec_time_str = exec_time_str.replace('/', '-')
+
+                                    exec_datetime = datetime.datetime.strptime(exec_time_str, '%m-%d-%Y %H:%M:%S')
+
                                     # We only care about time for sorting (ignore date)
                                     time_only = exec_datetime.time()
                                     data_with_time.append((time_only, line))
@@ -149,10 +185,13 @@ def Check_Edited_Cross_Times():
                     if original_order != new_order:
                         print(f"  - Reordering data in {filename}")
                         
-                        # Reconstruct the file with sorted data
-                        new_lines = (lines[:data_start_idx + 1] +  # Everything before data (including header)
-                                   new_order +                     # Sorted data
-                                   lines[data_end_idx:])          # Everything after data
+                        # Reconstruct the file with sorted data, keeping header in place
+                        new_lines = (lines[:data_start_idx] +      # Everything before header
+                                   [header_line] +                # Header line stays in original position
+                                   new_order +                    # Sorted data
+                                   ['\n'] +                       # Skip a line
+                                   ['Canceled Orders\n'] +        # Add 'Canceled Orders'
+                                   lines[data_end_idx:])          # Everything after original data
                         
                         # Write back to file
                         with open(file_path, 'w', encoding='utf-8') as file:
@@ -161,6 +200,28 @@ def Check_Edited_Cross_Times():
                         files_reordered += 1
                     else:
                         print(f"  - {filename} already in correct order")
+                        # Still need to check if 'Canceled Orders' is present at the end
+                        if data_end_idx < len(lines):
+                            # Check if 'Canceled Orders' already exists
+                            canceled_orders_exists = False
+                            for line in lines[data_end_idx:]:
+                                if 'Canceled Orders' in line:
+                                    canceled_orders_exists = True
+                                    break
+                            
+                            # Add 'Canceled Orders' if it doesn't exist
+                            if not canceled_orders_exists:
+                                print(f"  - Adding 'Canceled Orders' to {filename}")
+                                new_lines = (lines[:data_end_idx] +        # Everything up to end of data
+                                           ['\n'] +                       # Skip a line
+                                           ['Canceled Orders\n'] +        # Add 'Canceled Orders'
+                                           lines[data_end_idx:])          # Everything after original data
+                                
+                                # Write back to file
+                                with open(file_path, 'w', encoding='utf-8') as file:
+                                    file.writelines(new_lines)
+                                
+                                files_reordered += 1
                 
                 files_processed += 1
         
@@ -180,7 +241,7 @@ def Bulk_Create_Summary_Csvs():
     try:
         mode = Get_User_Input()
         print('\n')
-        if (mode == 2 and Check_Edited_Cross_Times() == False):
+        if ((mode == 2 or mode == 3) and Check_Cross_Times(mode) == False):
             return
         
         Create_Directories_If_Not_Exist()
@@ -215,6 +276,8 @@ def Bulk_Create_Summary_Csvs():
                     date = f"{parts[1]}-{parts[2]}-{parts[0]}"
                 elif (mode == 2):
                     date = (file.split('_'))[3] # month, day, year
+                elif (mode == 3):
+                    date = (file.split('_'))[2] # month, day, year
                     
                 if date in market_data_dates:
                     valid_dates.append(date)
@@ -223,7 +286,9 @@ def Bulk_Create_Summary_Csvs():
 
         # 3) create the data
         for i in range(0, len(valid_dates)):
-            Create_Summary_Csv(valid_dates[i], valid_market_file_names[i], target_file_names[i], mode)
+            result = Create_Summary_Csv(valid_dates[i], valid_market_file_names[i], target_file_names[i], mode)
+            if (result == None):
+                return None
 
         # 4) Combine all individual CSV files into one combined file
         print("Combining all individual CSV files into Bulk_Combined.csv...")
@@ -249,6 +314,12 @@ def Bulk_Create_Summary_Csvs():
 
 
 
-#Create_Summary_Csv(date="2025-04-09")
+# do a select group of individual days (have to manually mark on demand)
+'''for date in ['08-26-2025']:
+    return_result = Create_Summary_Csv(date=date, market_data_file=f'Raw_Market_Data_{date}.csv', 
+                    target_log_file=f'all_trades_{date}_auto_recorded.csv', mode=3)
+    if (return_result == None):
+        break
+'''
 Bulk_Create_Summary_Csvs()
 

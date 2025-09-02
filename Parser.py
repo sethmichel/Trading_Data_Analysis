@@ -19,19 +19,20 @@ def CreateDf(csvPath):
         df = df[:index_to_delete]
 
         # drop useless columns
-        x = list(df.columns)
-        if 'On_Demand' in csvPath:
-            columns_to_drop = ["Unnamed: 0", "Spread", "Exp", "Strike", "Type", "Price Improvement", "Order Type"]
-        else:
-            columns_to_drop = ["Unnamed: 0", "Unnamed: 1", "Spread", "Exp", "Strike", "Type", "Price Improvement", "Order Type"]
-        df = df.drop(columns=columns_to_drop)  # 'errors="ignore"' prevents errors if a column doesn't exist
+        columns_to_drop = ["Unnamed: 0", "Spread", "Exp", "Strike", "Type", "Price Improvement", "Order Type"]
+        if "Unnamed: 1" in df.columns:
+            columns_to_drop.append("Unnamed: 1") # idk what causes this to be in it. the original code for this thought it was always in live data, but 8/25/25 live didn't have it
+
+        df = df.drop(columns=columns_to_drop)   # 'errors="ignore"' prevents errors if a column doesn't exist
 
         df.rename(columns={df.columns[0]: "Date"}, inplace = True)   # rename the first column to "Date"
         df.rename(columns={df.columns[4]: "Ticker"}, inplace = True)
 
         return df
+    
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
 
 
 def Move_Processed_Files(raw_trades_name, raw_market_data_name, tos_raw_trades_DONE_dir, market_data_DONE_dir):
@@ -188,17 +189,8 @@ def Normalize_Raw_Trades(raw_df):
                             'Entry Adx28': None,
                             'Entry Adx14': None,
                             'Entry Adx7': None,
-                            'Target 0.3,-0.3': None,
-                            'Target 0.2,-0.5': None,
-                            'Target 0.5,0.9,-0.1,-0.5': None,
-                            'Target 0.2,0.9,-0.3,-0.1': None,
-                            'Target 0.4,0.9,-0.3,-0.1': None,
-                            'Target 0.5,0.8,-0.3,0.3': None,
-                            'Target 0.4,0.5,-0.3,-0.1': None,
-                            'Target 0.4,0.6,-0.3,-0.1': None,
-                            'Target 0.5,0.9,-0.4,-0.1': None,
-                            'Target 0.2,0.9,-0.5,-0.2': None,
-                            'Target 0.4,-0.3,0.5,-0.1,0.6,0.4': None,
+                            'avg_of_last_2_trades': None,
+                            'last_result_must_be_4_minutes': None,
                             'Price Movement': None
                         })
                         break
@@ -262,11 +254,11 @@ def Add_Market_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade):
             curr_row_time_parts = curr_row_time.split(':')
             row_seconds = int(curr_row_time_parts[0]) * 3600 + int(curr_row_time_parts[1]) * 60 + int(curr_row_time_parts[2])
             
-            # Check if times match within 2 seconds
-            if abs(row_seconds - entry_seconds) <= 2:
+            # Check if times match within x seconds
+            if abs(row_seconds - entry_seconds) <= 7:
                 return idx, row
         
-        return None
+        raise ValueError(f"failed to find a end time for the trade in ticker_data_df within x seconds")
     
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -609,15 +601,6 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
 
             if (exit_time_reached == True and macd_cross_reached == True):
                 #processed_price_movement = Post_Process_Price_Movement(price_movement)
-                normalized_df.at[idx, 'Target 0.5,0.9,-0.1,-0.5'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.1,-0.5')
-                normalized_df.at[idx, 'Target 0.2,0.9,-0.3,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.3,-0.1')
-                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.2'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.2')
-
-                normalized_df.at[idx, 'Target 0.3,0.9,-0.5,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.3,0.9,-0.5,-0.3')
-                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.3')
-                normalized_df.at[idx, 'Target 0.5,0.9,-0.4,-0.3'] = Was_Target_Hit(price_movement, 'Target 0.5,0.9,-0.4,-0.3')
-                normalized_df.at[idx, 'Target 0.2,0.9,-0.5,-0.1'] = Was_Target_Hit(price_movement, 'Target 0.2,0.9,-0.5,-0.1')
-
                 normalized_df.at[idx, 'Best Exit Price'] = curr_best_price
                 normalized_df.at[idx, 'Worst Exit Price'] = curr_worst_price
                 normalized_df.at[idx, 'Best Exit Percent'] = round(curr_best_percent, 2)
@@ -630,6 +613,7 @@ def Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_dat
             
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
 
 
 def Calculate_Macd_difference_rsi__Find_Start_Time(ticker_market_data, start_seconds, start_time, ticker):
@@ -662,9 +646,6 @@ def Calculate_Macd_difference_rsi__Find_Start_Time(ticker_market_data, start_sec
         
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-
-
-
 
 
 '''
@@ -780,6 +761,7 @@ def Calculate_Macd_difference_rsi(normalized_df, ticker_data_dict):
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+# ticker hood, idx 35, start_idx 34056
 def Add_Market_Data(normalized_df, raw_market_data_name):
     try:
         # 1) create a dict where keys = the unique tickers, values = dataframe of all csv rows of that ticker
@@ -797,8 +779,6 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
                 continue
             
             start_idx, start_row = Add_Market_Data_Helper__Find_Start_Row(ticker, ticker_data_dict, trade)
-            if (idx == 15):
-                pass # it fails on tsla index 15. it never finds the end of tsla. short. cross fails right away, so val > avg. so the cross exit might be getting skipped
 
             if start_row is None:
                 # TODO: this should NEVER happen, try to play an error sound or something to get the users attention
@@ -826,6 +806,8 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
             # currently have the starting row for the trade as "start_row"
             # 3.0 - 3.4) Get variables, update best/worst values, update price movement for the current trade. updates are written to normalized_df at the correct row
             normalized_df = Add_Market_Data_Helper__Best_Worst_Updator(ticker, normalized_df, ticker_data_dict, start_row, idx, start_idx)
+            if not isinstance(normalized_df, pd.DataFrame):
+                return None
 
         # 4) do this separate because of how hard it is to track
         normalized_df = Calculate_Macd_difference_rsi(normalized_df, ticker_data_dict)
@@ -834,4 +816,63 @@ def Add_Market_Data(normalized_df, raw_market_data_name):
     
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
 
+
+def Add_Final_Info(normalized_df):
+    try:
+        # Create a dictionary where keys are unique tickers and values are dataframes for that ticker
+        ticker_dict = {}
+        unique_tickers = normalized_df['Ticker'].unique()
+        
+        for ticker in unique_tickers:
+            ticker_dict[ticker] = normalized_df[normalized_df['Ticker'] == ticker].copy()
+        
+        # Process each ticker's dataframe separately
+        for ticker, ticker_df in ticker_dict.items():
+            # Reset index for sequential processing while keeping original index
+            ticker_df_reset = ticker_df.reset_index(drop=False)
+            ticker_df_reset.rename(columns={'index': 'original_idx'}, inplace=True)
+            
+            # Process each trade in this ticker's dataframe
+            for i in range(len(ticker_df_reset)):
+                # 1) add avg of last 2 trades for the same ticker
+                if i < 2:  # Not enough previous trades
+                    ticker_df_reset.at[i, 'avg_of_last_2_trades'] = None
+                else:
+                    # Get the last 3 trades (previous 3 rows in this ticker's data)
+                    last_3_trades = ticker_df_reset.iloc[i-2:i]
+                    avg = last_3_trades['Percent Change'].mean()
+                    ticker_df_reset.at[i, 'avg_of_last_2_trades'] = round(avg, 2)
+                
+                # 2) add bool for if the last trade for this ticker was more than 4 minutes
+                if i < 1:  # No previous trades
+                    ticker_df_reset.at[i, 'last_result_must_be_4_minutes'] = None
+                else:
+                    # Get the most recent trade (previous row in this ticker's data)
+                    last_trade_same_ticker = ticker_df_reset.iloc[i-1]
+                    time_obj = datetime.strptime(last_trade_same_ticker['Time in Trade'], '%H:%M:%S')
+                    minutes = time_obj.hour * 60 + time_obj.minute + time_obj.second / 60
+                    if (minutes < 4):
+                        ticker_df_reset.at[i, 'last_result_must_be_4_minutes'] = False
+                    else:
+                        ticker_df_reset.at[i, 'last_result_must_be_4_minutes'] = True
+            
+            # Update the ticker_dict with the processed data
+            ticker_dict[ticker] = ticker_df_reset.set_index('original_idx')
+        
+        # Reconstruct the final dataframe by concatenating all ticker dataframes
+        result_df = pd.concat(ticker_dict.values())
+        
+        # Sort by Entry Time to maintain chronological order (HH:MM:SS format)
+        # Convert Entry Time to datetime for proper sorting, then sort
+        result_df['Entry Time Parsed'] = pd.to_datetime(result_df['Entry Time'], format='%H:%M:%S')
+        result_df = result_df.sort_values('Entry Time Parsed')
+        # Remove the temporary sorting column
+        result_df = result_df.drop('Entry Time Parsed', axis=1)
+
+        return result_df
+    
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None

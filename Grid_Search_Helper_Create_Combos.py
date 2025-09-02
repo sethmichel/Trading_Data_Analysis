@@ -432,10 +432,12 @@ def Preprocess_Combination_Batch(combination_batch, local_sublists, target1s_np_
                 entry_times_valid = combination_batch['entry_times'][final_valid_indices]
                 volatilities_valid = combination_batch['volatilities'][final_valid_indices]
                 ratios_valid = combination_batch['ratios'][final_valid_indices]
+                avg_of_last_2_trades_valid = combination_batch['avg_of_last_2_trades'][final_valid_indices]
                 adx28s_valid = combination_batch['adx28s'][final_valid_indices]
                 adx14s_valid = combination_batch['adx14s'][final_valid_indices]
                 adx7s_valid = combination_batch['adx7s'][final_valid_indices]
                 rsi_types_valid = combination_batch['rsi_types'][final_valid_indices]
+                last_result_4_min_types_valid = combination_batch['last_result_4_min_types'][final_valid_indices]
                 t1s_valid = combination_batch['t1s'][final_valid_indices]
                 t2s_valid = combination_batch['t2s'][final_valid_indices]
                 sl1s_valid = combination_batch['sl1s'][final_valid_indices]
@@ -449,7 +451,7 @@ def Preprocess_Combination_Batch(combination_batch, local_sublists, target1s_np_
                 if how_many_final_parameters == 4:
                     # Vectorized string key creation for 4-parameter mode
                     for i, idx in enumerate(final_valid_indices):
-                        sublist_key = f"{entry_times_valid[i]}|{volatilities_valid[i]}|{ratios_valid[i]}|{adx28s_valid[i]}|{adx14s_valid[i]}|{adx7s_valid[i]}|{rsi_types_valid[i]}|{t1s_valid[i]}|{t2s_valid[i]}|{sl1s_valid[i]}|{sl2s_valid[i]}"
+                        sublist_key = f"{entry_times_valid[i]}|{volatilities_valid[i]}|{ratios_valid[i]}|{avg_of_last_2_trades_valid[i]}|{adx28s_valid[i]}|{adx14s_valid[i]}|{adx7s_valid[i]}|{rsi_types_valid[i]}|{last_result_4_min_types_valid[i]}|{t1s_valid[i]}|{t2s_valid[i]}|{sl1s_valid[i]}|{sl2s_valid[i]}"
                         local_sublists[sublist_key] = {
                             'sum': sums_valid[i],
                             'wins': wins_valid[i],
@@ -463,7 +465,7 @@ def Preprocess_Combination_Batch(combination_batch, local_sublists, target1s_np_
                     
                     # Vectorized string key creation for 6-parameter mode
                     for i, _ in enumerate(final_valid_indices):
-                        sublist_key = f"{entry_times_valid[i]}|{volatilities_valid[i]}|{ratios_valid[i]}|{adx28s_valid[i]}|{adx14s_valid[i]}|{adx7s_valid[i]}|{rsi_types_valid[i]}|{t1s_valid[i]}|{t2s_valid[i]}|{t3s_valid[i]}|{sl1s_valid[i]}|{sl2s_valid[i]}|{sl3s_valid[i]}"
+                        sublist_key = f"{entry_times_valid[i]}|{volatilities_valid[i]}|{ratios_valid[i]}|{avg_of_last_2_trades_valid[i]}|{adx28s_valid[i]}|{adx14s_valid[i]}|{adx7s_valid[i]}|{rsi_types_valid[i]}|{last_result_4_min_types_valid[i]}|{t1s_valid[i]}|{t2s_valid[i]}|{t3s_valid[i]}|{sl1s_valid[i]}|{sl2s_valid[i]}|{sl3s_valid[i]}"
                         local_sublists[sublist_key] = {
                             'sum': sums_valid[i],
                             'wins': wins_valid[i],
@@ -488,8 +490,8 @@ def time_str_to_seconds(time_str):
 # data_holder = [(index of original df, [list of values], last price), ...]
 # creates combos by looking at data by time stamp greater than or equal to volatility
 # numb of masks are lengths of all lists multiplied by each other. size depends on the dataset. 250 rows of data should be like 30 MB of RAM
-def precompute_all_masks(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, 
-                        extreme_rsis, data_values):
+def precompute_all_masks(entry_times, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, 
+                        extreme_rsis, last_result_must_be_4_minutes, data_values):
     try:
         """
         Pre-compute all possible masks for parameter combinations
@@ -504,13 +506,14 @@ def precompute_all_masks(entry_times, volatilities, ratios, adx28s, adx14s, adx7
             entry_time = entry_times[i]
             lower_bound_s = time_str_to_seconds(entry_time)
             upper_bound_s = time_str_to_seconds(entry_times[i + 1])
-            time_masks[entry_time] = (data_values[:, 6] >= lower_bound_s) & (data_values[:, 6] < upper_bound_s)
+            time_masks[entry_time] = (data_values[:, 7] >= lower_bound_s) & (data_values[:, 7] < upper_bound_s)
         
         vol_masks = {vol: data_values[:, 0] >= vol for vol in volatilities}
         ratio_masks = {ratio: data_values[:, 1] >= ratio for ratio in ratios}
-        adx28_masks = {adx: data_values[:, 2] >= adx for adx in adx28s}
-        adx14_masks = {adx: data_values[:, 3] >= adx for adx in adx14s}
-        adx7_masks = {adx: data_values[:, 4] >= adx for adx in adx7s}
+        avg_of_last_2_trades_masks = {avg: data_values[:, 2] >= avg for avg in avg_of_last_2_trades}
+        adx28_masks = {adx: data_values[:, 3] >= adx for adx in adx28s}
+        adx14_masks = {adx: data_values[:, 4] >= adx for adx in adx14s}
+        adx7_masks = {adx: data_values[:, 5] >= adx for adx in adx7s}
         
         rsi_masks = {}
         for rsi_type in extreme_rsis:
@@ -518,27 +521,39 @@ def precompute_all_masks(entry_times, volatilities, ratios, adx28s, adx14s, adx7
                 rsi_masks[rsi_type] = np.full(data_values.shape[0], True)
             else:
                 rsi_val = 1.0 if rsi_type else 0.0
-                rsi_masks[rsi_type] = data_values[:, 5] == rsi_val
+                rsi_masks[rsi_type] = data_values[:, 6] == rsi_val
+        
+        last_result_4_min_masks = {}
+        for last_result_4_min_type in last_result_must_be_4_minutes:
+            if last_result_4_min_type == "either":
+                last_result_4_min_masks[last_result_4_min_type] = np.full(data_values.shape[0], True)
+            else:
+                last_result_4_min_val = 1.0 if last_result_4_min_type else 0.0
+                last_result_4_min_masks[last_result_4_min_type] = data_values[:, 8] == last_result_4_min_val
         
         # Combine masks for all parameter combinations
         total_combinations = 0
         for entry_time in entry_times[:-1]:  # Skip last entry_time
             for vol in volatilities:
                 for ratio in ratios:
-                    for adx28 in adx28s:
-                        for adx14 in adx14s:
-                            for adx7 in adx7s:
-                                for rsi_type in extreme_rsis:
-                                    key = (entry_time, vol, ratio, adx28, adx14, adx7, rsi_type)
-                                    combined_mask = (time_masks[entry_time] & 
-                                                    vol_masks[vol] & 
-                                                    ratio_masks[ratio] & 
-                                                    adx28_masks[adx28] & 
-                                                    adx14_masks[adx14] &
-                                                    adx7_masks[adx7] & 
-                                                    rsi_masks[rsi_type])
-                                    mask_cache[key] = combined_mask
-                                    total_combinations += 1
+                    for avg_of_last_2_trades_val in avg_of_last_2_trades:
+                        for adx28 in adx28s:
+                            for adx14 in adx14s:
+                                for adx7 in adx7s:
+                                    for rsi_type in extreme_rsis:
+                                        for last_result_4_min_type in last_result_must_be_4_minutes:
+                                            key = (entry_time, vol, ratio, avg_of_last_2_trades_val, adx28, adx14, adx7, rsi_type, last_result_4_min_type)
+                                            combined_mask = (time_masks[entry_time] & 
+                                                            vol_masks[vol] & 
+                                                            ratio_masks[ratio] & 
+                                                            avg_of_last_2_trades_masks[avg_of_last_2_trades_val] &
+                                                            adx28_masks[adx28] & 
+                                                            adx14_masks[adx14] &
+                                                            adx7_masks[adx7] & 
+                                                            rsi_masks[rsi_type] &
+                                                            last_result_4_min_masks[last_result_4_min_type])
+                                            mask_cache[key] = combined_mask
+                                            total_combinations += 1
         
         # Calculate approximate memory usage (boolean mask = 1 byte per element)
         #memory_mb = (total_combinations * data_values.shape[0]) / (1024 * 1024)
@@ -551,8 +566,8 @@ def precompute_all_masks(entry_times, volatilities, ratios, adx28s, adx14s, adx7
 
 
 # finds masks w/o including time
-def precompute_all_masks_no_time(volatilities, ratios, adx28s, adx14s, adx7s, 
-                                extreme_rsis, data_values, user_mode):
+def precompute_all_masks_no_time(volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, 
+                                extreme_rsis, last_result_must_be_4_minutes, data_values, user_mode):
     try:
         """
         Pre-compute all possible masks for parameter combinations without time filtering
@@ -577,9 +592,10 @@ def precompute_all_masks_no_time(volatilities, ratios, adx28s, adx14s, adx7s,
             vol_masks = {vol: data_values[:, 0] >= vol for vol in volatilities}
         
         ratio_masks = {ratio: data_values[:, 1] >= ratio for ratio in ratios}
-        adx28_masks = {adx: data_values[:, 2] >= adx for adx in adx28s}
-        adx14_masks = {adx: data_values[:, 3] >= adx for adx in adx14s}
-        adx7_masks = {adx: data_values[:, 4] >= adx for adx in adx7s}
+        avg_of_last_2_trades_masks = {avg: data_values[:, 2] >= avg for avg in avg_of_last_2_trades}
+        adx28_masks = {adx: data_values[:, 3] >= adx for adx in adx28s}
+        adx14_masks = {adx: data_values[:, 4] >= adx for adx in adx14s}
+        adx7_masks = {adx: data_values[:, 5] >= adx for adx in adx7s}
         
         rsi_masks = {}
         for rsi_type in extreme_rsis:
@@ -587,25 +603,37 @@ def precompute_all_masks_no_time(volatilities, ratios, adx28s, adx14s, adx7s,
                 rsi_masks[rsi_type] = np.full(data_values.shape[0], True)
             else:
                 rsi_val = 1.0 if rsi_type else 0.0
-                rsi_masks[rsi_type] = data_values[:, 5] == rsi_val
+                rsi_masks[rsi_type] = data_values[:, 6] == rsi_val
+        
+        last_result_4_min_masks = {}
+        for last_result_4_min_type in last_result_must_be_4_minutes:
+            if last_result_4_min_type == "either":
+                last_result_4_min_masks[last_result_4_min_type] = np.full(data_values.shape[0], True)
+            else:
+                last_result_4_min_val = 1.0 if last_result_4_min_type else 0.0
+                last_result_4_min_masks[last_result_4_min_type] = data_values[:, 8] == last_result_4_min_val
         
         # Combine masks for all parameter combinations (no time component)
         total_combinations = 0
         for vol in volatilities:
             for ratio in ratios:
-                for adx28 in adx28s:
-                    for adx14 in adx14s:
-                        for adx7 in adx7s:
-                            for rsi_type in extreme_rsis:
-                                key = (None, vol, ratio, adx28, adx14, adx7, rsi_type)  # None for time
-                                combined_mask = (vol_masks[vol] & 
-                                                ratio_masks[ratio] & 
-                                                adx28_masks[adx28] & 
-                                                adx14_masks[adx14] & 
-                                                adx7_masks[adx7] & 
-                                                rsi_masks[rsi_type])
-                                mask_cache[key] = combined_mask
-                                total_combinations += 1
+                for avg_of_last_2_trades_val in avg_of_last_2_trades:
+                    for adx28 in adx28s:
+                        for adx14 in adx14s:
+                            for adx7 in adx7s:
+                                for rsi_type in extreme_rsis:
+                                    for last_result_4_min_type in last_result_must_be_4_minutes:
+                                        key = (None, vol, ratio, avg_of_last_2_trades_val, adx28, adx14, adx7, rsi_type, last_result_4_min_type)  # None for time
+                                        combined_mask = (vol_masks[vol] & 
+                                                        ratio_masks[ratio] & 
+                                                        avg_of_last_2_trades_masks[avg_of_last_2_trades_val] &
+                                                        adx28_masks[adx28] & 
+                                                        adx14_masks[adx14] & 
+                                                        adx7_masks[adx7] & 
+                                                        rsi_masks[rsi_type] &
+                                                        last_result_4_min_masks[last_result_4_min_type])
+                                        mask_cache[key] = combined_mask
+                                        total_combinations += 1
         
         # Calculate approximate memory usage (boolean mask = 1 byte per element)
         memory_mb = (total_combinations * data_values.shape[0]) / (1024 * 1024)
@@ -617,7 +645,7 @@ def precompute_all_masks_no_time(volatilities, ratios, adx28s, adx14s, adx7s,
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
-def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, extreme_rsis,
+def Create_Entries(entry_times, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, extreme_rsis, last_result_must_be_4_minutes,
                    target_1s, target_3s, stop_loss_2s, stop_loss_1s, target_2s, stop_loss_3s, data_rows, 
                    data_values, data_last_prices, target1s_np_array, target2s_np_array, target3s_np_array, 
                    stop_loss1s_np_array, stop_loss2s_np_array, stop_loss3s_np_array,
@@ -634,16 +662,16 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
         # Pre-compute all masks for optimization
         if user_mode == 3:
             # Only user_mode=3 uses time-based filtering
-            mask_cache = precompute_all_masks(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, 
-                                             extreme_rsis, data_values)
+            mask_cache = precompute_all_masks(entry_times, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, 
+                                             extreme_rsis, last_result_must_be_4_minutes, data_values)
         else:
             # user_mode=1 and user_mode=2 don't use time filtering
-            mask_cache = precompute_all_masks_no_time(volatilities, ratios, adx28s, adx14s, adx7s, 
-                                                     extreme_rsis, data_values, user_mode)
+            mask_cache = precompute_all_masks_no_time(volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, 
+                                                     extreme_rsis, last_result_must_be_4_minutes, data_values, user_mode)
         
         local_sublists = {}
         total_combinations_tested = 0
-        batch_size = 1000000     # large batch size for better parallelization
+        batch_size = 2500000     # large batch size for better parallelization. (on 16gb ram you must have everything but the ide closed to use this size)
         prune_size = 400000      # only allow _sublists to reach this length before pruning them
         batch_count = 0          # how many batches have been processed - used to update user with progress
         combination_batch = None # Struct-of-arrays for combinations
@@ -658,6 +686,7 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
             
         volatilities_np = np.array(volatilities)
         ratios_np = np.array(ratios)
+        avg_of_last_2_trades_np = np.array(avg_of_last_2_trades)
         adx28s_np = np.array(adx28s)
         adx14s_np = np.array(adx14s)
         adx7s_np = np.array(adx7s)
@@ -665,11 +694,11 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
         if user_mode == 3:
             # Use numpy meshgrid to create all combinations of outer parameters
             # This replaces the 7 nested loops with vectorized operations
-            (entry_times_mesh, volatilities_mesh, ratios_mesh, adx28s_mesh, 
-             adx14s_mesh, adx7s_mesh, rsi_mesh) = np.meshgrid(
-                np.arange(len(entry_times_valid)), volatilities_np, ratios_np, 
+            (entry_times_mesh, volatilities_mesh, ratios_mesh, avg_of_last_2_trades_mesh, adx28s_mesh, 
+             adx14s_mesh, adx7s_mesh, rsi_mesh, last_result_4_min_mesh) = np.meshgrid(
+                np.arange(len(entry_times_valid)), volatilities_np, ratios_np, avg_of_last_2_trades_np,
                 adx28s_np, adx14s_np, adx7s_np, np.arange(len(extreme_rsis)), 
-                indexing='ij'
+                np.arange(len(last_result_must_be_4_minutes)), indexing='ij'
             )
             
             # Flatten all meshgrids to get 1D arrays of all combinations
@@ -677,18 +706,20 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
                 entry_times_mesh.ravel(),
                 volatilities_mesh.ravel(), 
                 ratios_mesh.ravel(),
+                avg_of_last_2_trades_mesh.ravel(),
                 adx28s_mesh.ravel(),
                 adx14s_mesh.ravel(),
                 adx7s_mesh.ravel(),
-                rsi_mesh.ravel()
+                rsi_mesh.ravel(),
+                last_result_4_min_mesh.ravel()
             ])
         else:
             # For user_mode 1 and 2, no time dimension in meshgrid
-            (volatilities_mesh, ratios_mesh, adx28s_mesh, 
-             adx14s_mesh, adx7s_mesh, rsi_mesh) = np.meshgrid(
-                volatilities_np, ratios_np, 
+            (volatilities_mesh, ratios_mesh, avg_of_last_2_trades_mesh, adx28s_mesh, 
+             adx14s_mesh, adx7s_mesh, rsi_mesh, last_result_4_min_mesh) = np.meshgrid(
+                volatilities_np, ratios_np, avg_of_last_2_trades_np,
                 adx28s_np, adx14s_np, adx7s_np, np.arange(len(extreme_rsis)), 
-                indexing='ij'
+                np.arange(len(last_result_must_be_4_minutes)), indexing='ij'
             )
             
             # Flatten all meshgrids to get 1D arrays of all combinations (no time)
@@ -696,10 +727,12 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
                 np.full(volatilities_mesh.ravel().shape, 0),  # Dummy time index (always 0)
                 volatilities_mesh.ravel(), 
                 ratios_mesh.ravel(),
+                avg_of_last_2_trades_mesh.ravel(),
                 adx28s_mesh.ravel(),
                 adx14s_mesh.ravel(),
                 adx7s_mesh.ravel(),
-                rsi_mesh.ravel()
+                rsi_mesh.ravel(),
+                last_result_4_min_mesh.ravel()
             ])
         
         # Pre-create inner parameter combinations with validity checks
@@ -779,12 +812,14 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
                 
             volatility = outer_combo[1]
             ratio = outer_combo[2]
-            adx28 = outer_combo[3]
-            adx14 = outer_combo[4]
-            adx7 = outer_combo[5]
-            rsi_type = extreme_rsis[int(outer_combo[6])]
+            avg_of_last_2_trades_val = outer_combo[3]
+            adx28 = outer_combo[4]
+            adx14 = outer_combo[5]
+            adx7 = outer_combo[6]
+            rsi_type = extreme_rsis[int(outer_combo[7])]
+            last_result_4_min_type = last_result_must_be_4_minutes[int(outer_combo[8])]
             
-            mask_key = (entry_time, volatility, ratio, adx28, adx14, adx7, rsi_type)
+            mask_key = (entry_time, volatility, ratio, avg_of_last_2_trades_val, adx28, adx14, adx7, rsi_type, last_result_4_min_type)
             combined_mask = mask_cache[mask_key]
             
             if np.any(combined_mask):
@@ -814,7 +849,9 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
             entry_times_array = np.array([entry_times_valid[int(combo[0])] for combo in valid_outer_combos])
         else:
             entry_times_array = np.array([None for combo in valid_outer_combos])
-        rsi_types_array = np.array([extreme_rsis[int(combo[6])] for combo in valid_outer_combos])
+        avg_of_last_2_trades_array = np.array([combo[3] for combo in valid_outer_combos])
+        rsi_types_array = np.array([extreme_rsis[int(combo[7])] for combo in valid_outer_combos])
+        last_result_4_min_types_array = np.array([last_result_must_be_4_minutes[int(combo[8])] for combo in valid_outer_combos])
         
         # Build all combinations in one vectorized operation
         total_combos = len(outer_broadcast)
@@ -832,7 +869,9 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
             chunk_inner_combos = valid_inner_combos[chunk_inner_indices]
             chunk_mask_keys = [valid_mask_keys[i] for i in chunk_outer_indices]
             chunk_entry_times = entry_times_array[chunk_outer_indices]
+            chunk_avg_of_last_2_trades = avg_of_last_2_trades_array[chunk_outer_indices]
             chunk_rsi_types = rsi_types_array[chunk_outer_indices]
+            chunk_last_result_4_min_types = last_result_4_min_types_array[chunk_outer_indices]
             
             # STRUCT-OF-ARRAYS OPTIMIZATION: Use columnar numpy arrays instead of list of dictionaries
             # This enables SIMD optimization, reduces memory usage, and eliminates dictionary overhead
@@ -853,10 +892,12 @@ def Create_Entries(entry_times, volatilities, ratios, adx28s, adx14s, adx7s, ext
                 'entry_times': np.array(chunk_entry_times, dtype=object),
                 'volatilities': chunk_outer_combos[:, 1].astype(np.float32),
                 'ratios': chunk_outer_combos[:, 2].astype(np.float32),
-                'adx28s': chunk_outer_combos[:, 3].astype(np.float32),
-                'adx14s': chunk_outer_combos[:, 4].astype(np.float32),
-                'adx7s': chunk_outer_combos[:, 5].astype(np.float32),
+                'avg_of_last_2_trades': np.array(chunk_avg_of_last_2_trades, dtype=np.float32),
+                'adx28s': chunk_outer_combos[:, 4].astype(np.float32),
+                'adx14s': chunk_outer_combos[:, 5].astype(np.float32),
+                'adx7s': chunk_outer_combos[:, 6].astype(np.float32),
                 'rsi_types': np.array(chunk_rsi_types, dtype=object),
+                'last_result_4_min_types': np.array(chunk_last_result_4_min_types, dtype=object),
                 't1s': chunk_inner_combos[:, 0].astype(np.float32),
                 'sl1s': chunk_inner_combos[:, 1].astype(np.float32),
                 't2s': chunk_inner_combos[:, 2].astype(np.float32),

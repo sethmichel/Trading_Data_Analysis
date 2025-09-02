@@ -34,11 +34,10 @@ def Write_Easy_To_Read_Summary():
         message = f"\n\nSUMMARY\n"
         
         # edit the results
-        # 1) id: 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3, avg: 0.23, sum: 17.80, count: 28, wins: 22, losses: 6, neither: 0
         for line in top_result_lines:
             line = line[6:]   # cut "1) id: "
             comma_splits = line.split(",")
-            param_str = comma_splits[0]   # 6:30:00|0.0|0.0|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3
+            param_str = comma_splits[0]   # 6:30:00|0.0|0.0|-5|0.0|0.0|20.0|either|0.3|0.9|-0.5|-0.3
             param_list = param_str.split("|")
 
             # add parameters
@@ -47,14 +46,18 @@ def Write_Easy_To_Read_Summary():
                 message += f"vol%: {param_list[1]}, "
             if (param_list[2] != "0.0"):
                 message += f"ratio: {param_list[2]}, "
-            if (param_list[3] != "0.0"):
-                message += f"adx28: {param_list[3]}, "
+            if (param_list[3] != "-5.0"):
+                message += f"avg_of_last_2_trades: {param_list[2]}, "
             if (param_list[4] != "0.0"):
-                message += f"adx14: {param_list[4]}, "
+                message += f"adx28: {param_list[4]}, "
             if (param_list[5] != "0.0"):
-                message += f"adx7: {param_list[5]}, "
-            if (param_list[6] != 'either'):
-                message += f"rsi: {param_list[6]}, "
+                message += f"adx14: {param_list[5]}, "
+            if (param_list[6] != "0.0"):
+                message += f"adx7: {param_list[6]}, "
+            if (param_list[7] != 'either'):
+                message += f"rsi: {param_list[7]}, "
+            if (param_list[8] != 'either'):
+                message += f"last_result_4_min_types: {param_list[7]}, "
 
             # add targets and stop losses
             message += "\n      "
@@ -125,6 +128,7 @@ def Write_Analysis(message):
         # to the first line
         file.write(message)
 
+# {entry_times_valid[i]}|{volatilities_valid[i]}|{ratios_valid[i]}|{avg_of_last_2_trades_valid[i]}|{adx28s_valid[i]}|{adx14s_valid[i]}|{adx7s_valid[i]}|{rsi_types_valid[i]}|{last_result_4_min_types_valid[i]}|{t1s_valid[i]}|{t2s_valid[i]}|{sl1s_valid[i]}|{sl2s_valid[i]}"
 
 # if user mode = 3 all_sublists if blank, and time_top_sublists is populated. else otherway around
 # time_top_sublists: {time list key: {sublist key: sublist}, ...}
@@ -134,7 +138,7 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
             # overall sum - current list is correct already
             message1 = (f"TEST 1: testing all combos of parameters\n"
                         f"User Mode: {user_mode} - Best Combos Overall:\n"
-                        f"time, time key, volatility%, ratio, adx28, 14, 7, rsi_type")
+                        f"time, time key, volatility%, ratio, avg_of_last_2_trades, adx28, 14, 7, rsi_type, last_result_4_min_types")
             
             message2 = "\n"
             for i, key in enumerate(all_sublists.keys()):
@@ -202,7 +206,7 @@ def Write_Grid_Seach_Results(all_sublists, time_top_sublists, how_many_final_par
                     sorted_sublists_by_time[entry_time].append((sublist_key, sublist_data))
                 
                 message1 += (f"\n-----Time List Key: {key}-----\n\n"
-                            f"entry time, volatility%, ratio, adx28, 14, 7, rsi_type")
+                            f"entry time, volatility%, ratio, avg_of_last_2_trades, adx28, 14, 7, rsi_type, last_result_4_min_types")
             
                 if how_many_final_parameters == 4:
                     message1 += f", t1, t2, sl1, sl2"
@@ -357,8 +361,8 @@ def Create_2D_List_From_Df(df, target_1s, stop_loss_1s, target_3s, stop_loss_2s,
         df['price_movement_list'] = df['Price Movement'].apply(lambda x: [np.float32(val) for val in str(x).split('|')] if str(x) and str(x) != 'nan' else [])
 
         # Keep only the columns specified in columns_to_keep
-        columns_to_keep = ['price_movement_list','Entry Volatility Percent','Entry Volatility Ratio','Entry Adx28',
-                           'Entry Adx14','Entry Adx7','Rsi Extreme Prev Cross', 'Entry Time']
+        columns_to_keep = ['price_movement_list','Entry Volatility Percent','Entry Volatility Ratio','avg_of_last_2_trades','Entry Adx28',
+                           'Entry Adx14','Entry Adx7','Rsi Extreme Prev Cross', 'Entry Time', 'last_result_must_be_4_minutes']
         df = df[[col for col in columns_to_keep if col in df.columns]].copy()
 
         # Separate rows where 'price_movement_list' length <= 3. we'll deal with them at the end
@@ -519,7 +523,8 @@ def Grid_Search_Start(df):
         print("1) Overall Combinations")
         print("2) Volatility Groups With Ratio Combinations")
         print("3) Overall Time Group Combinations")
-        user_mode = int(input("Enter the number of the mode you want to use: "))
+        #user_mode = int(input("Enter the number of the mode you want to use: "))
+        user_mode = 3 # TESTING
         if (user_mode not in [1,2,3]):
             raise ValueError("Pick either 1, 2, or 3")
 
@@ -533,8 +538,16 @@ def Grid_Search_Start(df):
                      #'times_3_30m': np.array(['6:30:00', '7:00:00', '7:30:00']), 
                      #'times_4_custom_1': np.array(['6:30:00', '6:45:00', '7:00:00', '7:30:00'])}
         
+        '''
+        some stats I found. 
+        if we test if a trade's previous trade on that ticker lasted at least 4 minutes: 74.3% it did
+        if we test the average return of the last 2 trades in deciding if we should take the next trade:
+            90% are over -0.5, 43% are over 0.0, 22.7% are over 0.3, 13.5% are over 0.6
+        '''
         volatilities = np.array([0.0,0.3,0.4,0.5,0.6], dtype=np.float32)
-        ratios = np.array([0.0,0.2,0.5,0.7, 0.8, 0.9, 1.0], dtype=np.float32)
+        ratios = np.array([0.0,0.2,0.5,0.7, 0.8, 0.9, 1.0], dtype=np.float32) # 0 is base value to include all trades
+        avg_of_last_2_trades = np.array([-5,-0.4,-0.3,-0.2,-0.1,0,0.1,0.2,0.3,0.4], dtype=np.float32) # -5 is base value to include all trades
+        last_result_must_be_4_minutes = [True, False, "either"] # Keep as list for string handling
         adx28s = np.array([0,20, 30], dtype=np.float32)
         adx14s = np.array([0,20, 30], dtype=np.float32)
         adx7s = np.array([0,20, 30], dtype=np.float32)
@@ -595,7 +608,7 @@ def Grid_Search_Start(df):
             print(f"{message} overall sums...")
             # For user_mode=1, pass None for entry_times as it doesn't use time filtering
             all_sublists = Grid_Search_Helper_Create_Combos.Create_Entries(
-                   None, volatilities, ratios, adx28s, adx14s, adx7s, extreme_rsis,
+                   None, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, extreme_rsis, last_result_must_be_4_minutes,
                    target_1s, target_3s, stop_loss_2s, stop_loss_1s, target_2s, stop_loss_3s, data_rows, 
                    data_values, data_last_prices, target1s_np_array, target2s_np_array, target3s_np_array, 
                    stop_loss1s_np_array, stop_loss2s_np_array, stop_loss3s_np_array,
@@ -606,7 +619,7 @@ def Grid_Search_Start(df):
             print(f"{message} grouped by volatility sums...")
             # For user_mode=2, pass None for entry_times as it doesn't use time filtering
             all_sublists = Grid_Search_Helper_Create_Combos.Create_Entries(
-                   None, volatilities, ratios, adx28s, adx14s, adx7s, extreme_rsis,
+                   None, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, extreme_rsis, last_result_must_be_4_minutes,
                    target_1s, target_3s, stop_loss_2s, stop_loss_1s, target_2s, stop_loss_3s, data_rows, 
                    data_values, data_last_prices, target1s_np_array, target2s_np_array, target3s_np_array, 
                    stop_loss1s_np_array, stop_loss2s_np_array, stop_loss3s_np_array,
@@ -619,7 +632,7 @@ def Grid_Search_Start(df):
             for key, value in time_dict.items():
                 # each call returns the top x for that time list. each time list is different intervaul times
                 time_top_sublists[key] = Grid_Search_Helper_Create_Combos.Create_Entries(
-                    value, volatilities, ratios, adx28s, adx14s, adx7s, extreme_rsis,
+                    value, volatilities, ratios, avg_of_last_2_trades, adx28s, adx14s, adx7s, extreme_rsis, last_result_must_be_4_minutes,
                     target_1s, target_3s, stop_loss_2s, stop_loss_1s, target_2s, stop_loss_3s, data_rows, 
                     data_values, data_last_prices, target1s_np_array, target2s_np_array, target3s_np_array, 
                     stop_loss1s_np_array, stop_loss2s_np_array, stop_loss3s_np_array,
@@ -641,7 +654,7 @@ def Grid_Search_Start(df):
 
 def main():
     data_dir = "Csv_Files/3_Final_Trade_Csvs"
-    data_file = "Bulk_Combined.csv"
+    data_file = "Bulk_Combined-Small_Data_Set.csv"
     df = pd.read_csv(f"{data_dir}/{data_file}")
 
     Grid_Search_Start(df)

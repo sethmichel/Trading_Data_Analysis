@@ -5,6 +5,7 @@ Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data/
 Csv_Files/1_tos_Raw_Trades/trade_Data/
 Csv_Files/1_tos_Raw_Trades/Unedited_All_Trades_Data/
 Csv_Files/2_Raw_Market_Data/Market_Data/
+Csv_Files/2_Raw_Market_Data/
 Csv_Files/3_Final_Trade_Csvs/
 
 XG_Boost/Output/1_overview
@@ -13,7 +14,13 @@ XG_Boost/Output/3_correlations
 XG_Boost/Output/4_datapoint_analysis
 XG_Boost/Data.csv
 
+Holder_Strat/Holder_Strat_Trade_Logs/
+Holder_Strat/Summary_Csvs/
+Holder_Strat/Summary_Text_Files/
+
 Logs.txt
+TESTING.csv
+testing.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
