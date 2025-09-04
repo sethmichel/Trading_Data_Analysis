@@ -12,6 +12,7 @@ import Main_Globals
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
+
 '''
 goal: create a csv with
 date, ticker, held, entry time, exit time, time in trade, change percent, change dollar, running sum, total investment, trade type, 
@@ -21,6 +22,18 @@ Entry Atr14, Entry Atr28, Entry Volatility Percent, Entry Volatility Ratio, Entr
 held is bool for if it broke the target
 trade type is buy or short
 '''
+
+def seconds_to_hms(seconds):
+    """Convert seconds to hours:minutes:seconds format"""
+    if seconds is None or pd.isna(seconds):
+        return None
+    
+    hours = int(seconds // 3600)
+    minutes = int((seconds % 3600) // 60)
+    secs = int(seconds % 60)
+    
+    return f"{hours:02d}:{minutes:02d}:{secs:02d}"
+
 
 def Check_Dirs(dir_list):
     try:
@@ -46,7 +59,7 @@ def Check_Dirs(dir_list):
         return False
 
 
-def Find_Valid_Files(market_data_dir, trade_log_dir):
+def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
     try:
         all_trade_dates = []
         all_trade_paths = []
@@ -58,8 +71,14 @@ def Find_Valid_Files(market_data_dir, trade_log_dir):
             if file.endswith('.csv'):
                 parts = file.split('-')[0:3] # year, month, day
                 date = f"{parts[1]}-{parts[2]}-{parts[0]}"
-                all_trade_dates.append(date)
-                all_trade_paths.append(f"{trade_log_dir}/{file}")
+                # if we're doing all days, add them
+                if (do_set_days == []):
+                    all_trade_dates.append(date)
+                    all_trade_paths.append(f"{trade_log_dir}/{file}")
+                # if we're doing set days, check the date is valid
+                elif (date in do_set_days):
+                    all_trade_dates.append(date)
+                    all_trade_paths.append(f"{trade_log_dir}/{file}")
 
         # now look at market data, if we have a file for the trade date add that date to a list of valid dates
         for file in os.listdir(market_data_dir):
@@ -239,7 +258,7 @@ def Create_Summary_Df(raw_df):
                             'Best Exit Time In Trade': None,
                             'Worst Exit Price': None,
                             'Worst Exit Percent': None,
-                            'Worst Exit, Time In Trade': None,
+                            'Worst Exit Time In Trade': None,
                             'Entry Atr14': None,
                             'Entry Atr28': None,
                             'Entry Volatility Percent': None,
@@ -247,7 +266,21 @@ def Create_Summary_Df(raw_df):
                             'Entry Adx28': None,
                             'Entry Adx14': None,
                             'Entry Adx7': None,
-                            'Price Movement': None
+                            # Time-based estimates for holder trades
+                            'ROI_1_Hour': None,
+                            'ROI_1_5_Hours': None,
+                            'ROI_2_Hours': None,
+                            'ROI_2_5_Hours': None,
+                            'ROI_3_Hours': None,
+                            # ROI percentage-based estimates for holder trades
+                            'percent_1': None,
+                            'percent_2': None,
+                            'percent_2_5': None,
+                            'percent_3': None,
+                            'percent_3_5': None,
+                            'percent_4': None,
+                            
+                            'Price Movement': None,
                         })
                         break
 
@@ -467,6 +500,7 @@ def Add_Market_Data(df, market_data_path):
                 # This is the first row at or after entry time
                 if idx_2 is None:
                     idx_2 = ticker_idx
+
                     df.at[idx, 'Entry Atr14'] = row['Atr14']
                     df.at[idx, 'Entry Atr28'] = row['Atr28']
                     df.at[idx, 'Entry Volatility Percent'] = row['Volatility Percent']
@@ -484,12 +518,16 @@ def Add_Market_Data(df, market_data_path):
 
                 df.at[idx, 'Best Exit Price'] = best_worst_info['Best Exit Price']
                 df.at[idx, 'Best Exit Percent'] = best_worst_info['Best Exit Percent']
-                df.at[idx, 'Best Exit Time In Trade'] = best_worst_info['Best Exit Time In Trade']
+                df.at[idx, 'Best Exit Time In Trade'] = seconds_to_hms(best_worst_info['Best Exit Time In Trade'])
                 df.at[idx, 'Worst Exit Price'] = best_worst_info['Worst Exit Price']
                 df.at[idx, 'Worst Exit Percent'] = best_worst_info['Worst Exit Percent']
-                df.at[idx, 'Worst Exit Time In Trade'] = best_worst_info['Worst Exit Time In Trade']
+                df.at[idx, 'Worst Exit Time In Trade'] = seconds_to_hms(best_worst_info['Worst Exit Time In Trade'])
 
                 df.at[idx, 'Price Movement'] = Add_Price_Movement(ticker_df, entry_price, idx_2, exit_seconds, direction)
+
+                df = Create_Estimate_Columns(df, idx, ticker_df)
+                if (isinstance(df, pd.DataFrame) == False):
+                    return
 
         return df
 
@@ -498,7 +536,7 @@ def Add_Market_Data(df, market_data_path):
         return None
 
 
-def Create_Summarized_Info_txt(df):
+def Create_Summarized_Info_txt(df, date):
     try:
         # --- goal: extract summarized results from df and write to a txt file
         # --- df is now a completed normalized trade log dataframe, each line is all details of 1 trade
@@ -514,11 +552,6 @@ def Create_Summarized_Info_txt(df):
         if not os.path.exists(output_dir):
             os.makedirs(output_dir, exist_ok=True)
         
-        # Extract date from the first row and create filename
-        if len(df) == 0:
-            return False
-        
-        date = df.iloc[0]['Date']  # Get date from first row
         filename = f'Summary_{date}.txt'
         file_path = os.path.join(output_dir, filename)
         
@@ -534,7 +567,7 @@ def Create_Summarized_Info_txt(df):
         content.append(f"=== SUMMARY FOR {date} ===\n")
         content.append("OVERALL DAY STATISTICS:")
         content.append(f"Day's Total % Change: {total_percent_change:.2f}%")
-        content.append(f"Day's Total $ Change: ${total_dollar_change:.2f}")
+        content.append(f"Day's Total $ Change: ${total_dollar_change:.2f} + fees")
         content.append(f"Number of trades where Best Exit Percent > 0.6%: {num_trades_over_06}")
         content.append(f"Sum of Percent Change for trades with Best Exit > 0.6%: {sum_percent_change_over_06:.2f}%")
         content.append("")  # Empty line for spacing
@@ -570,7 +603,165 @@ def Create_Summarized_Info_txt(df):
         return False
 
 
-def Controller(): 
+# if a trade reached 0.6% and is thus a 'holder' trade, estimate roi in various senarios
+def Create_Estimate_Columns(df, idx, ticker_df):
+    try:
+        # Get the trade row from the dataframe at the given index
+        trade = df.iloc[idx]
+        
+        # step 1) skip trade if it's not a holder trade. A holder trade is one who's 'Best Exit Percent' value is at least 0.6
+        best_exit_percent = trade['Best Exit Percent']
+        if best_exit_percent is None or best_exit_percent < 0.6:
+            return df  # Not a holder trade, skip analysis but return df
+        
+        # step 2) if it's a holder trade, iterate over market data to find the price at each target point. market data is organized by ticker, in time ascending order
+        # --- When finding these target point values, if the 'Price' column value reaches the 'Entry Price' then record 0
+        # --- when finding these target point values, if the market data ends (reached end of file) record the final rows values.
+        #        for example, when finding the roi after 1.5 hours, if the price reaches the entry price record 0. or if we reach the end of the 
+        #        file record the roi % using the final price value. do the same with finding roi %, if we reach the end of the file record the % 
+        #        using the final price
+        # --- target points (time): 1 hour, 1.5 hours, 2 hours, 2.5 hours, 3 hours
+        # --- target points (% roi): 1%, 2%, 2.5%, 3%, 3.5%, 4% (find % roi compared to trades 'Entry Price') 
+        # --- you can see this sort of market data analyzing being done in Add_Best_Worst_Info()
+        # --- df is the dataframe containing the trades, idx is the index of the df for this trade, trade is the row of the df (the current trade)
+        #     ticker_df is a dataframe of market data just for this ticker, where 'Time' is the timestamp in seconds since midnight.
+        # step 3) record all these values directly to the df. create the df columns in the normalized_trades variable. line 228
+
+        # Get trade information
+        entry_price = trade['Entry Price']
+        direction = trade['Trade Type']
+        
+        entry_time_parts = trade['Entry Time'].split(':')
+        entry_seconds = int(entry_time_parts[0]) * 3600 + int(entry_time_parts[1]) * 60 + int(entry_time_parts[2])
+        
+        # Find the starting index for the trade in ticker_df
+        start_idx = None
+        for ticker_idx, row in ticker_df.iterrows():
+            if row['Time'] >= entry_seconds:
+                start_idx = ticker_idx
+                break
+        
+        # step 2) iterate over market data to find the price at each target point
+        
+        # Define target time points (in seconds from entry)
+        time_targets = {
+            'ROI_1_Hour': 3600,        # 1 hour
+            'ROI_1_5_Hours': 5400,     # 1.5 hours
+            'ROI_2_Hours': 7200,       # 2 hours
+            'ROI_2_5_Hours': 9000,     # 2.5 hours
+            'ROI_3_Hours': 10800       # 3 hours
+        }
+        
+        # Define target ROI percentages
+        roi_targets = {
+            'percent_1': 1.0,
+            'percent_2': 2.0,
+            'percent_2_5': 2.5,
+            'percent_3': 3.0,
+            'percent_3_5': 3.5,
+            'percent_4': 4.0
+        }
+        
+        # Initialize results
+        time_results = {}
+        roi_results = {}
+        
+        # Track if we ever hit entry price AFTER reaching 0.6% (means trade went to breakeven/loss)
+        hit_entry_price_after_06 = False
+        reached_06_percent = False
+        
+        # Get starting position in the dataframe
+        start_position = ticker_df.index.get_loc(start_idx)
+        
+        # Iterate through market data from entry time onwards
+        for idx_pos in range(start_position, len(ticker_df)):
+            row = ticker_df.iloc[idx_pos]
+            current_time = row['Time']
+            current_price = row['Price']
+            
+            # Calculate time elapsed since entry (in seconds)
+            time_elapsed = current_time - entry_seconds
+            
+            # Calculate current ROI percentage
+            if direction == 'buy':
+                current_roi = ((current_price - entry_price) / entry_price) * 100
+            else:  # direction == 'short'
+                current_roi = ((entry_price - current_price) / entry_price) * 100
+            
+            # Check if we've reached 0.6% for the first time
+            if not reached_06_percent and current_roi >= 0.6:
+                reached_06_percent = True
+            
+            # Only check if price has reached entry price AFTER we've reached 0.6%
+            if reached_06_percent:
+                if direction == 'buy' and current_price <= entry_price:
+                    hit_entry_price_after_06 = True
+                elif direction == 'short' and current_price >= entry_price:
+                    hit_entry_price_after_06 = True
+            
+            # Check time-based targets: "what is the roi if I held the trade for this long?"
+            for time_key, target_seconds in time_targets.items():
+                if time_key not in time_results and time_elapsed >= target_seconds:
+                    if hit_entry_price_after_06:
+                        time_results[time_key] = 0.0  # Hit entry price after reaching 0.6%
+                    else:
+                        time_results[time_key] = round(current_roi, 2)
+            
+            # Check ROI percentage-based targets: did it ever reach this roi percent?
+            # Only check these targets AFTER we've reached 0.6%
+            if reached_06_percent:
+                for roi_key, target_percent in roi_targets.items():
+                    if roi_key not in roi_results:
+                        if hit_entry_price_after_06:
+                            roi_results[roi_key] = 0.0  # Hit entry price after reaching 0.6%, so result is 0
+                        elif current_roi >= target_percent:
+                            roi_results[roi_key] = target_percent  # Reached target, so result is the target
+        
+        # Handle any remaining unfilled results using final market data
+        if len(ticker_df) > 0:
+            final_row = ticker_df.iloc[-1]
+            final_price = final_row['Price']
+            final_time = final_row['Time']
+            
+            # Calculate final ROI
+            if direction == 'buy':
+                final_roi = ((final_price - entry_price) / entry_price) * 100
+            else:  # direction == 'short'
+                final_roi = ((entry_price - final_price) / entry_price) * 100
+            
+            # Fill in any missing time targets with final values
+            for time_key in time_targets.keys():
+                if time_key not in time_results:
+                    if hit_entry_price_after_06:
+                        time_results[time_key] = 0.0
+                    else:
+                        time_results[time_key] = round(final_roi, 2)
+            
+            # Fill in any missing ROI targets with final ROI if not hit entry price after 0.6%
+            # Only fill these if the trade reached 0.6% (was a holder trade)
+            if reached_06_percent:
+                for roi_key, target_percent in roi_targets.items():
+                    if roi_key not in roi_results:
+                        if hit_entry_price_after_06:
+                            roi_results[roi_key] = 0.0
+                        else:
+                            roi_results[roi_key] = round(final_roi, 2)  # Final ROI if target not reached
+        
+        # step 3) record all these values directly to the df
+        for time_key, roi_value in time_results.items():
+            df.at[idx, time_key] = roi_value
+        
+        for roi_key, roi_value in roi_results.items():
+            df.at[idx, roi_key] = roi_value
+
+        return df
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
+
+
+def Controller():
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
@@ -586,10 +777,11 @@ def Controller():
 
     # step 2) find all the valid trade days with their market data days. we skip days w/o market days
     # [[trade file path, market data file path], ...]
-    file_pairs = Find_Valid_Files(market_data_dir, source_log_dir)
+    do_set_days = ['09-03-2025'] # 'month-day-year'
+    file_pairs = Find_Valid_Files(market_data_dir, source_log_dir, do_set_days)
     if (file_pairs == []):
         return
-
+        
     for files in file_pairs:
         trade_log_path = files[0]
         market_data_path = files[1]
@@ -611,11 +803,20 @@ def Controller():
         if not isinstance(df, pd.DataFrame):
             return
         
+        month, day, year = (df.iloc[0]['Date']).split('-')
+        if (len(month) == 1):
+            month = '0' + month
+        if (len(day) == 1):
+            day = '0' + day
+        if (len(year) == 2):
+            year = '20' + year
+        date = f"{month}-{day}-{year}"
+
         # df is ready to save as a csv, but I'll analyze it more to add final results to a supporting txt file
-        result = Create_Summarized_Info_txt(df)
+        result = Create_Summarized_Info_txt(df, date)
         if (result == False):
             return
-
-        df.to_csv(f"{summary_dir}/Summary_{df.iloc[0]['Date']}.csv", index=False)
+        
+        df.to_csv(f"{summary_dir}/Summary_{date}.csv", index=False)
 
 Controller()
