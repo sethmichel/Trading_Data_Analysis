@@ -49,7 +49,6 @@ def Check_Dirs(dir_list):
         for filename in os.listdir(dir_list[2]):
             os.remove(f"{dir_list[2]}/{filename}")
             print(f"Deleted: {filename}")
-        print("\n")
 
         print("Step 1 completed: All directories verified/created. Old summary csv's deleted\n")
         return True
@@ -69,8 +68,8 @@ def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
 
         for file in os.listdir(trade_log_dir):
             if file.endswith('.csv'):
-                parts = file.split('-')[0:3] # year, month, day
-                date = f"{parts[1]}-{parts[2]}-{parts[0]}"
+                parts = file.split('-')[0:3]
+                date = f"{parts[0]}-{parts[1]}-{parts[2]}"
                 # if we're doing all days, add them
                 if (do_set_days == []):
                     all_trade_dates.append(date)
@@ -104,13 +103,39 @@ def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
         return []
 
 
+def Fix_Df_If_Backwards(raw_df):
+    try:
+        #print(raw_df.columns)
+        #print(raw_df.head(1))
+        time_1 = raw_df.iloc[0]['Date'].split(' ')[1]
+        time_2 = raw_df.iloc[-1]['Date'].split(' ')[1]
+        
+        if time_2 > time_1:
+            # must reverse whole df
+            raw_df = raw_df.iloc[::-1].reset_index(drop=True)
+            #print(raw_df.at[0, 'Date'].split(' ')[1])
+        else:
+            # df is in correct order
+            pass
+        
+        return raw_df
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
+
+
 def Create_Df(csv_path):
     try:
         raw_df = pd.read_csv(csv_path, skiprows = 6)
 
         # delete all the canceled order rows
-        index_to_delete = raw_df[raw_df['Unnamed: 0'] == 'Canceled Orders'].index[0]
-        raw_df = raw_df[:index_to_delete]
+        try:
+            index_to_delete = raw_df[raw_df['Unnamed: 0'] == 'Canceled Orders'].index[0]
+            raw_df = raw_df[:index_to_delete]
+        except:
+            # there's no canceled orders: this happens with backtest logs
+            pass
 
         # drop useless columns
         columns_to_drop = ["Unnamed: 0", "Spread", "Exp", "Strike", "Type", "Price Improvement", "Order Type"]
@@ -121,6 +146,8 @@ def Create_Df(csv_path):
 
         raw_df.rename(columns={raw_df.columns[0]: "Date"}, inplace = True)   # rename the first column to "Date"
         raw_df.rename(columns={raw_df.columns[4]: "Ticker"}, inplace = True)
+
+        raw_df = Fix_Df_If_Backwards(raw_df)
 
         return raw_df
     
@@ -266,20 +293,6 @@ def Create_Summary_Df(raw_df):
                             'Entry Adx28': None,
                             'Entry Adx14': None,
                             'Entry Adx7': None,
-                            # Time-based estimates for holder trades
-                            'ROI_1_Hour': None,
-                            'ROI_1_5_Hours': None,
-                            'ROI_2_Hours': None,
-                            'ROI_2_5_Hours': None,
-                            'ROI_3_Hours': None,
-                            # ROI percentage-based estimates for holder trades
-                            'percent_1': None,
-                            'percent_2': None,
-                            'percent_2_5': None,
-                            'percent_3': None,
-                            'percent_3_5': None,
-                            'percent_4': None,
-                            
                             'Price Movement': None,
                         })
                         break
@@ -317,23 +330,27 @@ def Add_Running_Percents(df):
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
         return None
-    
+
 
 def Create_Ticker_Market_Data_Dfs(df, market_data_path):
-    market_df = pd.read_csv(market_data_path)
+    try:
+        market_df = pd.read_csv(market_data_path)
 
-    # convert each timestamp to seconds for faster comparison
-    for idx, row in market_df.iterrows():
-        time_parts = row['Time'].split(':')
-        market_df.at[idx, 'Time'] = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
-    
-    unique_tickers = df['Ticker'].unique()
-    ticker_data_dict = {}
-    for ticker in unique_tickers:
-        ticker_data_dict[ticker] = market_df[market_df['Ticker'] == ticker].copy()
-    
-    return ticker_data_dict
-
+        # convert each timestamp to seconds for faster comparison
+        for idx, row in market_df.iterrows():
+            time_parts = row['Time'].split(':')
+            market_df.at[idx, 'Time'] = int(time_parts[0]) * 3600 + int(time_parts[1]) * 60 + int(time_parts[2])
+        
+        unique_tickers = df['Ticker'].unique()
+        ticker_data_dict = {}
+        for ticker in unique_tickers:
+            ticker_data_dict[ticker] = market_df[market_df['Ticker'] == ticker].copy()
+        
+        return ticker_data_dict
+        
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return None
 
 # direction is 'buy' or 'short'
 def Add_Best_Worst_Info(ticker_df, idx_2, entry_price, direction, exit_time_seconds):
@@ -523,9 +540,10 @@ def Add_Market_Data(df, market_data_path):
                 df.at[idx, 'Worst Exit Percent'] = best_worst_info['Worst Exit Percent']
                 df.at[idx, 'Worst Exit Time In Trade'] = seconds_to_hms(best_worst_info['Worst Exit Time In Trade'])
 
-                df.at[idx, 'Price Movement'] = Add_Price_Movement(ticker_df, entry_price, idx_2, exit_seconds, direction)
+                price_movement_list = Add_Price_Movement(ticker_df, entry_price, idx_2, exit_seconds, direction)
+                df.at[idx, 'Price Movement'] = str(price_movement_list) if price_movement_list is not None else None
 
-                df = Create_Estimate_Columns(df, idx, ticker_df)
+                #df = Create_Estimate_Columns(df, idx, ticker_df, exit_seconds)
                 if (isinstance(df, pd.DataFrame) == False):
                     return
 
@@ -604,7 +622,7 @@ def Create_Summarized_Info_txt(df, date):
 
 
 # if a trade reached 0.6% and is thus a 'holder' trade, estimate roi in various senarios
-def Create_Estimate_Columns(df, idx, ticker_df):
+def Create_Estimate_Columns(df, idx, ticker_df, exit_seconds):
     try:
         # Get the trade row from the dataframe at the given index
         trade = df.iloc[idx]
@@ -692,8 +710,8 @@ def Create_Estimate_Columns(df, idx, ticker_df):
             if not reached_06_percent and current_roi >= 0.6:
                 reached_06_percent = True
             
-            # Only check if price has reached entry price AFTER we've reached 0.6%
-            if reached_06_percent:
+            # Only check if price has reached entry price AFTER we've reached 0.6% AND after the actual trade end time
+            if reached_06_percent and current_time >= exit_seconds:
                 if direction == 'buy' and current_price <= entry_price:
                     hit_entry_price_after_06 = True
                 elif direction == 'short' and current_price >= entry_price:
@@ -761,25 +779,46 @@ def Create_Estimate_Columns(df, idx, ticker_df):
         return None
 
 
-def Controller():
+def Get_All_Trade_Log_Date():
+    dates = []
+    trade_log_dir = "Holder_Strat/Holder_Strat_Trade_Logs"
+
+    for file in os.listdir(trade_log_dir):
+        if file.endswith('.csv'):
+            date = "-".join(file.split('-')[0:3])
+            if ".csv" in date:
+                date = date[:-4] # live days do this, on demand days don't
+            dates.append(date)
+
+    return dates
+
+
+def Controller(do_all_trade_logs):
     # Get the directory where this script is located
     script_dir = os.path.dirname(os.path.abspath(__file__))
     
     source_log_dir = os.path.join(script_dir, 'Holder_Strat_Trade_Logs')   # where the trade log csv's are
-    market_data_dir = os.path.abspath(os.path.join(script_dir, '..', 'Csv_Files', '2_Raw_Market_Data'))
+    market_data_dir = "Holder_Strat/Approved_Checked_Market_Data"
     summary_dir = os.path.join(script_dir, 'Summary_Csvs')
 
     # step 1) check directories/files, remove everything from the summary dir
     # make the output csv, check the trade logs and market data dir exist
     result = Check_Dirs([source_log_dir, market_data_dir, summary_dir])
     if (result == False):
+        print("bad check directories")
         return
 
     # step 2) find all the valid trade days with their market data days. we skip days w/o market days
     # [[trade file path, market data file path], ...]
-    do_set_days = ['09-03-2025'] # 'month-day-year'
+    if (do_all_trade_logs == 'no'):
+        do_set_days = ['08-25-2025'] # 'month-day-year'
+    elif (do_all_trade_logs == 'yes'):
+        do_set_days = Get_All_Trade_Log_Date()
+    else:
+        return
     file_pairs = Find_Valid_Files(market_data_dir, source_log_dir, do_set_days)
     if (file_pairs == []):
+        Main_Globals.logger.info(f"no fail pairs found for date")
         return
         
     for files in file_pairs:
@@ -795,6 +834,7 @@ def Controller():
         # step 4) create summary df and add stuff in
         df = Create_Summary_Df(raw_df)
         if not isinstance(df, pd.DataFrame):
+            print(f"ERROR**** just created summary df isn't a dataframe")
             return
         
         df = Add_Running_Percents(df) # running percent by ticker and all together
@@ -819,4 +859,5 @@ def Controller():
         
         df.to_csv(f"{summary_dir}/Summary_{date}.csv", index=False)
 
-Controller()
+
+Controller(do_all_trade_logs='yes')

@@ -1,1 +1,0 @@
-print(int(0.59 * 10) / 10)  # Floor to nearest 0.1%

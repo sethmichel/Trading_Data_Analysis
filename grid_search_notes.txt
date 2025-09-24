@@ -1,3 +1,0 @@
-SIMD: is a thing cpu's can do now, basically if the data is in continuous memory like it is in numpy arrays but not python lists,
-it can do 8 operations at once  instead of 1. However, it can't do it if the array has multiple data types, like I had rsi_types
-being bools and strings. you can call this data type 'object' but it's not efficient

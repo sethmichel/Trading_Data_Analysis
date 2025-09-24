@@ -3,6 +3,7 @@ import os
 import inspect
 import sys
 import shutil
+sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Main_Globals
 from datetime import datetime
 from sklearn.feature_selection import mutual_info_regression
@@ -405,8 +406,8 @@ def Change_Column_Name():
 # need this in case you add 0's to the end of numbers accidently. like 0.5800 instead of 0.58
 def Edit_Values():
     market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
-    file_path = f"{market_data_dir}/Raw_Market_Data_04-09-2025_On_Demand.csv"
-    temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_04-09-2025_On_Demand.csv"
+    file_path = f"{market_data_dir}/Raw_Market_Data_09-12-2025.csv"
+    temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_09-12-2025.csv"
     
     print(f"Processing {file_path}...")
     
@@ -447,14 +448,84 @@ def Edit_Values():
     print("Completed processing - trailing zeros removed from Volatility Percent column.")
 
 
+# replaces all values in a column with rounded values
+# columns is a list of columns: ['Volatility Percent', 'Volatility Ratio']
+# decimal_places is what we round to. 2 means round( ,2)
+def Round_Whole_Column_Values(csv_path, columns, decimal_places=2):
+    try:
+        temp_file_path = csv_path.replace('.csv', '_temp.csv')
+        
+        print(f"Processing {csv_path}...")
+        print(f"Rounding columns: {columns} to {decimal_places} decimal places")
+        
+        with open(csv_path, 'r', newline='', encoding='utf-8') as input_file, \
+             open(temp_file_path, 'w', newline='', encoding='utf-8') as output_file:
+            
+            reader = csv.reader(input_file)
+            writer = csv.writer(output_file)
+            
+            # Read and write header row
+            header = next(reader)
+            writer.writerow(header)
+            
+            # Find column indices for the columns we want to round
+            column_indices = []
+            for column in columns:
+                if column in header:
+                    column_indices.append(header.index(column))
+                    print(f"Found column '{column}' at index {header.index(column)}")
+                else:
+                    print(f"Warning: Column '{column}' not found in CSV file")
+            
+            if not column_indices:
+                print("No valid columns found to round. Exiting without changes.")
+                os.remove(temp_file_path)
+                return
+            
+            # Process each data row
+            rows_processed = 0
+            for row in reader:
+                if len(row) > max(column_indices):  # Ensure row has enough columns
+                    # Round values in specified columns
+                    for col_index in column_indices:
+                        try:
+                            # Only round if the value is not empty
+                            if row[col_index] and row[col_index].strip():
+                                original_value = float(row[col_index])
+                                rounded_value = round(original_value, decimal_places)
+                                row[col_index] = str(rounded_value)
+                        except ValueError:
+                            # If conversion fails, keep the original value
+                            print(f"Warning: Could not convert '{row[col_index]}' to float, keeping original value")
+                            pass
+                
+                writer.writerow(row)
+                rows_processed += 1
+        
+        # Replace original file with modified file
+        os.remove(csv_path)
+        os.rename(temp_file_path, csv_path)
+        
+        print(f"Completed processing {rows_processed} rows")
+        print(f"Rounded values in columns: {columns}")
+        
+    except Exception as e:
+        # Clean up temp file if it exists
+        if os.path.exists(temp_file_path):
+            os.remove(temp_file_path)
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
 # swtich the order of columns
 def Re_Order_Columns():
     # --- Load and reorder columns for Raw_Market_Data_06-20-2025_Final.csv ---
-    csv_path = "Csv_Files/2_Raw_Market_Data/Market_Data/Raw_Market_Data_06-24-2025.csv"
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    project_root = os.path.dirname(script_dir)
+    csv_path = os.path.join(project_root, "Csv_Files", "2_Raw_Market_Data", "Raw_Market_Data_09-12-2025.csv")
     desired_order = [
         'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
-        'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time'
-    ]
+        'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time']
+
     try:
         df = pd.read_csv(csv_path)
         # Reorder columns
@@ -676,6 +747,9 @@ def Check_Ticker_Counts_Consistancy(market_file_path, market_file):
                 if (min_count == 16302 and difference == 79):
                     print("you know about this one, it's 5-20-2025, tesla, 79 difference. I don't really care so I'm skipping it")
                     return True
+                if (market_file == 'Raw_Market_Data_09-02-2025.csv'):
+                    print("you don't know what caused this, but you don't really care so you're skipping it")
+                    return True
                 return False
             else:
                 print(f"  ✓ GOOD: Ticker counts are consistent in {market_file}")
@@ -692,7 +766,7 @@ def Check_Ticker_Counts_Consistancy(market_file_path, market_file):
 # checks if market data header row is in right order AND if there's no duplicate header rows
 def Check_Market_Data_Column_Order(market_file_path, market_file):
     try:
-        expected_headers = ["Ticker", "Price", "Val", "Avg", "Macd Z-Score", "Atr14", "Atr28", "Rsi", "Volume", "Adx28", 
+        expected_headers = ["Ticker", "Price", "Val", "Avg", "Atr14", "Atr28", "Rsi", "Volume", "Adx28", 
                             "Adx14", "Adx7", "Volatility Percent", "Volatility Ratio", "Time"]
         
         df = pd.read_csv(market_file_path)
@@ -702,6 +776,24 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
             print(f"✗ BAD: Header order mismatch in {market_file}")
             print(f"  Expected: {expected_headers}")
             print(f"  Actual:   {actual_headers}")
+
+            if ('Macd Z-Score' in actual_headers):
+                user_input = input(f"z score detected in {market_file}, do you want to remove the z score column from the data and header? "
+                                   f"this affects every row. enter 'y' for yes, anything else for no: ")
+                if user_input.lower() == "y":
+                    # Remove the z score column from the dataframe
+                    df = df.drop(columns=['Macd Z-Score'])
+                    # Update the actual_headers list
+                    actual_headers = list(df.columns)
+                    print(f"✓ Removed 'Macd Z-Score' column from {market_file}")
+                    
+                    # Save the modified dataframe back to the CSV file
+                    df.to_csv(market_file_path, index=False)
+                    print(f"✓ Updated CSV file: {market_file}")
+                    
+                    # Return a special value to indicate the file was modified and needs re-checking
+                    return "RECHECK"
+                
             return False
         
         # Check for duplicate header rows throughout the file
@@ -734,7 +826,7 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
 # controller to handle all validity checks of csv files
 def Authenticator_Freeway():
     try:
-        market_data_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
+        market_data_dir = "Csv_Files/2_Raw_Market_Data"
         market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
         # the reason I split it into for loops and not 1 big for loop is so the results are organized
@@ -742,7 +834,12 @@ def Authenticator_Freeway():
         # 1) check market order header is correct and there's not duplicate headers
         for market_data_file in market_data_csv_files:
             file_path = f"{market_data_dir}/{market_data_file}"
-            if (Check_Market_Data_Column_Order(file_path, market_data_file) == False):
+            result = Check_Market_Data_Column_Order(file_path, market_data_file)
+            if result == "RECHECK":
+                # Re-run the check for this file after modification
+                print(f"Re-checking {market_data_file} after modification...")
+                result = Check_Market_Data_Column_Order(file_path, market_data_file)
+            if result == False or result == 'RECHECK':
                 return False
         
         # 2) check counts of tickers for each file. this'll tell if a ticker stopped being recorded for some reason
@@ -777,29 +874,20 @@ def Authenticator_Freeway():
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
     
 
+#Authenticator_Freeway()
+
+
+
+
+
+
+
+
+
 Authenticator_Freeway()
 
-
-
-
-
-
-
-
-
-
-'''market_data_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
-other_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
-
-# Process all files in market_data_dir
-for filename in os.listdir(market_data_dir):
-    file_path = f"{market_data_dir}/{filename}"
-    print(f"Processing: {filename}")
-
-    data_holder = Calcualte_Directional_Bias_V2(file_path)
-    Add_Directional_Bias_To_Market_Data(data_holder, file_path)
-'''
-
+#Re_Order_Columns()
+#Round_Whole_Column_Values("Csv_Files/2_Raw_Market_Data/Raw_Market_Data_09-12-2025.csv", ['Volatility Percent', 'Volatility Ratio'], 2)
 
 
 

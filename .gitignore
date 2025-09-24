@@ -17,6 +17,10 @@ XG_Boost/Data.csv
 Holder_Strat/Holder_Strat_Trade_Logs/
 Holder_Strat/Summary_Csvs/
 Holder_Strat/Summary_Text_Files/
+Holder_Strat/Approved_Checked_Market_Data/
+
+Grid_Search/Analysis_Results.txt
+Grid_Search/grid_search_notes.txt
 
 Logs.txt
 TESTING.csv
