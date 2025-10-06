@@ -1,9 +1,7 @@
 import os
-from re import X
 import pandas as pd
 import inspect
 import sys
-import glob
 
 # Add parent directory to path so we can import Main_Globals
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -105,17 +103,20 @@ def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
         return []
 
 
-def Sort_By_Time(raw_df):
+def Fix_Df_If_Backwards(raw_df):
     try:
-        # Extract time portion from Date column and sort in descending order
-        # Date format: "month/day/year hour:minute:second"
-        raw_df['temp_time'] = raw_df['Date'].str.split(' ').str[1]
+        #print(raw_df.columns)
+        #print(raw_df.head(1))
+        time_1 = raw_df.iloc[0]['Date'].split(' ')[1]
+        time_2 = raw_df.iloc[-1]['Date'].split(' ')[1]
         
-        # Sort by time in descending order (newest time first, oldest time last)
-        raw_df = raw_df.sort_values('temp_time', ascending=False).reset_index(drop=True)
-        
-        # Remove the temporary time column
-        raw_df = raw_df.drop('temp_time', axis=1)
+        if time_2 > time_1:
+            # must reverse whole df
+            raw_df = raw_df.iloc[::-1].reset_index(drop=True)
+            #print(raw_df.at[0, 'Date'].split(' ')[1])
+        else:
+            # df is in correct order
+            pass
         
         return raw_df
 
@@ -146,7 +147,7 @@ def Create_Df(csv_path):
         raw_df.rename(columns={raw_df.columns[0]: "Date"}, inplace = True)   # rename the first column to "Date"
         raw_df.rename(columns={raw_df.columns[4]: "Ticker"}, inplace = True)
 
-        raw_df = Sort_By_Time(raw_df)
+        raw_df = Fix_Df_If_Backwards(raw_df)
 
         return raw_df
     
@@ -279,8 +280,6 @@ def Create_Summary_Df(raw_df):
                             'Exit Price': round(exit_price, 4),
                             'Trade Type': trade_type,
                             'Qty': None if has_multiple_entries else initial_qty,  # Use initial quantity unless multiple entries
-                            'holding reached': None,
-                            'Best Sl': None,
                             'Best Exit Price': None,
                             'Best Exit Percent': None,
                             'Best Exit Time In Trade': None,
@@ -294,7 +293,7 @@ def Create_Summary_Df(raw_df):
                             'Entry Adx28': None,
                             'Entry Adx14': None,
                             'Entry Adx7': None,
-                            'Price Movement': None
+                            'Price Movement': None,
                         })
                         break
 
@@ -354,9 +353,9 @@ def Create_Ticker_Market_Data_Dfs(df, market_data_path):
         return None
 
 # direction is 'buy' or 'short'
-def Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_time_seconds):
+def Add_Best_Worst_Info(ticker_df, idx_2, entry_price, direction, exit_time_seconds):
     try:
-        # --- start at starting_row which is the first rows index of ticker_df. iterate over ticker_df from there
+        # --- start at idx_2 which is the first rows index of ticker_df. iterate over ticker_df from there
         # --- we stop when we find the last row of the trade, each row has row['Time'] which is the time in seconds. 
         #     we can check the last row by doing some form of row['Time'] < exit_time_seconds.
         # --- for each row, track if it's the new best roi price, and if it's the new worst roi price. This means 
@@ -373,9 +372,9 @@ def Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_ti
         best_time_seconds = None
         worst_time_seconds = None
         
-        # Start iterating from starting_row (first row of the trade)
-        # starting_row is the dataframe index, so we need to get the position in the dataframe
-        start_position = ticker_df.index.get_loc(starting_row)
+        # Start iterating from idx_2 (first row of the trade)
+        # idx_2 is the dataframe index, so we need to get the position in the dataframe
+        start_position = ticker_df.index.get_loc(idx_2)
         for idx in range(start_position, len(ticker_df)):
             row = ticker_df.iloc[idx]
             current_time = row['Time']
@@ -412,7 +411,7 @@ def Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_ti
             worst_percent_change = ((entry_price - worst_price) / entry_price) * 100
         
         # Convert time in seconds to time in trade format (seconds from entry)
-        entry_time_seconds = ticker_df.loc[starting_row, 'Time']
+        entry_time_seconds = ticker_df.loc[idx_2, 'Time']
         best_time_in_trade = best_time_seconds - entry_time_seconds if best_time_seconds else 0
         worst_time_in_trade = worst_time_seconds - entry_time_seconds if worst_time_seconds else 0
         
@@ -431,11 +430,11 @@ def Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_ti
 
 
 # this tracks all 0.1% movements including 0.0, with duplicate tracking and oscillation detection
-def Add_Price_Movement(ticker_df, entry_price, starting_row, exit_time_seconds, direction):
+def Add_Price_Movement(ticker_df, entry_price, start_idx, exit_time_seconds, direction):
     try:
         price_movement = []
 
-        start_position = ticker_df.index.get_loc(starting_row)
+        start_position = ticker_df.index.get_loc(start_idx)
         for idx in range(start_position, len(ticker_df)):
             row = ticker_df.iloc[idx]
             current_time = row['Time']
@@ -490,6 +489,7 @@ def Add_Price_Movement(ticker_df, entry_price, starting_row, exit_time_seconds, 
 
 def Add_Market_Data(df, market_data_path):
     try:
+        # find best/worst exist
         # goal: ticker_data_dict['HOOD'] = all the market data rows for only HOOD
         # each value is a dataframe of all rows for that ticker
         ticker_data_dict = Create_Ticker_Market_Data_Dfs(df, market_data_path)
@@ -507,15 +507,16 @@ def Add_Market_Data(df, market_data_path):
             exit_seconds = int(exit_time_parts[0]) * 3600 + int(exit_time_parts[1]) * 60 + int(exit_time_parts[2])
 
             # Find the starting index for the trade in ticker_df
-            starting_row = None
+            idx_2 = None
             for ticker_idx, row in ticker_df.iterrows():
                 # start at the first row with a greater than or equal to entry time
+                x = row['Time']
                 if (row['Time'] < entry_seconds):
                     continue
 
                 # This is the first row at or after entry time
-                if starting_row is None:
-                    starting_row = ticker_idx
+                if idx_2 is None:
+                    idx_2 = ticker_idx
 
                     df.at[idx, 'Entry Atr14'] = row['Atr14']
                     df.at[idx, 'Entry Atr28'] = row['Atr28']
@@ -527,8 +528,8 @@ def Add_Market_Data(df, market_data_path):
                     break
 
             # add Best/worst Exit info. Loop over the data from start time to end time
-            if starting_row is not None:
-                best_worst_info = Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_seconds)
+            if idx_2 is not None:
+                best_worst_info = Add_Best_Worst_Info(ticker_df, idx_2, entry_price, direction, exit_seconds)
                 if (best_worst_info == None):
                     return None
 
@@ -538,14 +539,8 @@ def Add_Market_Data(df, market_data_path):
                 df.at[idx, 'Worst Exit Price'] = best_worst_info['Worst Exit Price']
                 df.at[idx, 'Worst Exit Percent'] = best_worst_info['Worst Exit Percent']
                 df.at[idx, 'Worst Exit Time In Trade'] = seconds_to_hms(best_worst_info['Worst Exit Time In Trade'])
-                df.at[idx, 'Best Sl'] = Find_Best_Sl(ticker_df, starting_row, direction) # returns x% or 'not found'
 
-                if (best_worst_info['Best Exit Percent'] >= 0.6):
-                    df.at[idx, 'holding reached'] = True
-                else:
-                    df.at[idx, 'holding reached'] = False
-
-                price_movement_list = Add_Price_Movement(ticker_df, entry_price, starting_row, exit_seconds, direction)
+                price_movement_list = Add_Price_Movement(ticker_df, entry_price, idx_2, exit_seconds, direction)
                 df.at[idx, 'Price Movement'] = str(price_movement_list) if price_movement_list is not None else None
 
                 #df = Create_Estimate_Columns(df, idx, ticker_df, exit_seconds)
@@ -557,47 +552,6 @@ def Add_Market_Data(df, market_data_path):
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
         return None
-
-
-'''
-starting at each trades start row, track worst exit % until 1) +0.6% is reached, 2) end of data is reached
-if 1 then write 0.1 worse than worst exit, if 2 then write None
-'''
-def Find_Best_Sl(ticker_df, starting_row, direction):
-    try:
-        # Get entry price from the starting row
-        entry_price = ticker_df.loc[starting_row, 'Price']
-        
-        # Initialize tracking variables
-        worst_roi_percent = 0.0  # Start at 0% (no loss/gain)
-        
-        # Start iterating from starting_row
-        start_position = ticker_df.index.get_loc(starting_row)
-        
-        for idx in range(start_position, len(ticker_df)):
-            row = ticker_df.iloc[idx]
-            current_price = row['Price']
-            
-            # Calculate current ROI percent based on direction
-            if direction == 'buy':
-                current_roi_percent = ((current_price - entry_price) / entry_price) * 100
-            else:  # direction == 'short'
-                current_roi_percent = ((entry_price - current_price) / entry_price) * 100
-            
-            # Update worst ROI (most negative for both buy and short)
-            if current_roi_percent < worst_roi_percent:
-                worst_roi_percent = current_roi_percent
-            
-            # Check if we've reached +0.6% ROI
-            if current_roi_percent >= 0.6:
-                # Return worst ROI but make it 0.1% worse
-                return round(worst_roi_percent - 0.1, 2)
-        
-        # If we reach end of data without hitting 0.6%
-        return 'not found'
-        
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
 def Create_Summarized_Info_txt(df, date):
@@ -839,115 +793,14 @@ def Get_All_Trade_Log_Date():
     return dates
 
 
-def Create_Bulk_Summaries(summary_dir):
-    """
-    Creates a bulk_summaries.csv file by combining all summary CSV files
-    that do not start with "bulk" (case insensitive) from the summary directory.
-    
-    Args:
-        summary_dir (str): Directory containing the summary CSV files
-    
-    Returns:
-        str: Path to the created bulk CSV file, or None if no files were found
-    """
-    try:
-        # Output file path
-        output_file = os.path.join(summary_dir, "bulk_summaries.csv")
-        
-        # List to store all dataframes
-        all_dataframes = []
-        
-        print("Looking for summary CSV files...")
-        
-        if os.path.exists(summary_dir):
-            print(f"Checking directory: {summary_dir}")
-            
-            # Get all CSV files in the directory
-            csv_files = glob.glob(os.path.join(summary_dir, "*.csv"))
-            
-            for csv_file in csv_files:
-                filename = os.path.basename(csv_file).lower()
-                
-                # Skip files that start with "bulk" (case insensitive)
-                if filename.startswith("bulk"):
-                    print(f"Skipping bulk file: {csv_file}")
-                    continue
-                
-                # Only process files that start with "summary"
-                if filename.startswith("summary"):
-                    print(f"Processing file: {csv_file}")
-                    
-                    try:
-                        # Read the CSV file
-                        df = pd.read_csv(csv_file)
-                        
-                        # Check if the dataframe is not empty
-                        if not df.empty:
-                            all_dataframes.append(df)
-                            print(f"  Added {len(df)} rows from {os.path.basename(csv_file)}")
-                        else:
-                            print(f"  Skipped empty file: {os.path.basename(csv_file)}")
-                    
-                    except Exception as e:
-                        print(f"  Error reading {csv_file}: {str(e)}")
-        else:
-            print(f"Directory does not exist: {summary_dir}")
-            return None
-        
-        # Check if we found any files to combine
-        if not all_dataframes:
-            print("No summary CSV files found to combine!")
-            return None
-        
-        print(f"\nCombining {len(all_dataframes)} CSV files...")
-        
-        # Combine all dataframes
-        combined_df = pd.concat(all_dataframes, ignore_index=True)
-        
-        # Sort by Date and then by Entry Time for better organization
-        try:
-            # Convert Date column to datetime for proper sorting
-            combined_df['Date'] = pd.to_datetime(combined_df['Date'], format='%m-%d-%y', errors='coerce')
-            combined_df = combined_df.sort_values(['Date', 'Entry Time'], ascending=[True, True])
-            
-            # Convert Date back to original format
-            combined_df['Date'] = combined_df['Date'].dt.strftime('%m-%d-%y')
-        except Exception as e:
-            print(f"Warning: Could not sort by date/time: {str(e)}")
-            print("Proceeding without sorting...")
-        
-        # Save the combined dataframe to CSV
-        combined_df.to_csv(output_file, index=False)
-        
-        print(f"\nBulk summary file created successfully!")
-        print(f"Output file: {output_file}")
-        print(f"Total rows: {len(combined_df)}")
-        print(f"Columns: {len(combined_df.columns)}")
-        
-        # Display some basic statistics
-        if 'Ticker' in combined_df.columns:
-            print(f"Unique tickers: {combined_df['Ticker'].nunique()}")
-            print(f"Most common tickers:")
-            print(combined_df['Ticker'].value_counts().head(5))
-        
-        return output_file
-
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-        return None
-
-
 def Controller(do_all_trade_logs):
-    # Get the directory where this script is located
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    source_log_dir = os.path.join(script_dir, 'Holder_Strat_Trade_Logs')   # where the trade log csv's are
+    trade_log_dir = 'Holder_Strat/Holder_Strat_Trade_Logs'
     market_data_dir = "Holder_Strat/Approved_Checked_Market_Data"
-    summary_dir = os.path.join(script_dir, 'Summary_Csvs')
+    summary_dir = 'Holder_Strat/Summary_Csvs'
 
     # step 1) check directories/files, remove everything from the summary dir
     # make the output csv, check the trade logs and market data dir exist
-    result = Check_Dirs([source_log_dir, market_data_dir, summary_dir])
+    result = Check_Dirs([trade_log_dir, market_data_dir, summary_dir])
     if (result == False):
         print("bad check directories")
         return
@@ -955,14 +808,15 @@ def Controller(do_all_trade_logs):
     # step 2) find all the valid trade days with their market data days. we skip days w/o market days
     # [[trade file path, market data file path], ...]
     if (do_all_trade_logs == 'no'):
-        do_set_days = ['06-24-2025'] # 'month-day-year'
+        do_set_days = ['09-22-2025','09-23-2025'] # 'month-day-year'
     elif (do_all_trade_logs == 'yes'):
         do_set_days = Get_All_Trade_Log_Date()
     else:
+        print("error in finding days to look at")
         return
-    file_pairs = Find_Valid_Files(market_data_dir, source_log_dir, do_set_days)
+    file_pairs = Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days)
     if (file_pairs == []):
-        print(f"no fail pairs found for date")
+        Main_Globals.logger.info(f"no fail pairs found for date")
         return
         
     for files in file_pairs:
@@ -1003,13 +857,5 @@ def Controller(do_all_trade_logs):
         
         df.to_csv(f"{summary_dir}/Summary_{date}.csv", index=False)
 
-    # Create bulk summaries CSV after all individual summaries are created
-    print("\nCreating bulk summaries CSV...")
-    bulk_result = Create_Bulk_Summaries(summary_dir)
-    if bulk_result:
-        print(f"Bulk summaries created successfully at: {bulk_result}")
-    else:
-        print("Failed to create bulk summaries CSV")
 
-
-Controller(do_all_trade_logs='yes')
+Controller(do_all_trade_logs='no')

@@ -694,30 +694,30 @@ def Check_Timestamp_Gaps(market_file_path, market_file):
             except:
                 print(f"  Warning: Invalid time format '{time_str}' in {market_file}")
                 return False
-            
-            # Check for gaps of x seconds or more
-            gaps_found = False
-            for i in range(1, len(time_seconds)):
-                if time_seconds[i] is None or time_seconds[i-1] is None:
-                    continue
-                    
-                gap = time_seconds[i] - time_seconds[i-1]
+        
+        # Check for gaps of x seconds or more (moved outside the conversion loop)
+        gaps_found = False
+        for i in range(1, len(time_seconds)):
+            if time_seconds[i] is None or time_seconds[i-1] is None:
+                continue
                 
-                # Check for gaps of X seconds or more
-                if gap >= gap_size:
-                    if not gaps_found:
-                        print(f"  **BAD Gaps found in {market_file}:")
-                        gaps_found = True
-                    
-                    # Line number is i+2 because: i is 0-indexed, +1 for 1-indexed, +1 for header
-                    line_number = i + 2
-                    print(f"    Line {line_number}: Gap of {gap} seconds")
+            gap = time_seconds[i] - time_seconds[i-1]
             
-            if not gaps_found:
-                print(f"  GOOD No gaps of {gap_size}+ seconds found in {market_file}")
-                return True
-            else:
-                return False
+            # Check for gaps of X seconds or more
+            if gap >= gap_size:
+                if not gaps_found:
+                    print(f"  **BAD Gaps found in {market_file}:")
+                    gaps_found = True
+                
+                # Line number is i+2 because: i is 0-indexed, +1 for 1-indexed, +1 for header
+                line_number = i + 2
+                print(f"    Line {line_number}: Gap of {gap} seconds")
+        
+        if not gaps_found:
+            print(f"  GOOD No gaps of {gap_size}+ seconds found in {market_file}")
+            return True
+        else:
+            return False
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -821,12 +821,13 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-    
+
 
 # controller to handle all validity checks of csv files
 def Authenticator_Freeway():
     try:
-        market_data_dir = "Csv_Files/2_Raw_Market_Data"
+        market_data_dir = "Csv_Files/2_Raw_Market_Data/market_data_to_check"
+        #market_data_dir = 'Holder_Strat/Approved_Checked_Market_Data'
         market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
         # the reason I split it into for loops and not 1 big for loop is so the results are organized
@@ -875,13 +876,6 @@ def Authenticator_Freeway():
     
 
 #Authenticator_Freeway()
-
-
-
-
-
-
-
 
 
 Authenticator_Freeway()
