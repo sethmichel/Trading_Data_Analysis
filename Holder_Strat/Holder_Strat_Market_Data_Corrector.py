@@ -41,7 +41,7 @@ Checking:
 def Ticker_Csv():
     try:
         ticker = 'SOXL'
-        file_path = 'Csv_Files/2_Raw_Market_Data/Market_Data/Raw_Market_Data_06-18-2025.csv'
+        file_path = 'Csv_Files/raw_Market_Data/Market_Data/Raw_Market_Data_06-18-2025.csv'
         df = pd.read_csv(file_path)
         
         # Filter rows where the "Ticker" column matches the specified ticker
@@ -127,7 +127,7 @@ def Only_Keep_Some_Columns_Csv():
 #      that normal or bad?
 def Volatility_Time_By_Ticker():
     try:
-        data_dir = "Csv_Files/2_Raw_Market_Data/Used_Market_Data"
+        data_dir = "Csv_Files/raw_Market_Data/Used_Market_Data"
         volatility_target = 0.3
         
         # Dictionary to store results organized by date
@@ -247,7 +247,7 @@ def Change_Timestamps_of_Market_Data():
 # (atr14 / price) * 100
 def Add_Volatility_Percent():
     try:
-        dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
+        dir = "Csv_Files/raw_Market_Data/Market_Data"
         csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
         
         for csv_file in csv_files_list:
@@ -303,7 +303,7 @@ def Add_Volatility_Percent():
 # add volaitlity ratio to all market data csv's
 # REQUIRED: must have volatility percent already
 def Add_Volatility_Ratio():
-    dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
+    dir = "Csv_Files/raw_Market_Data/Market_Data"
     csv_files_list = ["Raw_Market_Data_06-24-2025.csv"]
 
     for csv_file in csv_files_list:
@@ -360,8 +360,8 @@ def Add_Volatility_Ratio():
 
 # changes 1 column name in all csv files
 def Change_Column_Name():
-    #market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    #market_data_dir = 'Csv_Files/raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
     original_column_name = "Vol"
@@ -405,7 +405,7 @@ def Change_Column_Name():
 # edits all values in 1 column in 1 csv file
 # need this in case you add 0's to the end of numbers accidently. like 0.5800 instead of 0.58
 def Edit_Values():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/raw_Market_Data/Market_Data'
     file_path = f"{market_data_dir}/Raw_Market_Data_09-12-2025.csv"
     temp_file_path = f"{market_data_dir}/temp_Raw_Market_Data_09-12-2025.csv"
     
@@ -521,7 +521,7 @@ def Re_Order_Columns():
     # --- Load and reorder columns for Raw_Market_Data_06-20-2025_Final.csv ---
     script_dir = os.path.dirname(os.path.abspath(__file__))
     project_root = os.path.dirname(script_dir)
-    csv_path = os.path.join(project_root, "Csv_Files", "2_Raw_Market_Data", "Raw_Market_Data_09-12-2025.csv")
+    csv_path = os.path.join(project_root, "Csv_Files", "raw_Market_Data", "Raw_Market_Data_09-12-2025.csv")
     desired_order = [
         'Ticker', 'Price', 'Val', 'Avg', 'Atr14', 'Atr28', 'Rsi', 'Volume',
         'Adx28', 'Adx14', 'Adx7', 'Volatility Percent', 'Volatility Ratio', 'Time']
@@ -826,7 +826,7 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
 # controller to handle all validity checks of csv files
 def Authenticator_Freeway():
     try:
-        market_data_dir = "Csv_Files/2_Raw_Market_Data/market_data_to_check"
+        market_data_dir = "Csv_Files/raw_Market_Data/market_data_to_check"
         #market_data_dir = 'Holder_Strat/Approved_Checked_Market_Data'
         market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
 
@@ -848,20 +848,19 @@ def Authenticator_Freeway():
             file_path = f"{market_data_dir}/{market_data_file}"
             if (Check_Ticker_Counts_Consistancy(file_path, market_data_file) == False):
                 return False
-        print("\n")
         
         # 3) check time gaps (if there's a big gap in recording)
         for market_data_file in market_data_csv_files:
             file_path = f"{market_data_dir}/{market_data_file}"
             if (Check_Timestamp_Gaps(file_path, market_data_file) == False):
                 return False
-        print("\n")
             
         # 4) check required row values: every row has Ticker,Price,Val,Avg,Atr14,Atr28,Rsi,Volume,Adx28,Adx14,Adx7,Volatility Percent,Volatility Ratio,Time
         for market_data_file in market_data_csv_files:
             file_path = f"{market_data_dir}/{market_data_file}"
             if (Check_Required_Market_Values(file_path, market_data_file) == False):
                 return False
+        print("\n")
 
         # 5) make sure the file name is correct and date is correct format
         for market_data_file in market_data_csv_files:
@@ -881,7 +880,7 @@ def Authenticator_Freeway():
 Authenticator_Freeway()
 
 #Re_Order_Columns()
-#Round_Whole_Column_Values("Csv_Files/2_Raw_Market_Data/Raw_Market_Data_09-12-2025.csv", ['Volatility Percent', 'Volatility Ratio'], 2)
+#Round_Whole_Column_Values("Csv_Files/raw_Market_Data/Raw_Market_Data_09-12-2025.csv", ['Volatility Percent', 'Volatility Ratio'], 2)
 
 
 

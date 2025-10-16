@@ -1,26 +1,28 @@
 ### Python ###
 
 # my stuff to ignore
-Csv_Files/1_tos_Raw_Trades/Edited_All_Trades_Data/
-Csv_Files/1_tos_Raw_Trades/trade_Data/
-Csv_Files/1_tos_Raw_Trades/Unedited_All_Trades_Data/
-Csv_Files/2_Raw_Market_Data/Market_Data/
-Csv_Files/2_Raw_Market_Data/
+Csv_Files/tos_Raw_Trades/Edited_All_Trades_Data/
+Csv_Files/tos_Raw_Trades/trade_Data/
+Csv_Files/tos_Raw_Trades/Unedited_All_Trades_Data/
+Csv_Files/raw_Market_Data/Market_Data/
+Csv_Files/raw_Market_Data/
 Csv_Files/3_Final_Trade_Csvs/
+Csv_Files/Final_Trade_Csvs/
 
-XG_Boost/Output/1_overview
-XG_Boost/Output/2_interactions_and_ranges
-XG_Boost/Output/3_correlations
-XG_Boost/Output/4_datapoint_analysis
-XG_Boost/Data.csv
+Old_Code/XG_Boost/Output/1_overview
+Old_Code/XG_Boost/Output/2_interactions_and_ranges
+Old_Code/XG_Boost/Output/3_correlations
+Old_Code/XG_Boost/Output/4_datapoint_analysis
+Old_Code/XG_Boost/Data.csv
 
 Holder_Strat/Holder_Strat_Trade_Logs/
 Holder_Strat/Summary_Csvs/
 Holder_Strat/Summary_Text_Files/
 Holder_Strat/Approved_Checked_Market_Data/
+Holder_Strat/trained_roi_predictor_model.pkl
 
-Grid_Search/Analysis_Results.txt
-Grid_Search/grid_search_notes.txt
+Old_Code/Grid_Search/Analysis_Results.txt
+Old_Code/Grid_Search/grid_search_notes.txt
 
 Logs.txt
 TESTING.csv

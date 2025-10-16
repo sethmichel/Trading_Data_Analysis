@@ -189,7 +189,7 @@ def Add_ADX_Comparisons(market_data_csv_path):
 # change past csv market data files to include the new volatility %
 # (atr14 / price) * 100
 def Add_Volatility_Percent():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
     
     for csv_file in csv_files_list:
@@ -239,7 +239,7 @@ def Add_Volatility_Percent():
 # add volaitlity ratio to all market data csv's
 # REQUIRED: must have volatility percent already
 def Add_Volatility_Ratio():
-    market_data_dir = 'Csv_Files/2_Raw_Market_Data/Market_Data'
+    market_data_dir = 'Csv_Files/raw_Market_Data/Market_Data'
     csv_files_list = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
     
     for csv_file in csv_files_list:
@@ -292,7 +292,7 @@ def Add_Volatility_Ratio():
 
 
 
-csv_dir = "Csv_Files/2_Raw_Market_Data/Market_Data"
+csv_dir = "Csv_Files/raw_Market_Data/Market_Data"
 
 # macd z score
 '''for filename in os.listdir(csv_dir):

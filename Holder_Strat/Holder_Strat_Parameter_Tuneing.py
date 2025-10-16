@@ -1,10 +1,10 @@
 '''
 1) load each days market data into a dictionary date: df
 2) load bulk csv into a df
-3) make 'optimal sl result', 'optimal sl hit', 'optimal sl best exit %', 'optimal sl reached holding' as new df columns
+3) make 'TEST optimal sl result', 'TEST Optimal sl Hit', 'optimal sl best exit %', 'TEST Optimal sl Reached Holding' as new df columns
 3) get 'Entry Volatility Percent' bucket avg sl value, round down by 0.1%
-4) iterate over 'Price Movement' list, if it hits the sl value, record the sl value in 'optimal sl result'
-   if it reaches 0.6, change the sl value to 0, and write true for 'optimal sl reached holding'
+4) iterate over 'Price Movement' list, if it hits the sl value, record the sl value in 'TEST optimal sl result'
+   if it reaches 0.6, change the sl value to 0, and write true for 'TEST Optimal sl Reached Holding'
    for the duration of the trade, record the best roi price. when the trade ends, record that price as a % roi for 'optimal sl best exit %'
 
 next: write the max for each ticker and if best roi reaches the max, save as the max. output a text file saying the ticker results and total sum. number of sl's with -0.4 vs optimal and total results
@@ -102,27 +102,6 @@ def load_bulk_summaries():
     bulk_summaries_path = "Holder_Strat/Summary_Csvs/bulk_summaries.csv"
     return pd.read_csv(bulk_summaries_path)
 
-def add_optimal_sl_columns(df):
-    """
-    Add new columns for optimal stop loss analysis to the dataframe.
-    
-    Args:
-        df: The bulk summaries dataframe
-        
-    Returns:
-        pd.DataFrame: Dataframe with new columns added
-    """
-    # Add new columns for optimal stop loss analysis
-    df['optimal sl result'] = None
-    df['optimal sl hit'] = False
-    df['optimal sl best exit percent'] = None
-    df['optimal sl reached holding'] = False
-
-    # target estimate metrics
-    df['optimal sl including max roi'] = 0
-    
-    return df
-
 
 # ticker_date_market_data is market data for this trades ticker and date. indexes are likely the original full df's indexes
 def process_price_movement(ticker_date_market_data, sl_value, trade_type, entry_time, entry_price, ticker):
@@ -130,7 +109,7 @@ def process_price_movement(ticker_date_market_data, sl_value, trade_type, entry_
     best_exit_percent = 0
     reached_holding = False
     max_roi = max_rois[ticker]
-    # this returns: (optimal sl result, optimal sl hit, optimal sl best exit percent, reached_holding)
+    # this returns: (optimal sl result, TEST optimal sl hit, optimal sl best exit percent, reached_holding)
     
     # Reset index to make iteration easier
     ticker_data = ticker_date_market_data.reset_index(drop=True)
@@ -168,7 +147,7 @@ def process_price_movement(ticker_date_market_data, sl_value, trade_type, entry_
         
         # Check if stop loss is hit (sl_value is negative, so we check if curr_roi_percent <= sl_value)
         if curr_roi_percent <= sl_value:
-            # (optimal sl result, optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
+            # (optimal sl result, TEST optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
             return curr_roi_percent, True, best_exit_percent, reached_holding, False
         
         # Check if reached holding target of 0.6%
@@ -178,11 +157,11 @@ def process_price_movement(ticker_date_market_data, sl_value, trade_type, entry_
             sl_value = 0
 
         if (curr_roi_percent >= max_roi):
-            # (optimal sl result, optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
+            # (optimal sl result, TEST optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
             return curr_roi_percent, False, best_exit_percent, reached_holding, True
     
     # If we get here, stop loss was never hit
-    # (optimal sl result, optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
+    # (optimal sl result, TEST optimal sl hit, optimal sl best exit percent, reached_holding, max_hit)
     return curr_roi_percent, False, best_exit_percent, reached_holding, False
 
 
@@ -204,10 +183,7 @@ def analyze_optimal_stop_loss(bulk_df, market_data_dict):
         
     Returns:
         pd.DataFrame: Dataframe with optimal stop loss analysis completed
-    """
-    # Add the new columns
-    bulk_df = add_optimal_sl_columns(bulk_df)
-    
+    """    
     # Process each row
     for idx, row in bulk_df.iterrows():
         # Get volatility bucket average stop loss
@@ -219,33 +195,64 @@ def analyze_optimal_stop_loss(bulk_df, market_data_dict):
         sl_value = get_volatility_bucket_avg_sl(volatility_percent)
         if (sl_value == None):
             # no data for this range, skip trade
-            bulk_df.at[idx, 'optimal sl result'] = float('nan')
-            bulk_df.at[idx, 'optimal sl hit'] = float('nan')
-            bulk_df.at[idx, 'optimal sl best exit percent'] = float('nan')
-            bulk_df.at[idx, 'optimal sl reached holding'] = float('nan')
+            #bulk_df.at[idx, 'TEST optimal sl result'] = float('nan')
+            bulk_df.at[idx, 'TEST Optimal sl Hit'] = float('nan')
+            bulk_df.at[idx, 'TEST Optimal sl Best Exit Percent'] = float('nan')
+            bulk_df.at[idx, 'TEST Optimal sl Reached Holding'] = float('nan')
             continue
         date_market_data = market_data_dict[date]
         ticker_date_market_data = date_market_data[date_market_data['Ticker'] == ticker] # this likely keeps the original indexes
         
         # Process price movement
         trade_type = row['Trade Type'] # 'buy' or 'short'
-        sl_result, sl_hit, best_exit_percent, reached_holding, max_hit = process_price_movement(
+        trade_result, sl_hit, best_exit_percent, reached_holding, max_hit = process_price_movement(
             ticker_date_market_data, sl_value, trade_type, entry_time, entry_price, ticker
         )
         
         # Update the dataframe
-        bulk_df.at[idx, 'optimal sl result'] = round(sl_result, 2)
-        bulk_df.at[idx, 'optimal sl hit'] = sl_hit
-        bulk_df.at[idx, 'optimal sl best exit percent'] = round(best_exit_percent, 2)
-        bulk_df.at[idx, 'optimal sl reached holding'] = reached_holding
+        #bulk_df.at[idx, 'TEST optimal sl result'] = round(trade_result, 2)
+        bulk_df.at[idx, 'TEST Optimal sl Hit'] = sl_hit
+        bulk_df.at[idx, 'TEST Optimal sl Best Exit Percent'] = round(best_exit_percent, 2)
+        bulk_df.at[idx, 'TEST Optimal sl Reached Holding'] = reached_holding
         if (max_hit == True):
-            bulk_df.at[idx, 'optimal sl including max roi'] = max_rois[ticker]
+            bulk_df.at[idx, 'TEST Optimal sl Percent Change'] = max_rois[ticker]
         elif (sl_hit == True):
-            bulk_df.at[idx, 'optimal sl including max roi'] = round(sl_result, 2)
+            bulk_df.at[idx, 'TEST Optimal sl Percent Change'] = round(trade_result, 2)
         else:
-            bulk_df.at[idx, 'optimal sl including max roi'] = round(sl_result, 2)
+            bulk_df.at[idx, 'TEST Optimal sl Percent Change'] = round(trade_result, 2)
     
     return bulk_df
+
+
+def Add_Benchmark_Metrics(bulk_df, market_data_dict):
+    sl_values = [-0.4, -0.5, -0.8]
+    keys = ['TEST -0.4 sl Benchmark', 'TEST -0.5 sl Benchmark', 'TEST -0.8 sl Benchmark']
+
+    for i in range(len(sl_values)):
+        sl_value = sl_values[i]
+        key = keys[i]
+
+        # Process each row
+        for idx, row in bulk_df.iterrows():
+            # Get volatility bucket average stop loss
+            ticker = row['Ticker']
+            date = bulk_csv_date_converter(row['Date'])
+            entry_time = row['Entry Time']
+            entry_price = row['Entry Price']
+            date_market_data = market_data_dict[date]
+            ticker_date_market_data = date_market_data[date_market_data['Ticker'] == ticker] # this likely keeps the original indexes
+            
+            # Process price movement
+            trade_type = row['Trade Type'] # 'buy' or 'short'
+            trade_result, sl_hit, best_exit_percent, reached_holding, max_hit = process_price_movement(
+                ticker_date_market_data, sl_value, trade_type, entry_time, entry_price, ticker
+            )
+            
+            # Update the dataframe
+            bulk_df.at[idx, key] = round(trade_result, 2)
+
+    return bulk_df
+
 
 def generate_analysis_summary(bulk_df_analyzed):
     """
@@ -265,12 +272,12 @@ def generate_analysis_summary(bulk_df_analyzed):
         f.write("-" * 20 + "\n\n")
         
         # Filter out NaN values for calculations
-        valid_df = bulk_df_analyzed.dropna(subset=['optimal sl reached holding', 'optimal sl including max roi'])
+        valid_df = bulk_df_analyzed.dropna(subset=['TEST Optimal sl Reached Holding', 'TEST Optimal sl Percent Change'])
         total_rows = len(valid_df)
         
         # Metric 1: Holding reached vs optimal sl reached holding vs total rows
-        holding_reached_count = len(valid_df[valid_df['holding reached'] == True])
-        optimal_sl_reached_holding_count = len(valid_df[valid_df['optimal sl reached holding'] == True])
+        holding_reached_count = len(valid_df[valid_df['Original Holding Reached'] == True])
+        optimal_sl_reached_holding_count = len(valid_df[valid_df['TEST Optimal sl Reached Holding'] == True])
         
         f.write(f"1. Trade Completion Analysis:\n")
         f.write(f"   - Total valid trades: {total_rows}\n")
@@ -278,8 +285,8 @@ def generate_analysis_summary(bulk_df_analyzed):
         f.write(f"   - Optimal SL reached holding: {optimal_sl_reached_holding_count} ({round((optimal_sl_reached_holding_count/total_rows)*100, 2)}%)\n\n")
         
         # Metric 2: Average Best Exit Percent comparison
-        avg_best_exit = round(valid_df['Best Exit Percent'].mean(), 2)
-        avg_optimal_sl_best_exit = round(valid_df['optimal sl best exit percent'].mean(), 2)
+        avg_best_exit = round(valid_df['Original Best Exit Percent'].mean(), 2)
+        avg_optimal_sl_best_exit = round(valid_df['TEST Optimal sl Best Exit Percent'].mean(), 2)
         
         f.write(f"2. Average Best Exit Percent Comparison:\n")
         f.write(f"   - Original strategy average: {avg_best_exit}%\n")
@@ -287,8 +294,8 @@ def generate_analysis_summary(bulk_df_analyzed):
         f.write(f"   - Improvement: {round(avg_optimal_sl_best_exit - avg_best_exit, 2)}%\n\n")
         
         # Metric 3: Sum comparison
-        sum_optimal_sl_roi = round(valid_df['optimal sl including max roi'].sum(), 2)
-        sum_percent_change = round(valid_df['Percent Change'].sum(), 2)
+        sum_optimal_sl_roi = round(valid_df['TEST Optimal sl Percent Change'].sum(), 2)
+        sum_percent_change = round(valid_df['Original Percent Change'].sum(), 2)
         
         f.write(f"3. Total Return Comparison:\n")
         f.write(f"   - Original strategy total return: {sum_percent_change}%\n")
@@ -303,8 +310,8 @@ def generate_analysis_summary(bulk_df_analyzed):
         
         for ticker in sorted(unique_tickers):
             ticker_df = valid_df[valid_df['Ticker'] == ticker]
-            ticker_optimal_sl_sum = round(ticker_df['optimal sl including max roi'].sum(), 2)
-            ticker_percent_change_sum = round(ticker_df['Percent Change'].sum(), 2)
+            ticker_optimal_sl_sum = round(ticker_df['TEST Optimal sl Percent Change'].sum(), 2)
+            ticker_percent_change_sum = round(ticker_df['Original Percent Change'].sum(), 2)
             ticker_improvement = round(ticker_optimal_sl_sum - ticker_percent_change_sum, 2)
             trade_count = len(ticker_df)
             
@@ -317,6 +324,7 @@ def generate_analysis_summary(bulk_df_analyzed):
         f.write("Analysis completed successfully.\n")
     
     print(f"Analysis summary saved to: {output_path}")
+
 
 # Main execution function
 def main():
@@ -334,6 +342,7 @@ def main():
     
     # Step 3: Analyze optimal stop loss
     bulk_df_analyzed = analyze_optimal_stop_loss(bulk_df, market_data_dict)
+    bulk_df_analyzed = Add_Benchmark_Metrics(bulk_df_analyzed, market_data_dict)
     
     # Step 4: Save results
     output_path = "Holder_Strat/Summary_Csvs/bulk_summaries_with_optimal_sl.csv"
