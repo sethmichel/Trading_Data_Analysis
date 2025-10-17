@@ -19,7 +19,11 @@ Holder_Strat/Holder_Strat_Trade_Logs/
 Holder_Strat/Summary_Csvs/
 Holder_Strat/Summary_Text_Files/
 Holder_Strat/Approved_Checked_Market_Data/
-Holder_Strat/trained_roi_predictor_model.pkl
+Holder_Strat/Parameter_Tuning/trained_roi_predictor_model.pkl
+Holder_Strat/Parameter_Tuning/trained_sl_predictor_model
+Holder_Strat/Parameter_Tuning/model_files_and_data
+
+catboost_info
 
 Old_Code/Grid_Search/Analysis_Results.txt
 Old_Code/Grid_Search/grid_search_notes.txt

@@ -11,22 +11,10 @@ import matplotlib.pyplot as plt
 import pickle
 import numpy as np
 from sklearn.preprocessing import StandardScaler
+import Helper_Functions
 
 trade_start_indexes = {}
 trade_end_timestamps = {}
-
-
-def bulk_csv_date_converter(date):
-    parts = date.split('-')
-
-    if (len(parts[0]) == 1):
-        parts[0] = f"0{parts[0]}"
-    if (len(parts[1]) == 1):
-        parts[1] = f"0{parts[1]}"
-    if (len(parts[2]) == 2):
-        parts[2] = f"20{parts[2]}"
-    
-    return '-'.join(parts)
 
 
 def Load_Market_Data_Dictionary(bulk_df):
@@ -45,7 +33,7 @@ def Load_Market_Data_Dictionary(bulk_df):
     unique_dates = bulk_df['Date'].unique().tolist()
     # date needs to be mm-dd-yyyy format
     for i in range (len(unique_dates)):
-        unique_dates[i] = bulk_csv_date_converter(unique_dates[i])
+        unique_dates[i] = Helper_Functions.bulk_csv_date_converter(unique_dates[i])
 
     print(f"Found {len(unique_dates)} unique dates in bulk_summaries.csv")
     
@@ -119,24 +107,6 @@ def Add_Trade_Id(bulk_df):
     bulk_df['Id'] = range(1, len(bulk_df) + 1)
 
     return bulk_df
-
-
-def Check_We_Have_Data_For_Trade(market_df, entry_time):
-    # Get the final timestamp from market data
-    final_market_time = market_df.iloc[-1]['Time']
-    
-    # Convert times to datetime objects for comparison
-    entry_time_obj = datetime.datetime.strptime(entry_time, '%H:%M:%S').time()
-    final_market_time_obj = datetime.datetime.strptime(final_market_time, '%H:%M:%S').time()
-    
-    # Convert to seconds for easier comparison
-    entry_seconds = entry_time_obj.hour * 3600 + entry_time_obj.minute * 60 + entry_time_obj.second
-    final_market_seconds = final_market_time_obj.hour * 3600 + final_market_time_obj.minute * 60 + final_market_time_obj.second
-    
-    if entry_seconds > final_market_seconds:
-        return False
-    else:
-        return True
     
 
 '''
@@ -156,7 +126,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker):
     skip_dates = []
 
     for idx, row in bulk_df.iterrows():
-        date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
+        date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
         if (date in skip_dates):
             continue
 
@@ -181,7 +151,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker):
         market_df = market_data_dict_by_ticker[date][ticker].copy()  # market data df for this ticker and date
         
         # Skip trade if entry time is after final market data time
-        if (Check_We_Have_Data_For_Trade(market_df, entry_time) == False):
+        if (Helper_Functions.Check_We_Have_Data_For_Trade(market_df, entry_time) == False):
             print(f"Skipping trade {trade_id}: entry time {entry_time} is after final market data time")
             continue
         
@@ -287,7 +257,7 @@ def Take_Samples(bulk_df, market_data_dict_by_ticker, roi_dictionary):
 
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
-        date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
+        date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
         if (date in skip_dates):
             continue
         
@@ -311,7 +281,7 @@ def Take_Samples(bulk_df, market_data_dict_by_ticker, roi_dictionary):
         start_index = trade_start_indexes[trade_id]
         
         # Skip trade if entry time is after final market data time
-        if (Check_We_Have_Data_For_Trade(market_df, entry_time) == False):
+        if (Helper_Functions.Check_We_Have_Data_For_Trade(market_df, entry_time) == False):
             print(f"Skipping trade {trade_id}: entry time {entry_time} is after final market data time")
             continue
         
@@ -420,14 +390,14 @@ def Save_Regression_Model(gam, scaler):
         'scaler': scaler
     }
 
-    with open('Holder_Strat/trained_roi_predictor_model.pkl', 'wb') as f:
+    with open('Holder_Strat/Parameter_Tuning/model_files_and_data/trained_roi_predictor_model.pkl', 'wb') as f:
         pickle.dump(model_data, f)
     print("Saved GAM model and scaler to trained_roi_predictor_model.pkl")
 
 
 def Load_Regression_Model():
     try:
-        with open('Holder_Strat/trained_roi_predictor_model.pkl', 'rb') as f:
+        with open('Holder_Strat/Parameter_Tuning/model_files_and_data/trained_roi_predictor_model.pkl', 'rb') as f:
             model_data = pickle.load(f)
         
         gam_model = model_data['gam_model']
@@ -467,7 +437,7 @@ def Save_Test_Values(all_data_samples_x, all_roi_samples_y):
     }
     
     # Save to txt file
-    with open('Holder_Strat/target_runing_regression_numbers.txt', 'w') as f:
+    with open('Holder_Strat/Parameter_Tuning/model_files_and_data/target_runing_regression_numbers.txt', 'w') as f:
         json.dump(data_to_save, f, indent=2)
     
     print(f"Saved {len(all_data_samples_x)} data samples to target_runing_regression_numbers.txt")
@@ -480,7 +450,7 @@ def Load_Test_Values():
     import json
     
     try:
-        with open('Holder_Strat/target_runing_regression_numbers.txt', 'r') as f:
+        with open('Holder_Strat/Parameter_Tuning/model_files_and_data/target_runing_regression_numbers.txt', 'r') as f:
             data = json.load(f)
         
         all_data_samples_x = data['all_data_samples_x']
@@ -642,7 +612,7 @@ def Full_Test_Model_Over_Trade_Data(gam, scaler, bulk_df, market_data_dict_by_ti
     sums = {}
 
     for _, row in bulk_df.iterrows():
-        date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
+        date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
         ticker = row['Ticker']
 
         if (date in skip_dates):
@@ -709,7 +679,7 @@ def Full_Test_Model_Over_Trade_Data(gam, scaler, bulk_df, market_data_dict_by_ti
                 break
 
     # Write results to text file
-    with open('Holder_Strat/roi_prediction_model_trade_results.txt', 'w') as f:
+    with open('Holder_Strat/Parameter_Tuning/model_files_and_data/roi_prediction_model_trade_results.txt', 'w') as f:
         f.write('sums by ticker\n')
         for ticker in sums:
             f.write(f'{ticker} = {round(sums[ticker], 2)}\n')
@@ -718,8 +688,9 @@ def Full_Test_Model_Over_Trade_Data(gam, scaler, bulk_df, market_data_dict_by_ti
         f.write(f'overall = {round(overall, 2)}\n\n')
         
         f.write('Specific Results\n')
+        results.sort(key=lambda x: x[0]) # sort by ticker
         for result in results:
-            f.write(f'{result}\n')
+            f.write(f'{result[0]}, {result[1]}, {round(result[2][0], 2)}\n')
 
     return results
 
@@ -737,7 +708,6 @@ def Main():
     '''
     all_data_samples_x, all_roi_samples_y = Take_Samples(bulk_df, market_data_dict_by_ticker, roi_dictionary)
     Save_Test_Values(all_data_samples_x, all_roi_samples_y)
-    
     '''
     all_data_samples_x, all_roi_samples_y = Load_Test_Values()
 

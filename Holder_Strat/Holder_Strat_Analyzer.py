@@ -608,6 +608,78 @@ def Find_Best_Sl(ticker_df, starting_row, direction):
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+def Create_Overall_Summary_Info_Txt(bulk_df):
+    try:
+        script_dir = os.path.dirname(os.path.abspath(__file__))
+        output_dir = os.path.join(script_dir, 'Summary_Text_Files')
+        
+        # Ensure the output directory exists
+        if not os.path.exists(output_dir):
+            os.makedirs(output_dir, exist_ok=True)
+        
+        filename = f'Overall_Summary.txt'
+        file_path = os.path.join(output_dir, filename)
+        
+        total_percent_change = round(bulk_df['Original Percent Change'].sum(), 2)
+        total_dollar_change = round(bulk_df['Dollar Change'].sum(), 2)
+        trades_at_holding = bulk_df[bulk_df['Original Best Exit Percent'] > 0.6]
+        num_trades_at_holding = len(trades_at_holding)
+        sum_trades_at_holding = round(trades_at_holding['Original Percent Change'].sum(), 2)
+        trades_failed = bulk_df[bulk_df['Original Percent Change'] < -0.3]
+        num_trades_failed = len(trades_failed)
+        sum_trades_failed = round(trades_failed['Original Percent Change'].sum(), 2)
+        num_of_days = bulk_df['Date'].nunique()
+        
+        content = []
+        content.append(f"=== SUMMARY ===\n")
+        content.append("OVERALL STATISTICS:")
+        content.append(f"Total % Change: {total_percent_change}%")
+        content.append(f"Avg % Change/Day: {round(total_percent_change/num_of_days, 2)}%")
+        content.append(f"Total $ Change: ${total_dollar_change} - fees")
+        content.append(f"Number of Holding Trades (0.6%): {num_trades_at_holding}")
+        content.append(f"Number of Failed Trades (~-0.4%): {num_trades_failed}")
+        content.append(f"Sum of % Change for holding trades: {sum_trades_at_holding}%")
+        content.append(f"Sum of % Change for failed trades: {sum_trades_failed}%")
+        content.append(f"Avg % Change for holding trades: {round(sum_trades_at_holding/num_of_days, 2)}%")
+        content.append(f"Avg % Change for failed trades: {round(sum_trades_failed/num_of_days, 2)}%")
+
+        content.append("PER-TICKER STATISTICS:")
+        unique_tickers = bulk_df['Ticker'].unique()
+        
+        for ticker in unique_tickers:
+            ticker_df = bulk_df[bulk_df['Ticker'] == ticker]
+            
+            ticker_total_percent = round(ticker_df['Original Percent Change'].sum(), 2)
+            ticker_total_dollar = round(ticker_df['Dollar Change'].sum(), 2)
+            ticker_trades_at_holding = ticker_df[ticker_df['Original Best Exit Percent'] > 0.6]
+            ticker_num_trades_at_holding = len(ticker_trades_at_holding)
+            ticker_sum_percent_at_holding = round(ticker_trades_at_holding['Original Percent Change'].sum(), 2)
+            ticker_trades_failed = ticker_df[ticker_df['Original Percent Change'] < -0.3]
+            ticker_num_trades_failed = len(ticker_trades_failed)
+            ticker_sum_percent_failed = round(ticker_trades_failed['Original Percent Change'].sum(), 2)
+            
+            content.append(f"\n{ticker}:")
+            content.append(f"  Total % Change: {ticker_total_percent:.2f}%")
+            content.append(f"  Avg % Change/Day: {round(ticker_total_percent/num_of_days, 2)}%")
+            content.append(f"  Total $ Change: ${ticker_total_dollar:.2f}")
+            content.append(f"  Number of Holding Trades (0.6%): {ticker_num_trades_at_holding}")
+            content.append(f"  Number of Failed Trades (~-0.4%): {ticker_num_trades_failed}")
+            content.append(f"  Sum of % Change for holding trades: {ticker_sum_percent_at_holding:.2f}%")
+            content.append(f"  Sum of % Change for failed trades: {ticker_sum_percent_failed:.2f}%")
+            content.append(f"  Avg % change for holding trades: {round(ticker_sum_percent_at_holding/num_of_days, 2)}%")
+            content.append(f"  Avg % Change for failed trades: {round(ticker_sum_percent_failed/num_of_days, 2)}%")
+        
+        # Write to file (overwrite if exists)
+        with open(file_path, 'w') as f:
+            f.write('\n'.join(content))
+        
+        print(f"Overall summary written to: {file_path}")
+        return True
+
+    except Exception as e:
+        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+
+
 def Create_Summarized_Info_txt(df, date):
     try:
         # --- goal: extract summarized results from df and write to a txt file
@@ -627,24 +699,25 @@ def Create_Summarized_Info_txt(df, date):
         filename = f'Summary_{date}.txt'
         file_path = os.path.join(output_dir, filename)
         
-        # Calculate overall day statistics
         total_percent_change = df['Original Percent Change'].sum()
         total_dollar_change = df['Dollar Change'].sum()
-        trades_with_best_exit_over_06 = df[df['Original Best Exit Percent'] > 0.6]
-        num_trades_over_06 = len(trades_with_best_exit_over_06)
-        sum_percent_change_over_06 = trades_with_best_exit_over_06['Original Percent Change'].sum()
+        trades_at_holding = df[df['Original Best Exit Percent'] > 0.6]
+        num_trades_at_holding = len(trades_at_holding)
+        sum_trades_at_holding = trades_at_holding['Original Percent Change'].sum()
+        trades_failed = df[df['Original Percent Change'] < -0.3]
+        num_trades_failed = len(trades_failed)
+        sum_trades_failed = trades_failed['Original Percent Change'].sum()
         
-        # Start building the output content
         content = []
         content.append(f"=== SUMMARY FOR {date} ===\n")
         content.append("OVERALL DAY STATISTICS:")
         content.append(f"Day's Total % Change: {total_percent_change:.2f}%")
-        content.append(f"Day's Total $ Change: ${total_dollar_change:.2f} + fees")
-        content.append(f"Number of trades where Best Exit Percent > 0.6%: {num_trades_over_06}")
-        content.append(f"Sum of Percent Change for trades with Best Exit > 0.6%: {sum_percent_change_over_06:.2f}%")
-        content.append("")  # Empty line for spacing
+        content.append(f"Day's Total $ Change: ${total_dollar_change:.2f} - fees")
+        content.append(f"Number of Holding Trades (0.6%): {num_trades_at_holding}")
+        content.append(f"Number of Failed Trades (~-0.4%): {num_trades_failed}")
+        content.append(f"Sum of % Change for holding trades: {sum_trades_at_holding:.2f}%")
+        content.append(f"Sum of % Change for failed trades: {sum_trades_failed:.2f}%")
         
-        # Calculate per-ticker statistics
         content.append("PER-TICKER STATISTICS:")
         unique_tickers = df['Ticker'].unique()
         
@@ -653,15 +726,20 @@ def Create_Summarized_Info_txt(df, date):
             
             ticker_total_percent = ticker_df['Original Percent Change'].sum()
             ticker_total_dollar = ticker_df['Dollar Change'].sum()
-            ticker_trades_over_06 = ticker_df[ticker_df['Original Best Exit Percent'] > 0.6]
-            ticker_num_trades_over_06 = len(ticker_trades_over_06)
-            ticker_sum_percent_over_06 = ticker_trades_over_06['Original Percent Change'].sum()
+            ticker_trades_at_holding = ticker_df[ticker_df['Original Best Exit Percent'] > 0.6]
+            ticker_num_trades_at_holding = len(ticker_trades_at_holding)
+            ticker_sum_percent_at_holding = ticker_trades_at_holding['Original Percent Change'].sum()
+            ticker_trades_failed = ticker_df[ticker_df['Original Percent Change'] < -0.3]
+            ticker_num_trades_failed = len(ticker_trades_failed)
+            ticker_sum_percent_failed = ticker_trades_failed['Original Percent Change'].sum()
             
             content.append(f"\n{ticker}:")
             content.append(f"  Total % Change: {ticker_total_percent:.2f}%")
             content.append(f"  Total $ Change: ${ticker_total_dollar:.2f}")
-            content.append(f"  Number of trades where Best Exit Percent > 0.6%: {ticker_num_trades_over_06}")
-            content.append(f"  Sum of Percent Change for trades with Best Exit > 0.6%: {ticker_sum_percent_over_06:.2f}%")
+            content.append(f"  Number of Holding Trades (0.6%): {ticker_num_trades_at_holding}")
+            content.append(f"  Number of Failed Trades (~-0.4%): {ticker_num_trades_failed}")
+            content.append(f"  Sum of % Change for holding trades: {ticker_sum_percent_at_holding:.2f}%")
+            content.append(f"  Sum of % Change for failed trades: {ticker_sum_percent_failed:.2f}%")
         
         # Write to file (overwrite if exists)
         with open(file_path, 'w') as f:
@@ -938,7 +1016,7 @@ def Create_Bulk_Summaries(summary_dir):
             print(f"Most common tickers:")
             print(combined_df['Ticker'].value_counts().head(5))
         
-        return output_file
+        return output_file, combined_df
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -1013,9 +1091,10 @@ def Controller(do_all_trade_logs):
 
     # Create bulk summaries CSV after all individual summaries are created
     print("\nCreating bulk summaries CSV...")
-    bulk_result = Create_Bulk_Summaries(summary_dir)
-    if bulk_result:
-        print(f"Bulk summaries created successfully at: {bulk_result}")
+    bulk_df = Create_Bulk_Summaries(summary_dir)
+    if isinstance(bulk_df, pd.DataFrame):
+        print(f"Bulk summaries created successfully")
+        Create_Overall_Summary_Info_Txt(bulk_df)
     else:
         print("Failed to create bulk summaries CSV")
 
