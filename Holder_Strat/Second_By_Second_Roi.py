@@ -1,8 +1,11 @@
+import pandas as pd
 from datetime import datetime
 import os
-import pandas as pd
-import json
 
+'''
+Use to assess if I should take profits when it reaches a certain percent
+finds the second by second roi I had during the day by the sum of all tickers
+'''
 
 def bulk_csv_date_converter(date):
     parts = date.split('-')
@@ -33,37 +36,6 @@ def Check_We_Have_Data_For_Trade(market_df, entry_time):
         return False
     else:
         return True
-    
-
-# Check for time gaps larger than 6 seconds between consecutive rows in market data.
-def Confirm_No_Market_Data_Time_Gaps(market_df, file_path):
-    # Convert Time column to datetime objects for comparison
-    time_objects = []
-    for time_str in market_df['Time']:
-        # Parse hour:minute:second format
-        time_obj = datetime.strptime(time_str, '%H:%M:%S').time()
-        time_objects.append(time_obj)
-    
-    # Check for gaps between consecutive rows
-    for i in range(1, len(time_objects)):
-        prev_time = time_objects[i-1]
-        curr_time = time_objects[i]
-        
-        # Calculate time difference in seconds
-        prev_seconds = prev_time.hour * 3600 + prev_time.minute * 60 + prev_time.second
-        curr_seconds = curr_time.hour * 3600 + curr_time.minute * 60 + curr_time.second
-        
-        time_diff = curr_seconds - prev_seconds
-        
-        # Since all data is from the same day, we only care about positive time gaps
-        # Negative differences are just data collection timing variations (1-2 seconds backwards)
-        # Only check for gaps larger than 6 seconds in the forward direction
-        if time_diff > 6:
-            prev_time_str = prev_time.strftime('%H:%M:%S')
-            curr_time_str = curr_time.strftime('%H:%M:%S')
-            raise ValueError(f"Time gap of {time_diff} seconds found between {prev_time_str} and {curr_time_str} (gap > 6 seconds) for file {file_path}")
-    
-    return True
 
 
 def Load_Market_Data_Dictionary(bulk_df):
@@ -99,18 +71,12 @@ def Load_Market_Data_Dictionary(bulk_df):
         if date_from_filename in unique_dates:
             file_path = os.path.join(market_data_dir, filename)
 
-            # Load the market data CSV
             market_df = pd.read_csv(file_path)
-            if (Confirm_No_Market_Data_Time_Gaps(market_df, file_path) == True):
-                # Keep only the specified columns
-                required_columns = ['Ticker', 'Price', 'Volatility Percent', 'Time']
-                market_df = market_df[required_columns]
-                market_data_dict[date_from_filename] = market_df
-                print(f"Loaded market data for {date_from_filename}")
-            else:
-                msg = f"time gap in {file_path}, crashing..."
-                print(msg)
-                raise ValueError(msg)
+            # Keep only the specified columns
+            required_columns = ['Ticker', 'Price', 'Volatility Percent', 'Time']
+            market_df = market_df[required_columns]
+            market_data_dict[date_from_filename] = market_df
+            print(f"Loaded market data for {date_from_filename}")
 
         else:
             print(f"Skipping {filename} - date {date_from_filename} not in bulk_summaries.csv")
@@ -151,21 +117,15 @@ def Load_Market_Data_Dictionary(bulk_df):
     return nested_market_data_dict
 
 
-'''
--Make roi dictionary of lists for each trade -> {trade_id: [roi values], ...}
--iterate over the data. each trades stop loss is an roi of -0.4% until the trade reaches +0.6% roi, at which time the stop loss changes to 0% (entry price)
--For each trade, get its market data dataframe (market_data_dict_by_ticker[date][ticker]), start at the starting point for the trade (iterate over the 
-data until we find the entry_time or the first timestamp after the entry_time (in case it's off by 1 second)). Then iterate over each row of market data;
-for each market data row, add the trades roi to roi_list, note that trades direction can be "buy" (+roi is when the price is higher) or "short" (+roi is when the 
-price is lower).
-
-goal: create a list for each trade that has second by second roi
-'''
-def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, largest_sl_value):
-    trade_start_indexes = {}
-    trade_end_timestamps = {}
-    roi_dictionary = {}
+# for each ticker, for each trade, make second by second roi's {ticker: {time: [trade_id, roi]}}
+def Gather_Data(bulk_df, market_data_dict_by_ticker, tickers):
+    holding_dict = {}
+    for ticker in tickers:
+        holding_dict[ticker] = {}
+    
+    roi_dictionary = {} # {date: ticker: {time: [trade_id, roi]}}
     skip_dates = []
+    stop_loss = -0.4
 
     print("\nmaking roi dictionary...")
 
@@ -173,20 +133,22 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
         date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
         if (date in skip_dates):
             continue
+        if date not in list(roi_dictionary.keys()):
+            roi_dictionary[date] = {}
+            for ticker in tickers:
+                roi_dictionary[date][ticker] = {}
 
         entry_time = row['Entry Time']               # hour:minute:second
         trade_id = row['Id']
         entry_price = row['Entry Price']
         ticker = row['Ticker']
         direction = row['Trade Type']
-        roi_list = []
         
         # Check if we have market data for this date and ticker
         if date not in market_data_dict_by_ticker:
             print(f"No market data found for date {date}")
             skip_dates.append(date)
             continue  
-            
         if ticker not in market_data_dict_by_ticker[date]:
             msg = f"No market data found for ticker {ticker} on date {date}"
             print(msg)
@@ -208,7 +170,6 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
             if market_time >= entry_time:
                 start_index = i
                 entry_found = True
-                trade_start_indexes[trade_id] = i
                 break
         
         if not entry_found:
@@ -218,12 +179,16 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
             
         # Track stop loss state
         stop_loss_triggered = False
-        stop_loss_updated = False  # Track if stop loss changed from -0.4% to 0%
+        stop_loss_updated = False    # Track if stop loss changed from -0.4% to 0%
         
         # Iterate through market data starting from entry point
         for i in range(start_index, len(market_df)):
             current_price = market_df.iloc[i]['Price']
-            current_time = market_df.iloc[i]['Time']
+            current_time_str = market_df.iloc[i]['Time']
+            
+            # Convert current time to seconds since midnight
+            current_time_obj = datetime.strptime(current_time_str, '%H:%M:%S').time()
+            curr_time_seconds = current_time_obj.hour * 3600 + current_time_obj.minute * 60 + current_time_obj.second
             
             # get roi
             if direction == 'buy':
@@ -237,70 +202,133 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
             
             # Check stop loss conditions
             if stop_loss_triggered == False:
-                if roi <= largest_sl_value:
+                if roi <= stop_loss:
                     stop_loss_triggered = True
-                    roi_list.append(roi)
+                    roi_dictionary[date][ticker][curr_time_seconds] = [trade_id, roi]
                     break
 
                 elif roi >= 0.6 and stop_loss_updated == False:
                     stop_loss_updated = True
-                    roi_list.append(roi)
+                    roi_dictionary[date][ticker][curr_time_seconds] = [trade_id, roi]
 
                 elif stop_loss_updated == True and roi <= 0:
                     stop_loss_triggered = True
-                    roi_list.append(roi)
+                    roi_dictionary[date][ticker][curr_time_seconds] = [trade_id, roi]
                     break
 
                 else:
-                    roi_list.append(roi)
+                    roi_dictionary[date][ticker][curr_time_seconds] = [trade_id, roi]
             else:
                 # Stop loss already triggered, no more data needed
                 break
         
-        trade_end_timestamps[trade_id] = current_time
-        roi_dictionary[trade_id] = roi_list
-    
-    # Save ROI dictionary and related data to file
-    roi_file_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved.json"
-    
-    # Combine all trade data into one dictionary
-    trade_data = {
-        "roi_dictionary": roi_dictionary,
-        "trade_end_timestamps": trade_end_timestamps,
-        "trade_start_indexes": trade_start_indexes
-    }
-    
-    with open(roi_file_path, 'w') as f:
-        json.dump(trade_data, f, indent=2)
-    print(f"Trade data (ROI dictionary, end timestamps, start indexes) saved to {roi_file_path}")
     
     print(f"roi dictionary done. Total trades processed: {len(roi_dictionary)}")
 
-    return roi_dictionary, trade_end_timestamps, trade_start_indexes
+    return roi_dictionary
 
-
-# return (roi_dictionary, trade_end_timestamps, trade_start_indexes)
-def Load_Roi_Dictionary_And_Values():
-    roi_file_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved.json"
+'''
+-roi_dictionary: {date: {ticker: {time_in_seconds: [trade_id, roi]}, ticker: {...}, ...}, date: {...}}
+-for each date, go second by second scanning each ticker for each second. if there's an roi value for that ticker
+ then subtract the prev value from that ticker and add the new value unless it's a new trade
+'''
+def Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers):
+    """
+    Find the highest ROI sum achieved during each trading day.
     
-    try:
-        with open(roi_file_path, 'r') as f:
-            trade_data = json.load(f)
+    For each date, tracks the cumulative ROI second by second:
+    - When a trade is active, updates the running sum with current ROI
+    - When a trade ends (new trade_id), locks in the final ROI permanently
+    - Tracks both current sum and highest sum reached during the day
+    """
+    
+    # Market hours: 6:30 AM (23400 seconds) to 1:00 PM (46800 seconds)
+    MARKET_OPEN = 23400  # 6:30 AM in seconds since midnight
+    MARKET_CLOSE = 46800  # 1:00 PM in seconds since midnight
+    
+    results = {}
+    
+    for date in roi_dictionary.keys():
+        print(f"\nProcessing date: {date}")
         
-        roi_dictionary = trade_data["roi_dictionary"]
-        trade_end_timestamps = trade_data["trade_end_timestamps"]
-        trade_start_indexes = trade_data["trade_start_indexes"]
+        current_sum = 0.0
+        highest_sum = 0.0
         
-        print(f"Successfully loaded trade data from {roi_file_path}")
-        print(f"Loaded {len(roi_dictionary)} trades")
+        # Track previous ROI and trade_id for each ticker to handle transitions
+        ticker_previous_roi = {ticker: 0.0 for ticker in tickers}
+        ticker_previous_trade_id = {ticker: None for ticker in tickers}
         
-        return roi_dictionary, trade_end_timestamps, trade_start_indexes
+        # Go second by second through the trading day
+        for second in range(MARKET_OPEN, MARKET_CLOSE + 1):
+            
+            # Check each ticker for this second
+            for ticker in tickers:
+                if ticker in roi_dictionary[date]:
+                    ticker_data = roi_dictionary[date][ticker].get(second, None)
+                    
+                    if ticker_data is not None:
+                        current_trade_id, current_roi = ticker_data
+                        
+                        # Check if this is a new trade (trade_id changed)
+                        if ticker_previous_trade_id[ticker] is not None and ticker_previous_trade_id[ticker] != current_trade_id:
+                            # New trade detected - previous trade ended
+                            # The previous ROI is already locked in, don't subtract it
+                            # Just start tracking the new trade
+                            current_sum += current_roi
+                            #print(f"  {second}s: {ticker} new trade {current_trade_id}, ROI: {current_roi}%, sum: {current_sum}%")
+                        
+                        elif ticker_previous_trade_id[ticker] == current_trade_id:
+                            # Same trade continuing - update ROI
+                            # Subtract previous ROI and add new ROI
+                            current_sum = current_sum - ticker_previous_roi[ticker] + current_roi
+                            #print(f"  {second}s: {ticker} trade {current_trade_id} update, ROI: {current_roi}%, sum: {current_sum}%")
+                        
+                        else:
+                            # First time seeing this ticker (ticker_previous_trade_id[ticker] is None)
+                            current_sum += current_roi
+                            #print(f"  {second}s: {ticker} first trade {current_trade_id}, ROI: {current_roi}%, sum: {current_sum}%")
+                        
+                        # Update tracking variables
+                        ticker_previous_roi[ticker] = current_roi
+                        ticker_previous_trade_id[ticker] = current_trade_id
+                        
+                        # Update highest sum if current sum is higher
+                        if current_sum > highest_sum:
+                            highest_sum = current_sum
+                            print(f"    New highest sum: {highest_sum}%")
         
-    except FileNotFoundError:
-        print(f"Error: File {roi_file_path} not found")
-    except KeyError as e:
-        print(f"Error: Missing key {e} in the saved data file")
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in file {roi_file_path}: {e}")
+        results[date] = {
+            'final_sum': round(current_sum, 3),
+            'highest_sum': round(highest_sum, 3)
+        }
+        
+        print(f"Date {date} - Final sum: {current_sum}%, Highest sum: {highest_sum}%")
+    
+    # Print final results
+    print("\n" + "="*50)
+    print("FINAL RESULTS - HIGHEST ROI SUMS BY DATE")
+    print("="*50)
+    
+    for date, data in results.items():
+        print(f"{date}: Highest Sum = {data['highest_sum']}% (Final Sum = {data['final_sum']}%)")
+    
+    return results
 
 
+
+
+
+
+
+def Main():
+    bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[["Date", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]]
+    
+    market_data_dict_by_ticker = Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
+    tickers = bulk_df['Ticker'].unique()
+
+    roi_dictionary = Gather_Data(bulk_df, market_data_dict_by_ticker, tickers) # {date: {ticker: {entry time in seconds: [trade_id, roi]}, ticker: {...}, ...}, date: {...}}
+
+    Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers)
+
+
+Main()

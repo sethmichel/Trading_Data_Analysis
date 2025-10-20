@@ -666,9 +666,10 @@ def Check_Required_Market_Values(file_path, market_data_file):
     
 
 # checks market data file and returns false if a row has a gap of at least x seconds compared to the previous row
+# also checks if the data has a valid start time (at least 20 timestamps between 6:30:00 and 6:31:00)
 def Check_Timestamp_Gaps(market_file_path, market_file):
     try:
-        gap_size = 7 # seconds
+        gap_size = 6 # seconds
         
         def time_to_seconds(time_str):
             # Convert HH:MM:SS to total seconds
@@ -695,6 +696,40 @@ def Check_Timestamp_Gaps(market_file_path, market_file):
                 print(f"  Warning: Invalid time format '{time_str}' in {market_file}")
                 return False
         
+        # Check for valid start time (at least 20 timestamps between 6:30:00 and 6:31:00)
+        start_time_630 = time_to_seconds("06:30:00")  # 6:30:00 in seconds
+        start_time_631 = time_to_seconds("06:31:00")  # 6:31:00 in seconds
+        
+        valid_start_timestamps = 0
+        for seconds in time_seconds:
+            if start_time_630 <= seconds < start_time_631:
+                valid_start_timestamps += 1
+        
+        if valid_start_timestamps < 20:
+            print(f"  ✗ BAD: Invalid start time in {market_file}")
+            print(f"    Found only {valid_start_timestamps} timestamps between 6:30:00 and 6:31:00 (need at least 20)")
+            if (market_file == 'Raw_Market_Data_06-24-2025.csv'):
+                print(f"   OK: market data starts at 06:31:21, which is before the first trade (there was 1 trade but I cut it out). "
+                      f"so accept this as it now doesn't have any impact. since it's in the morning I can't get reliable on demand "
+                      f"data to fill it\n")
+            elif (market_file == 'Raw_Market_Data_07-15-2025.csv'):
+                print(f"   OK: market data starts at 06:34:52, and there currently aren't any trades for this. it should be noted where "
+                      f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
+            elif (market_file == 'Raw_Market_Data_07-16-2025.csv'):
+                print(f"   OK: market data starts at 06:33:18, and there currently aren't any trades for this. it should be noted where "
+                      f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
+            elif (market_file == 'Raw_Market_Data_07-17-2025.csv'):
+                print(f"   OK: market data starts at 06:31:22, and there currently aren't any trades for this. it should be noted where "
+                      f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
+            elif (market_file == 'Raw_Market_Data_09-02-2025.csv'):
+                print(f"   OK: market data starts at 06:32:22, and there currently aren't any trades for this. it should be noted where "
+                      f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
+            elif (market_file == 'Raw_Market_Data_10-09-2025.csv'):
+                print(f"   OK: market data starts at 06:34:19, but I didn't take a trade during that time so it's fine. Since it's in "
+                      f"the morning I can't get reliable on demand data to fill it\n")
+            else:
+                return False
+        
         # Check for gaps of x seconds or more (moved outside the conversion loop)
         gaps_found = False
         for i in range(1, len(time_seconds)):
@@ -708,16 +743,36 @@ def Check_Timestamp_Gaps(market_file_path, market_file):
                 if not gaps_found:
                     print(f"  **BAD Gaps found in {market_file}:")
                     gaps_found = True
-                
+
                 # Line number is i+2 because: i is 0-indexed, +1 for 1-indexed, +1 for header
                 line_number = i + 2
-                print(f"    Line {line_number}: Gap of {gap} seconds")
+                if (market_file == 'Raw_Market_Data_09-02-2025.csv' and line_number == 78):
+                    print(f"{market_file} has gap at line 78 of 6 seconds. it's too early to get replacement data. live with it it's just 6 seconds")
+                    return True
+                elif (market_file == 'Raw_Market_Data_09-04-2025.csv' and line_number == 72):
+                    print(f"{market_file} has gap at line 72 of 7 seconds. it's too early to get replacement data. live with it it's just 7 seconds")
+                    return True
+                elif (market_file == 'Raw_Market_Data_09-04-2025.csv' and line_number == 3075):
+                    print(f"{market_file} has gap at line 3075 of 6 seconds. it's too early to get replacement data. live with it it's just 6 seconds")
+                    return True
+                elif (market_file == 'Raw_Market_Data_10-03-2025.csv' and line_number == 681):
+                    print(f"{market_file} has gap at line {line_number} of {gap} seconds. it's too early to get replacement data. live with it it's just {gap} seconds")
+                    return True
+                elif (market_file == 'Raw_Market_Data_10-07-2025.csv' and line_number == 3432):
+                    print(f"{market_file} has gap at line {line_number} of {gap} seconds. it's too early to get replacement data. live with it it's just {gap} seconds")
+                    return True
+                elif (market_file == 'Raw_Market_Data_10-16-2025.csv' and (line_number == 877 or line_number == 905)):
+                    print(f"{market_file} has gap at line {line_number} of {gap} seconds. it's too early to get replacement data. live with it it's just {gap} seconds")
+                    return True
+                else:
+                    print(f"    Line {line_number}: Gap of {gap} seconds")
         
         if not gaps_found:
-            print(f"  GOOD No gaps of {gap_size}+ seconds found in {market_file}")
+            print(f"  ✓ GOOD: No gaps of {gap_size}+ seconds found and valid start time in {market_file}")
+            print(f"    Found {valid_start_timestamps} timestamps between 6:30:00-6:31:00")
             return True
         else:
-            return False
+            raise ValueError()
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)

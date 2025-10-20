@@ -579,8 +579,6 @@ def main():
     sl_list = [-0.3, -0.4, -0.5, -0.6, -0.7, -0.8]
     '''
     bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[["Date", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]]
-    bulk_df = Helper_Functions.Add_Trade_Id(bulk_df)
-
     market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
     roi_dictionary, trade_end_timestamps, trade_start_indexes = Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, sl_list[-1])
     

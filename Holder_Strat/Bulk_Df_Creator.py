@@ -266,6 +266,7 @@ def Create_Summary_Df(raw_df):
                         # Add trade summary
                         normalized_trades.append({
                             'Date': raw_df.loc[i, "Date"].split()[0].replace("/","-"),  # Just the date part
+                            'Trade_Id': None, # must be added at very end
                             'Ticker': ticker,
                             'Entry Time': entry_time,
                             'Exit Time': exit_time,
@@ -278,7 +279,6 @@ def Create_Summary_Df(raw_df):
                             'Exit Price': round(exit_price, 4),
                             'Trade Type': trade_type,
                             'Qty': None if has_multiple_entries else initial_qty,  # Use initial quantity unless multiple entries
-                            'Best Sl': None,
                             'Best Exit Price': None,
                             'Best Exit Time In Trade': None,
                             'Worst Exit Price': None,
@@ -291,18 +291,10 @@ def Create_Summary_Df(raw_df):
                             'Entry Adx28': None,
                             'Entry Adx14': None,
                             'Entry Adx7': None,
-                            'Price Movement': None,
-                            #'TEST optimal sl result': None,
-                            'TEST Optimal sl Hit': None,
+                            #'Price Movement': None,
                             'Original Holding Reached': None,
-                            'TEST Optimal sl Reached Holding': None,
                             'Original Best Exit Percent': None,
-                            'TEST Optimal sl Best Exit Percent': None,
                             'Original Percent Change': round(percent_change, 2),
-                            'TEST Optimal sl Percent Change': None,
-                            'TEST -0.4 sl Benchmark': None,
-                            'TEST -0.5 sl Benchmark': None,
-                            'TEST -0.6 sl Benchmark': None
                         })
                         break
 
@@ -546,15 +538,15 @@ def Add_Market_Data(df, market_data_path):
                 df.at[idx, 'Worst Exit Price'] = best_worst_info['Worst Exit Price']
                 df.at[idx, 'Worst Exit Percent'] = best_worst_info['Worst Exit Percent']
                 df.at[idx, 'Worst Exit Time In Trade'] = seconds_to_hms(best_worst_info['Worst Exit Time In Trade'])
-                df.at[idx, 'Best Sl'] = Find_Best_Sl(ticker_df, starting_row, direction) # returns x% or 'not found'
+                #df.at[idx, 'Best Sl'] = Find_Best_Sl(ticker_df, starting_row, direction) # returns x% or 'not found'
 
                 if (best_worst_info['Original Best Exit Percent'] >= 0.6):
                     df.at[idx, 'Original Holding Reached'] = True
                 else:
                     df.at[idx, 'Original Holding Reached'] = False
 
-                price_movement_list = Add_Price_Movement(ticker_df, entry_price, starting_row, exit_seconds, direction)
-                df.at[idx, 'Price Movement'] = str(price_movement_list) if price_movement_list is not None else None
+                #price_movement_list = Add_Price_Movement(ticker_df, entry_price, starting_row, exit_seconds, direction)
+                #df.at[idx, 'Price Movement'] = str(price_movement_list) if price_movement_list is not None else None
 
                 #df = Create_Estimate_Columns(df, idx, ticker_df, exit_seconds)
                 if (isinstance(df, pd.DataFrame) == False):
@@ -978,12 +970,12 @@ def Create_Bulk_Summaries(summary_dir):
                         print(f"  Error reading {csv_file}: {str(e)}")
         else:
             print(f"Directory does not exist: {summary_dir}")
-            return None
+            return None, None
         
         # Check if we found any files to combine
         if not all_dataframes:
             print("No summary CSV files found to combine!")
-            return None
+            return None, None
         
         print(f"\nCombining {len(all_dataframes)} CSV files...")
         
@@ -1002,6 +994,8 @@ def Create_Bulk_Summaries(summary_dir):
             print(f"Warning: Could not sort by date/time: {str(e)}")
             print("Proceeding without sorting...")
         
+        combined_df['Trade_Id'] = range(1, len(combined_df) + 1)
+
         # Save the combined dataframe to CSV
         combined_df.to_csv(output_file, index=False)
         
@@ -1020,7 +1014,7 @@ def Create_Bulk_Summaries(summary_dir):
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-        return None
+        return None, None
 
 
 def Controller(do_all_trade_logs):
@@ -1091,7 +1085,7 @@ def Controller(do_all_trade_logs):
 
     # Create bulk summaries CSV after all individual summaries are created
     print("\nCreating bulk summaries CSV...")
-    bulk_df = Create_Bulk_Summaries(summary_dir)
+    output_file, bulk_df = Create_Bulk_Summaries(summary_dir)
     if isinstance(bulk_df, pd.DataFrame):
         print(f"Bulk summaries created successfully")
         Create_Overall_Summary_Info_Txt(bulk_df)
