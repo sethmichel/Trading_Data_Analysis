@@ -290,7 +290,102 @@ def Full_Test_Model_Over_Trade_Data(model, scaler, bulk_df, market_data_dict_by_
 
     return results
 
-    
+
+# keep: this is useful for assessing what optimizations we can do next. it's the distribution of y values
+def Summarize_Response_Distribution(all_roi_samples_y, save_hist: bool = True, show_plot: bool = False):
+    """
+    Summarize and visualize the distribution of the response variable (Y):
+    best future ROI values used to train the model.
+
+    Saves a concise text report and a histogram plot for quick inspection.
+    """
+    # Extract response values preserving original scale (percent ROI)
+    y_values = []
+    for roi_dict in all_roi_samples_y:
+        _, roi_value = next(iter(roi_dict.items()))
+        try:
+            y_values.append(float(roi_value))
+        except Exception:
+            continue
+
+    if len(y_values) == 0:
+        print("No response values found; skipping response distribution summary.")
+        return
+
+    y = np.array(y_values, dtype=float)
+
+    # Basic statistics
+    count = y.size
+    y_min = float(np.min(y))
+    y_max = float(np.max(y))
+    y_mean = float(np.mean(y))
+    y_median = float(np.median(y))
+    y_std = float(np.std(y))
+
+    # Percentiles
+    percentiles_list = [1, 5, 10, 25, 50, 75, 90, 95, 99]
+    pct_vals = np.percentile(y, percentiles_list).tolist()
+
+    # Skewness and kurtosis (excess) without SciPy
+    if y_std > 0:
+        centered = y - y_mean
+        skewness = float(np.mean(centered ** 3) / (y_std ** 3))
+        kurtosis_excess = float(np.mean(centered ** 4) / (y_std ** 4) - 3.0)
+    else:
+        skewness = 0.0
+        kurtosis_excess = 0.0
+
+    # Useful thresholds for trading context
+    frac_lt_0 = float(np.mean(y < 0))
+    frac_ge_target = float(np.mean(y >= 0.6))  # >= original target
+    frac_between_0_0p1 = float(np.mean((y >= 0) & (y < 0.1)))
+
+    # Write summary to file
+    summary_path = 'Holder_Strat/Parameter_Tuning/model_files_and_data/Response_Distribution_Summary.txt'
+    with open(summary_path, 'w') as f:
+        f.write('Response (Y) Distribution Summary - Best Future ROI\n')
+        f.write('===============================================\n')
+        f.write(f'Count: {count}\n')
+        f.write(f'Min: {y_min:.4f}%\n')
+        f.write(f'P1/P5/P10: {pct_vals[0]:.4f}% / {pct_vals[1]:.4f}% / {pct_vals[2]:.4f}%\n')
+        f.write(f'P25/P50/P75: {pct_vals[3]:.4f}% / {pct_vals[4]:.4f}% / {pct_vals[5]:.4f}%\n')
+        f.write(f'P90/P95/P99: {pct_vals[6]:.4f}% / {pct_vals[7]:.4f}% / {pct_vals[8]:.4f}%\n')
+        f.write(f'Max: {y_max:.4f}%\n')
+        f.write(f'Mean: {y_mean:.4f}%\n')
+        f.write(f'Median: {y_median:.4f}%\n')
+        f.write(f'Std Dev: {y_std:.4f}\n')
+        f.write(f'Skewness: {skewness:.4f}\n')
+        f.write(f'Excess Kurtosis: {kurtosis_excess:.4f}\n')
+        f.write('\nShares of interest:\n')
+        f.write(f'  < 0%: {frac_lt_0:>.2%}\n')
+        f.write(f'  >= 0.6% (target): {frac_ge_target:>.2%}\n')
+        f.write(f'  [0%, 0.1%): {frac_between_0_0p1:>.2%}\n')
+
+    print("\nResponse distribution summary written to:")
+    print(summary_path)
+
+    # Save histogram plot
+    if save_hist:
+        plt.figure(figsize=(10, 6))
+        # Use a simple rule for bin count for readability
+        num_bins = max(20, int(np.ceil(np.sqrt(count))))
+        plt.hist(y, bins=num_bins, color='steelblue', edgecolor='black', alpha=0.75)
+        plt.axvline(0, color='red', linestyle='--', linewidth=1, alpha=0.7)
+        plt.axvline(0.6, color='green', linestyle='--', linewidth=1, alpha=0.7)
+        plt.title('Response (Y) Distribution: Best Future ROI')
+        plt.xlabel('ROI (%)')
+        plt.ylabel('Count')
+        plt.grid(True, axis='y', alpha=0.25)
+        plt.tight_layout()
+        plot_path = 'Holder_Strat/Parameter_Tuning/model_files_and_data/Response_Distribution_Hist.png'
+        plt.savefig(plot_path, dpi=300, bbox_inches='tight')
+        if show_plot:
+            plt.show()
+        else:
+            plt.close()
+        print('Histogram saved to:')
+        print(plot_path)
+
 # all_data_samples_x: [{trade_id: [minutes_since_open, volatility_percent]} ...]
 # all_roi_samples_y: [{trade_id: roi}, ...]
 # scaler: used to scale x values for the model input
@@ -299,6 +394,8 @@ def Run_Model_Diagnostics(model, scaler, all_data_samples_x, all_roi_samples_y):
     Director function for running various diagnostic tests on the model.
     """
     print("\nRunning model diagnostics...")
+    # 0) Response variable distribution (Y)
+    Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot=False)
     
     # Run residual plot analysis
     Plot_Residuals_Vs_Fitted(model, scaler, all_data_samples_x, all_roi_samples_y)
@@ -544,6 +641,10 @@ def Main():
     roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
     all_data_samples_x, all_roi_samples_y = Load_Test_Values()
     model, scaler = Load_Model()
+
+    # Print the number of negative values in all_roi_samples_y
+    negative_count = sum(1 for roi_dict in all_roi_samples_y for value in roi_dict.values() if value < 0)
+    print(f"Number of negative values in all_roi_samples_y: {negative_count}") # 14
 
     Run_Model_Diagnostics(model, scaler, all_data_samples_x, all_roi_samples_y)
 

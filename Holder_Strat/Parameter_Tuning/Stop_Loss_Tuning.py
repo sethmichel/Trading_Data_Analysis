@@ -13,13 +13,167 @@ import seaborn as sns
 import pickle
 import numpy as np
 from sklearn.preprocessing import StandardScaler, LabelEncoder
-from catboost import CatBoostClassifier, Pool
+from catboost import CatBoostClassifier, CatBoostRegressor, Pool
 from sklearn.model_selection import train_test_split
-from sklearn.metrics import classification_report, confusion_matrix, accuracy_score
+from sklearn.metrics import classification_report, confusion_matrix, accuracy_score, mean_squared_error, mean_absolute_error, r2_score
 import Helper_Functions
 
 
-def Grid_Search(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes):
+def Find_Optimal_Stop_Loss_For_Trades(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes, drop_neither_trades=True):
+    """
+    For each trade, find the optimal stop loss that maximizes success probability.
+    
+    Args:
+        drop_neither_trades: If True, exclude trades that reach neither stop loss nor target.
+                           If False, treat them as failures (original behavior).
+    
+    Returns:
+        tuple: (result_df, trades_processed, trades_dropped_neither, neither_trades_detected)
+        - result_df: DataFrame with columns: ['trade id', 'minutes since market open', 'volatility percent', 'optimal_stop_loss']
+        - trades_processed: Number of trades successfully processed
+        - trades_dropped_neither: Number of trades dropped due to 'neither' outcomes
+        - neither_trades_detected: Total number of trades that had 'neither' outcomes (regardless of drop setting)
+    """
+    skip_dates = []
+    result_df = pd.DataFrame(columns=['trade id', 'minutes since market open', 'volatility percent', 'optimal_stop_loss'])
+    holding_percent = 0.6
+    
+    trades_processed = 0
+    trades_dropped_neither = 0
+    neither_trades_detected = 0  # Track total 'neither' trades found
+    
+    print(f"Finding optimal stop loss for each trade using SL candidates: {sl_list}")
+    print(f"Drop 'neither' trades: {drop_neither_trades}")
+    
+    for idx, row in bulk_df.iterrows():
+        ticker = row['Ticker']
+        date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
+        trade_id = row['Trade Id']
+        
+        if (date in skip_dates):
+            continue
+            
+        # Check if we have market data for this date and ticker
+        if date not in market_data_dict_by_ticker:
+            print(f"No market data found for date {date}")
+            skip_dates.append(date)
+            continue  
+        if ticker not in market_data_dict_by_ticker[date]:
+            msg = f"No market data found for ticker {ticker} on date {date}"
+            print(msg)
+            raise ValueError(msg)
+
+        entry_time = row['Entry Time']  # hour:minute:second
+        market_df = market_data_dict_by_ticker[date][ticker].copy()
+
+        # Skip trade if entry time is after final market data time
+        if (Helper_Functions.Check_We_Have_Data_For_Trade(market_df, entry_time) == False):
+            print(f"Skipping trade {trade_id}: entry time {entry_time} is after final market data time")
+            continue
+        
+        roi_list = roi_dictionary[trade_id]
+        start_index = trade_start_indexes[trade_id]
+
+        # Test each stop loss and find the optimal one for this trade
+        sl_results = {}  # {stop_loss: success(1) or failure(0)}
+        has_neither_outcome = False
+        
+        for sl in sl_list:
+            counter = -1
+            
+            # Simulate this stop loss on the trade
+            for i in range(start_index, len(market_df)):
+                counter += 1
+                if counter >= len(roi_list):
+                    # Ran out of ROI data - this is a "neither" case
+                    if drop_neither_trades:
+                        has_neither_outcome = True
+                        break
+                    else:
+                        sl_results[sl] = 0  # Consider as failure (original behavior)
+                        break
+                    
+                curr_roi = roi_list[counter]
+
+                if (curr_roi <= sl):
+                    # Stop loss hit - failure
+                    sl_results[sl] = 0
+                    break
+                elif (curr_roi >= holding_percent):
+                    # Target reached - success
+                    sl_results[sl] = 1
+                    break
+            else:
+                # Neither stop loss nor target hit - this is a "neither" case
+                if drop_neither_trades:
+                    has_neither_outcome = True
+                else:
+                    sl_results[sl] = 0  # Consider as failure (original behavior)
+            
+            # If we found a "neither" case and we're dropping them, skip this entire trade
+            if has_neither_outcome and drop_neither_trades:
+                break
+
+        # Track 'neither' trades detected (regardless of drop setting)
+        if has_neither_outcome:
+            neither_trades_detected += 1
+            
+        # Skip this trade if it has "neither" outcomes and we're dropping them
+        if has_neither_outcome and drop_neither_trades:
+            trades_dropped_neither += 1
+            continue
+            
+        trades_processed += 1
+
+        # Find the optimal stop loss: the loosest SL that still allows success
+        # Priority: 1) Must reach target, 2) Prefer looser stop loss for better risk/reward
+        successful_sls = [sl for sl, success in sl_results.items() if success == 1]
+        
+        if successful_sls:
+            # Choose the loosest (least negative) stop loss that still succeeds
+            optimal_sl = max(successful_sls)  # max of [-0.3, -0.4, -0.5] = -0.3 (loosest)
+        else:
+            # No stop loss worked, choose the loosest one anyway (best risk/reward)
+            optimal_sl = max(sl_list)  # Most conservative choice
+        
+        # Add one row per trade with its optimal stop loss
+        new_row = {
+            'trade id': trade_id,
+            'minutes since market open': market_df.iloc[start_index]['Time Since Market Open'],
+            'volatility percent': market_df.iloc[start_index]['Volatility Percent'],
+            'optimal_stop_loss': optimal_sl
+        }
+        result_df = result_df._append(new_row, ignore_index=True)
+
+    print(f"\nTraining Data Creation Results:")
+    print(f"  Trades processed: {trades_processed}")
+    print(f"  'Neither' trades detected: {neither_trades_detected}")
+    if drop_neither_trades:
+        total_trades = trades_processed + trades_dropped_neither
+        drop_rate = (trades_dropped_neither / total_trades) * 100 if total_trades > 0 else 0
+        print(f"  Trades dropped ('neither'): {trades_dropped_neither}")
+        print(f"  Drop rate: {drop_rate:.1f}%")
+    else:
+        print(f"  'Neither' trades treated as failures: {neither_trades_detected}")
+    
+    # Show distribution of optimal stop losses
+    if len(result_df) > 0:
+        sl_counts = result_df['optimal_stop_loss'].value_counts().sort_index()
+        print(f"\nOptimal Stop Loss Distribution ({len(result_df)} trades):")
+        for sl, count in sl_counts.items():
+            pct = count / len(result_df) * 100
+            print(f"  {sl:>6.1f}%: {count:>4} trades ({pct:>5.1f}%)")
+    
+    return result_df, trades_processed, trades_dropped_neither, neither_trades_detected
+
+
+# deprecated
+def OLD_Grid_Search(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes):
+    """
+    v0.1 10-17-25
+    OLD APPROACH: Creates multiple rows per trade (one for each stop loss tested).
+    This approach has data leakage issues but kept for reference.
+    """
     skip_dates = []
     result_df = pd.DataFrame(columns=['trade id', 'minutes since market open', 'volatility percent', 'stop loss', 'result'])
     holding_percent = 0.6
@@ -27,7 +181,7 @@ def Grid_Search(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, tr
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
         date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
-        trade_id = row['Id']  # Move this up to avoid undefined variable error
+        trade_id = row['Trade Id']  # Move this up to avoid undefined variable error
         
         if (date in skip_dates):
             continue
@@ -49,7 +203,7 @@ def Grid_Search(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, tr
             print(f"Skipping trade {trade_id}: entry time {entry_time} is after final market data time")
             continue
         
-        trade_id = row['Id']
+        trade_id = row['Trade Id']
         roi_list = roi_dictionary[trade_id]
         start_index = trade_start_indexes[trade_id]
 
@@ -447,7 +601,136 @@ def Format_CatBoost_Data(results_df):
     return results_df
 
 
-def Train_CatBoost_Model(results_df):
+def Train_CatBoost_Optimal_SL_Model(results_df):
+    """
+    Train CatBoost Regressor to predict optimal stop loss.
+    
+    Features: ['minutes since market open', 'volatility percent'] 
+    Target: 'optimal_stop_loss' (continuous values like -0.3, -0.4, etc.)
+    """
+    x_cols = ['minutes since market open', 'volatility percent']  # Only entry conditions, no stop loss
+    
+    results_df = Format_Optimal_SL_Data(results_df)
+
+    # Prepare feature matrix
+    x_raw = results_df[x_cols].values            # Convert to numpy array
+    y = results_df['optimal_stop_loss'].values   # Target is now optimal stop loss
+    
+    # Scale features (but not target - we want to predict actual stop loss values)
+    scaler = StandardScaler()
+    x_scaled = scaler.fit_transform(x_raw)
+    
+    print(f"Feature matrix shape: {x_scaled.shape}")
+    print(f"Target shape: {y.shape}")
+    print(f"Target range: {y.min():.3f} to {y.max():.3f}")
+    print(f"Target distribution:")
+    unique_vals, counts = np.unique(y, return_counts=True)
+    for val, count in zip(unique_vals, counts):
+        pct = count / len(y) * 100
+        print(f"  {val:>6.1f}%: {count:>4} samples ({pct:>5.1f}%)")
+    
+    # Train/validation split (no stratification needed for regression)
+    x_train, x_val, y_train, y_val = train_test_split(
+        x_scaled, y, test_size=0.2, random_state=42
+    )
+    
+    print(f"Training set: {x_train.shape}, Validation set: {x_val.shape}")
+
+    # Convert to CatBoost Pool
+    train_pool = Pool(x_train, y_train, feature_names=x_cols)
+    val_pool = Pool(x_val, y_val, feature_names=x_cols)
+
+    # Train CatBoost Regressor (not Classifier!)
+    model = CatBoostRegressor(
+        iterations=600,              # total trees
+        depth=4,                     # shallower for regression
+        learning_rate=0.05,          # slightly higher for regression
+        loss_function='RMSE',        # Root Mean Square Error for regression
+        eval_metric='RMSE',
+        l2_leaf_reg=3,               # L2 regularization
+        random_seed=42,              # for reproducibility
+        early_stopping_rounds=50,    # stop if validation not improving
+        verbose=100,                 # print every 100 iterations
+    )
+
+    print("Training model...")
+    model.fit(train_pool, eval_set=val_pool, use_best_model=True)
+    print("Done training")
+    
+    # Model evaluation for regression
+    train_pred = model.predict(x_train)
+    val_pred = model.predict(x_val)
+    
+    # Regression metrics
+    train_rmse = np.sqrt(mean_squared_error(y_train, train_pred))
+    val_rmse = np.sqrt(mean_squared_error(y_val, val_pred))
+    train_mae = mean_absolute_error(y_train, train_pred)
+    val_mae = mean_absolute_error(y_val, val_pred)
+    train_r2 = r2_score(y_train, train_pred)
+    val_r2 = r2_score(y_val, val_pred)
+    
+    print(f"\nModel Performance (Regression Metrics):")
+    print(f"Training RMSE:   {train_rmse:.4f}")
+    print(f"Validation RMSE: {val_rmse:.4f}")
+    print(f"Training MAE:    {train_mae:.4f}")
+    print(f"Validation MAE:  {val_mae:.4f}")
+    print(f"Training R²:     {train_r2:.4f}")
+    print(f"Validation R²:   {val_r2:.4f}")
+    
+    # Feature importance
+    feature_importance = model.get_feature_importance()
+    print(f"\nFeature Importance:")
+    for i, (feature, importance) in enumerate(zip(x_cols, feature_importance)):
+        print(f"  {feature}: {importance:.3f}")
+    
+    # Show prediction examples
+    print(f"\nSample Predictions vs Actual:")
+    for i in range(min(10, len(val_pred))):
+        print(f"  Predicted: {val_pred[i]:>6.3f}, Actual: {y_val[i]:>6.3f}, Diff: {abs(val_pred[i] - y_val[i]):>6.3f}")
+    
+    return model, results_df, scaler
+
+
+def Format_Optimal_SL_Data(results_df):
+    """
+    Data validation and cleaning for optimal stop loss regression.
+    """
+    print(f"Input data shape: {results_df.shape}")
+    print(f"Columns: {results_df.columns.tolist()}")
+    
+    # Check for missing values
+    missing_counts = results_df.isnull().sum()
+    if missing_counts.any():
+        print("Missing values found:")
+        for col, count in missing_counts.items():
+            if count > 0:
+                print(f"  {col}: {count} missing")
+        
+        # Drop rows with missing optimal_stop_loss
+        results_df = results_df.dropna(subset=['optimal_stop_loss'])
+        print(f"After dropping missing values: {results_df.shape}")
+    
+    # Validate optimal_stop_loss values are reasonable
+    sl_values = results_df['optimal_stop_loss'].values
+    print(f"Optimal stop loss range: {sl_values.min():.3f} to {sl_values.max():.3f}")
+    
+    # Check if values are within expected range (should be negative percentages)
+    if sl_values.max() > 0:
+        print("WARNING: Found positive stop loss values - this might be incorrect")
+    if sl_values.min() < -2.0:
+        print("WARNING: Found very large negative stop loss values - this might be incorrect")
+    
+    print(f"Final data shape: {results_df.shape}")
+    return results_df
+
+
+# deprecated
+def OLD_Train_CatBoost_Model(results_df):
+    """
+    v0.1 10-17-25
+    OLD APPROACH: Classification model with data leakage issues.
+    Kept for reference but should not be used.
+    """
     x_cols = ['minutes since market open', 'volatility percent', 'stop loss']
     
     results_df = Format_CatBoost_Data(results_df)
@@ -508,21 +791,11 @@ def Train_CatBoost_Model(results_df):
     print(f"\nFeature Importance:")
     for i, (feature, importance) in enumerate(zip(x_cols, feature_importance)):
         print(f"  {feature}: {importance:.3f}")
-    
-    ''' Example usage after training:
-    # For new prediction, make sure to scale the input
-    example_raw = np.array([[45, 0.22, -0.5]])  # minutes, volatility, stop loss
-    example_scaled = scaler.transform(example_raw)
-    pred_proba = model.predict_proba(example_scaled)
-    pred_class = model.predict(example_scaled)
-    print(f"Prediction probabilities: {pred_proba}")
-    print(f"Predicted class: {pred_class}")
-    '''
 
     return model, results_df, scaler
 
 
-def Save_Regression_Model_And_Data(model, result_df, scaler):
+def Save_Model_And_Data(model, result_df, scaler):
     model_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/trained_sl_predictor_model.pkl"
     values_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/sl_model_training_data.pkl"
 
@@ -536,7 +809,7 @@ def Save_Regression_Model_And_Data(model, result_df, scaler):
     print(f"Model data saved to: {values_path}")
 
 
-def Load_Regression_Model():
+def Load_Model():
     try:
         model_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/trained_sl_predictor_model.pkl"
         values_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/sl_model_training_data.pkl"
@@ -563,38 +836,95 @@ def Load_Regression_Model():
 
 
 def Give_Model_Test_Input(model, scaler):
-    ex1 = [[45, 0.22, -0.4], [45, 0.22, -0.5], [45, 0.22, -0.6], [45, 0.22, -0.7], [45, 0.22, -0.8]]
-    for input in ex1:
-        input = np.array(input).reshape(1, -1)  # Reshape to 2D array (1 sample, n features)
-        input_scaled = scaler.transform(input)  # Use transform, not fit_transform (fit transform recalculates scaling)
-        probability = model.predict_proba(input_scaled)
-        pred_class = model.predict(input_scaled)
-        print(f"Input: {input.flatten()}")
-        print(f"Prediction probabilities: {probability}") # [[class 1 prob, class 2 prob]]
-        print(f"Predicted class: {pred_class}")
-        print("---")
+    """
+    NEW APPROACH: Test the regression model with different entry conditions.
+    Input: [minutes_since_open, volatility_percent]
+    Output: predicted optimal stop loss
+    """
+    print("\n" + "="*50)
+    print("TESTING OPTIMAL STOP LOSS PREDICTIONS")
+    print("="*50)
+    
+    # Test cases: [minutes_since_open, volatility_percent]
+    test_cases = [
+        [30, 0.15],   # Early morning, low volatility
+        [30, 0.35],   # Early morning, high volatility  
+        [120, 0.15],  # Mid-morning, low volatility
+        [120, 0.35],  # Mid-morning, high volatility
+        [240, 0.15],  # Afternoon, low volatility
+        [240, 0.35],  # Afternoon, high volatility
+    ]
+    
+    print("Format: [Minutes Since Open, Volatility %] -> Predicted Optimal Stop Loss")
+    print("-" * 70)
+    
+    for test_input in test_cases:
+        input_array = np.array(test_input).reshape(1, -1)  # Reshape to 2D array (1 sample, n features)
+        input_scaled = scaler.transform(input_array)  # Scale the input
+        predicted_sl = model.predict(input_scaled)[0]  # Get single prediction value
+        
+        print(f"Input: [{test_input[0]:>3}, {test_input[1]:>5.2f}] -> Predicted SL: {predicted_sl:>6.3f}%")
+    
+    print("\nInterpretation:")
+    print("- More negative values = tighter stop losses")
+    print("- Less negative values = looser stop losses") 
+    print("- Model learns which conditions need tighter vs looser stops")
+
 
 
 def main():
+    """
+    Train a model to predict optimal stop loss directly.
+    
+    This version includes analysis of 'neither' trades and option to drop them.
+    """
     sl_list = [-0.3, -0.4, -0.5, -0.6, -0.7, -0.8]
-    '''
-    bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[["Date", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]]
+    
+    bulk_summary_path = "Holder_Strat/Summary_Csvs/bulk_summaries.csv"
+    columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Entry Price", "Trade Type"]
+    bulk_df = pd.read_csv(bulk_summary_path)[columns_to_keep]
+
+    print(f"Loaded {len(bulk_df)} trades from {bulk_summary_path}")
+
     market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
-    roi_dictionary, trade_end_timestamps, trade_start_indexes = Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, sl_list[-1])
+    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, sl_list[-1])
     
-    # collect data results = [trade_id]['x'] and [trade_id]['y']
-    results_df = Grid_Search(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes)
+    drop_neither_trades = True
+
+    print("\n" + "="*40)
+    print(f"TRAINING MODEL. include neither trades: {not drop_neither_trades}")
+    print("="*40)
+    results_df, trades_processed, trades_dropped_neither, neither_trades_detected = Find_Optimal_Stop_Loss_For_Trades(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes, drop_neither_trades)
+
+    if len(results_df) > 0:
+        model_clean, result_df_clean, scaler_clean = Train_CatBoost_Optimal_SL_Model(results_df)
+        Save_Model_And_Data(model_clean, result_df_clean, scaler_clean)
+        
+        Give_Model_Test_Input(model_clean, scaler_clean)
+
+    else:
+        print("ERROR: No training data remaining after dropping 'neither' trades!")
+        return
     
-    model, result_df, scaler = Train_CatBoost_Model(results_df)
-    Save_Regression_Model_And_Data(model, result_df, scaler)
-    '''
-    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
-    model, result_df, scaler = Load_Regression_Model()
+    print("="*40)
+    print("MODEL SUMMARY")
+    print("="*40)
+    print(f"Model: {len(results_df)} training samples")
+    print(f"'Neither' trades detected: {neither_trades_detected}")
+    if drop_neither_trades:
+        total_trades_analyzed = trades_processed + trades_dropped_neither
+        drop_rate = (trades_dropped_neither / total_trades_analyzed) * 100 if total_trades_analyzed > 0 else 0
+        print(f"'Neither' trades dropped: {trades_dropped_neither}")
+        print(f"Drop rate: {drop_rate:.1f}%")
+    else:
+        print(f"'Neither' trades treated as failures: {neither_trades_detected}")
 
-    Give_Model_Test_Input(model, scaler)
-
-    #Model_Diagnostics(model, result_df, scaler)
-
+    
+    #roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
+    #model, result_df, scaler = Load_Model()
+    
+    # Note: Model_Diagnostics needs to be updated for regression - commenting out for now
+    # Model_Diagnostics(model, result_df, scaler)
 
 
 

@@ -266,7 +266,7 @@ def Create_Summary_Df(raw_df):
                         # Add trade summary
                         normalized_trades.append({
                             'Date': raw_df.loc[i, "Date"].split()[0].replace("/","-"),  # Just the date part
-                            'Trade_Id': None, # must be added at very end
+                            'Trade Id': None, # must be added at very end
                             'Ticker': ticker,
                             'Entry Time': entry_time,
                             'Exit Time': exit_time,
@@ -994,7 +994,7 @@ def Create_Bulk_Summaries(summary_dir):
             print(f"Warning: Could not sort by date/time: {str(e)}")
             print("Proceeding without sorting...")
         
-        combined_df['Trade_Id'] = range(1, len(combined_df) + 1)
+        combined_df['Trade Id'] = range(1, len(combined_df) + 1)
 
         # Save the combined dataframe to CSV
         combined_df.to_csv(output_file, index=False)

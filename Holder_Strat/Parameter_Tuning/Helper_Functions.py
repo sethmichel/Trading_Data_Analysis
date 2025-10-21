@@ -101,16 +101,16 @@ def Load_Market_Data_Dictionary(bulk_df):
 
             # Load the market data CSV
             market_df = pd.read_csv(file_path)
-            if (Confirm_No_Market_Data_Time_Gaps(market_df, file_path) == True):
-                # Keep only the specified columns
-                required_columns = ['Ticker', 'Price', 'Volatility Percent', 'Time']
-                market_df = market_df[required_columns]
-                market_data_dict[date_from_filename] = market_df
-                print(f"Loaded market data for {date_from_filename}")
-            else:
+            #if (Confirm_No_Market_Data_Time_Gaps(market_df, file_path) == True):
+            # Keep only the specified columns
+            required_columns = ['Ticker', 'Price', 'Volatility Percent', 'Time']
+            market_df = market_df[required_columns]
+            market_data_dict[date_from_filename] = market_df
+            print(f"Loaded market data for {date_from_filename}")
+            '''else:
                 msg = f"time gap in {file_path}, crashing..."
                 print(msg)
-                raise ValueError(msg)
+                raise ValueError(msg)'''
 
         else:
             print(f"Skipping {filename} - date {date_from_filename} not in bulk_summaries.csv")
@@ -175,7 +175,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
             continue
 
         entry_time = row['Entry Time']               # hour:minute:second
-        trade_id = row['Id']
+        trade_id = row['Trade Id']
         entry_price = row['Entry Price']
         ticker = row['Ticker']
         direction = row['Trade Type']

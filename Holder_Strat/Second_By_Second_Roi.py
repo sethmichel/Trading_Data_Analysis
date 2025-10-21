@@ -5,6 +5,11 @@ import os
 '''
 Use to assess if I should take profits when it reaches a certain percent
 finds the second by second roi I had during the day by the sum of all tickers
+
+status: 
+-it has no way of knowing when I actually exited unless I change the algo to use exit time. so final sum is just the sum
+ if I held everything to -0.4, 0, or eod. 
+
 '''
 
 def bulk_csv_date_converter(date):
@@ -139,7 +144,7 @@ def Gather_Data(bulk_df, market_data_dict_by_ticker, tickers):
                 roi_dictionary[date][ticker] = {}
 
         entry_time = row['Entry Time']               # hour:minute:second
-        trade_id = row['Id']
+        trade_id = row['Trade Id']
         entry_price = row['Entry Price']
         ticker = row['Ticker']
         direction = row['Trade Type']
@@ -295,14 +300,14 @@ def Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers):
                         # Update highest sum if current sum is higher
                         if current_sum > highest_sum:
                             highest_sum = current_sum
-                            print(f"    New highest sum: {highest_sum}%")
+                            #print(f"    New highest sum: {round(highest_sum, 2)}%")
         
         results[date] = {
-            'final_sum': round(current_sum, 3),
-            'highest_sum': round(highest_sum, 3)
+            'final_sum': round(current_sum, 2),
+            'highest_sum': round(highest_sum, 2)
         }
         
-        print(f"Date {date} - Final sum: {current_sum}%, Highest sum: {highest_sum}%")
+        #print(f"Date {date} - Final sum: {current_sum}%, Highest sum: {highest_sum}%")
     
     # Print final results
     print("\n" + "="*50)
@@ -310,25 +315,235 @@ def Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers):
     print("="*50)
     
     for date, data in results.items():
-        print(f"{date}: Highest Sum = {data['highest_sum']}% (Final Sum = {data['final_sum']}%)")
+        print(f"{date}: Highest Sum / 6 = {round(data['highest_sum'] / 6, 2)}% (Final Sum / 6 = {round(data['final_sum'] / 6, 2)}%)")
+
+    # Calculate and print the sum of final_sum and highest_sum values for each date
+    total_final_sum = sum(data['final_sum'] for data in results.values())
+    total_highest_sum = sum(data['highest_sum'] for data in results.values())
+    
+    print(f"\nTotal Final Sum / 6 = {round(total_final_sum / 6, 2)}%")
+    print(f"Total Highest Sum / 6 = {round(total_highest_sum / 6, 2)}%")
+
+    return results
+
+
+def Analyze_Optimal_Exit_Thresholds(roi_dictionary, tickers, thresholds=None):
+    """
+    Analyze what daily profit threshold would result in the highest total realized profits.
+    
+    For each threshold, simulate exiting all positions when daily ROI first reaches that level.
+    If the threshold is never reached, use end-of-day ROI.
+    
+    Args:
+        roi_dictionary: {date: {ticker: {time_in_seconds: [trade_id, roi]}}}
+        tickers: List of ticker symbols
+        thresholds: List of daily profit thresholds to test (default: 0.5% to 3.0% in 0.25% steps)
+    
+    Returns:
+        Dictionary with results for each threshold
+    """
+    if thresholds is None:
+        # Test thresholds from 1% to 3.0% in 0.25% increments
+        thresholds = [round(x * 0.25 + 1, 2) for x in range(9)]  # [1.0, 1.25, 1.5, ..., 3.0]
+    
+    # Market hours: 6:30 AM (23400 seconds) to 1:00 PM (46800 seconds)
+    MARKET_OPEN = 23400
+    MARKET_CLOSE = 46800
+    
+    results = {}
+    
+    print(f"\nTesting {len(thresholds)} profit thresholds: {thresholds}")
+    print("\nNOTE: All percentages shown are 'average per position' (raw sum ÷ 6)")
+    print("This matches your original analysis where you divide by 6 to normalize across positions")
+    print("="*75)
+    
+    for threshold in thresholds:
+        print(f"\nAnalyzing threshold: {threshold}%")
+        
+        threshold_results = {
+            'threshold': threshold,
+            'daily_profits': [],
+            'days_hit_threshold': 0,
+            'days_missed_threshold': 0,
+            'total_profit': 0.0,
+            'hit_rate': 0.0,
+            'avg_profit_hit_days': 0.0,
+            'avg_profit_miss_days': 0.0
+        }
+        
+        for date in roi_dictionary.keys():
+            daily_profit = None  # Will store the profit for this day at this threshold
+            threshold_hit = False
+            
+            current_sum = 0.0
+            
+            # Track previous ROI and trade_id for each ticker
+            ticker_previous_roi = {ticker: 0.0 for ticker in tickers}
+            ticker_previous_trade_id = {ticker: None for ticker in tickers}
+            
+            # Go second by second through the trading day
+            for second in range(MARKET_OPEN, MARKET_CLOSE + 1):
+                
+                # If we already hit threshold, stop processing this day (simulate stopping trading)
+                if threshold_hit:
+                    break
+                
+                # Check each ticker for this second
+                for ticker in tickers:
+                    if ticker in roi_dictionary[date]:
+                        ticker_data = roi_dictionary[date][ticker].get(second, None)
+                        
+                        if ticker_data is not None:
+                            current_trade_id, current_roi = ticker_data
+                            
+                            # Handle trade transitions (same logic as Find_Second_By_Second_Days_Roi_Sum)
+                            if ticker_previous_trade_id[ticker] is not None and ticker_previous_trade_id[ticker] != current_trade_id:
+                                # New trade detected - previous trade ended
+                                current_sum += current_roi
+                            elif ticker_previous_trade_id[ticker] == current_trade_id:
+                                # Same trade continuing - update ROI
+                                current_sum = current_sum - ticker_previous_roi[ticker] + current_roi
+                            else:
+                                # First time seeing this ticker
+                                current_sum += current_roi
+                            
+                            # Update tracking variables
+                            ticker_previous_roi[ticker] = current_roi
+                            ticker_previous_trade_id[ticker] = current_trade_id
+                
+                # Check if we've hit the threshold 
+                # Note: current_sum is the raw sum of all position ROIs, divide by 6 to get average per position
+                daily_roi_percentage = current_sum / 6
+                if daily_roi_percentage >= threshold:
+                    # Threshold reached! Exit all positions and stop trading for the day
+                    daily_profit = daily_roi_percentage
+                    threshold_hit = True
+                    break  # Stop processing this day immediately
+            
+            # If threshold was never hit, use end-of-day profit
+            if daily_profit is None:
+                daily_profit = current_sum / 6
+            
+            # Record results for this day
+            threshold_results['daily_profits'].append(daily_profit)
+            threshold_results['total_profit'] += daily_profit
+            
+            if threshold_hit:
+                threshold_results['days_hit_threshold'] += 1
+            else:
+                threshold_results['days_missed_threshold'] += 1
+        
+        # Calculate summary statistics
+        total_days = len(threshold_results['daily_profits'])
+        threshold_results['hit_rate'] = (threshold_results['days_hit_threshold'] / total_days) * 100
+        
+        # Calculate average profits for hit vs miss days
+        hit_profits = []
+        miss_profits = []
+        
+        for i, profit in enumerate(threshold_results['daily_profits']):
+            if i < threshold_results['days_hit_threshold']:  # This is approximate - we'd need to track which specific days hit
+                hit_profits.append(profit)
+            else:
+                miss_profits.append(profit)
+        
+        # More accurate way: re-identify hit vs miss days
+        hit_profits = [p for p in threshold_results['daily_profits'] if p >= threshold]
+        miss_profits = [p for p in threshold_results['daily_profits'] if p < threshold]
+        
+        threshold_results['avg_profit_hit_days'] = sum(hit_profits) / len(hit_profits) if hit_profits else 0
+        threshold_results['avg_profit_miss_days'] = sum(miss_profits) / len(miss_profits) if miss_profits else 0
+        
+        results[threshold] = threshold_results
+        
+        print(f"  Total Profit (sum across all days): {round(threshold_results['total_profit'], 2)}%")
+        print(f"  Hit Rate (% of days that reached this threshold): {round(threshold_results['hit_rate'], 2)}% ({threshold_results['days_hit_threshold']}/{total_days} days)")
+        print(f"  Avg Profit on Hit Days: {round(threshold_results['avg_profit_hit_days'], 2)}%")
+        print(f"  Avg Profit on Miss Days: {round(threshold_results['avg_profit_miss_days'], 2)}%")
+        print(f"  Overall Avg Daily Profit: {round(threshold_results['total_profit'] / total_days, 2)}%")
+    
+    # Find optimal threshold
+    best_threshold = max(results.keys(), key=lambda x: results[x]['total_profit'])
+    best_result = results[best_threshold]
+    
+    # Get baseline (no threshold strategy) - use the lowest threshold's miss days as proxy for EOD
+    baseline_profits = []
+    for threshold in thresholds:
+        baseline_profits.extend([p for p in results[threshold]['daily_profits'] if p < threshold])
+    
+    # Better baseline: calculate what happens with no threshold (end-of-day profits)
+    # This would be the final sum from the original analysis
+    total_days = len(results[best_threshold]['daily_profits'])
+    
+    print("\n" + "="*80)
+    print("OPTIMAL EXIT THRESHOLD ANALYSIS - COMPREHENSIVE SUMMARY")
+    print("="*80)
+    print("📝 EXPLANATION:")
+    print("   • All percentages are 'average per position' (total ROI / 6 positions)")
+    print("   • Hit Rate = % of trading days that reached the threshold")
+    print("   • Daily ROI = realized profits from closed trades + unrealized profits from open positions")
+    print("   • When threshold is hit, you exit ALL open positions and stop trading that day")
+    print("   • When threshold is missed, you get end-of-day profit")
+    
+    print(f"\n🎯 BEST THRESHOLD: {best_threshold}% (average per position)")
+    print(f"   Total Profit Across All Days: {round(best_result['total_profit'], 2)}%")
+    print(f"   Average Daily Profit: {round(best_result['total_profit'] / total_days, 2)}%")
+    print(f"   Hit Rate: {round(best_result['hit_rate'], 2)}% ({best_result['days_hit_threshold']}/{total_days} days reached threshold)")
+    print(f"   Average Profit on Hit Days: {round(best_result['avg_profit_hit_days'], 2)}%")
+    print(f"   Average Profit on Miss Days: {round(best_result['avg_profit_miss_days'], 2)}%")
+    
+    print(f"\n📊 THRESHOLD COMPARISON TABLE:")
+    print(f"{'Threshold':<10} {'Total Profit':<12} {'Hit Rate':<10} {'Avg Daily':<10} {'Hit Days':<8} {'Miss Days':<9}")
+    print("-" * 70)
+    
+    for threshold in sorted(thresholds):
+        result = results[threshold]
+        total_profit = round(result['total_profit'], 2)
+        hit_rate = round(result['hit_rate'], 2)
+        avg_daily = round(result['total_profit'] / total_days, 2)
+        hit_days = result['days_hit_threshold']
+        miss_days = result['days_missed_threshold']
+        
+        marker = " 🏆" if threshold == best_threshold else ""
+        print(f"{threshold}%{marker:<8} {total_profit}%{'':<8} {hit_rate}%{'':<6} {avg_daily}%{'':<6} {hit_days:<8} {miss_days:<9}")
+    
+    print(f"\n💡 KEY INSIGHTS:")
+    print(f"   • Best threshold is reached on {round(best_result['hit_rate'], 2)}% of trading days")
+    print(f"   • On days that hit threshold: avg profit {round(best_result['avg_profit_hit_days'], 2)}% per position")
+    print(f"   • On days that miss threshold: avg profit {round(best_result['avg_profit_miss_days'], 2)}% per position")
+    
+    # Find the threshold with highest hit rate for comparison
+    highest_hit_rate_threshold = max(results.keys(), key=lambda x: results[x]['hit_rate'])
+    if highest_hit_rate_threshold != best_threshold:
+        hr_result = results[highest_hit_rate_threshold]
+        print(f"   • Highest hit rate is {round(hr_result['hit_rate'], 2)}% at {highest_hit_rate_threshold}% threshold")
+        print(f"     but total profit would be {round(hr_result['total_profit'], 2)}% vs {round(best_result['total_profit'], 2)}%")
+    
+    print(f"\n🎲 STRATEGY RECOMMENDATION:")
+    print(f"   Set daily profit target at {best_threshold}% (per position average)")
+    print(f"   This means: when your day's total ROI (realized + unrealized) reaches {best_threshold}%, exit all open positions & stop trading")
+    print(f"   Expected results: {round(best_result['total_profit'] / total_days, 2)}% average daily profit")
+    print(f"   You'll hit this target on {round(best_result['hit_rate'], 2)}% of trading days")
     
     return results
 
 
 
-
-
-
-
 def Main():
-    bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[["Date", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]]
+    columns_to_keep = ["Date","Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", 
+                       "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
+    bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
     
     market_data_dict_by_ticker = Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
     tickers = bulk_df['Ticker'].unique()
 
     roi_dictionary = Gather_Data(bulk_df, market_data_dict_by_ticker, tickers) # {date: {ticker: {entry time in seconds: [trade_id, roi]}, ticker: {...}, ...}, date: {...}}
 
-    Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers)
+    # Original analysis - find highest daily ROI achieved (not that useful. it was 1.16% last I checked (split 6))
+    #daily_results = Find_Second_By_Second_Days_Roi_Sum(roi_dictionary, tickers)
+    
+    # New analysis - find optimal exit threshold
+    threshold_results = Analyze_Optimal_Exit_Thresholds(roi_dictionary, tickers)
 
 
 Main()
