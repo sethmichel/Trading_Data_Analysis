@@ -174,7 +174,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
         if (date in skip_dates):
             continue
 
-        entry_time = row['Entry Time']               # hour:minute:second
+        entry_time = row['Entry Time']   # hour:minute:second
         trade_id = row['Trade Id']
         entry_price = row['Entry Price']
         ticker = row['Ticker']
