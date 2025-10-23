@@ -29,12 +29,26 @@ def Remove_1_Column(csv_path):
         print(f"Error processing {csv_path}: {str(e)}")
 
 
+# vol % has time values, vol ratio has vol% values, time is blank. it's missing vol ratio
+def Custom_Fix_1(csv_path):
+    df = pd.read_csv(csv_path)
+    # capture misplaced columns
+    temp_time = df['Volatility Percent'].copy()
+    temp_volpct = df['Volatility Ratio'].copy()
+    # shift columns to correct positions
+    df['Time'] = temp_time
+    df['Volatility Percent'] = temp_volpct
+    # recalculate and assign volatility ratio
+    df['Volatility Ratio'] = (df['Atr14'] / df['Atr28']).round(2)
+    # overwrite CSV
+    df.to_csv(csv_path, index=False)
+    print(f"Successfully applied Custom_Fix_1 to {csv_path}")
 
 
 csv_dir = "Csv_Files/raw_Market_Data/market_data_to_check"
-csv_path = f"{csv_dir}/Raw_Market_Data_09-05-2025.csv"
+csv_path = f"{csv_dir}/Raw_Market_Data_10-22-2025.csv"
 
-Remove_1_Column(csv_path)
+Custom_Fix_1(csv_path)
 
 
 

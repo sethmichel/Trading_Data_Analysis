@@ -53,15 +53,14 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
         date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
+        
         if (date in skip_dates):
             continue
-        
         # Check if we have market data for this date and ticker
         if date not in market_data_dict_by_ticker:
             print(f"No market data found for date {date}")
             skip_dates.append(date)
-            continue  
-            
+            continue      
         if ticker not in market_data_dict_by_ticker[date]:
             msg = f"No market data found for ticker {ticker} on date {date}"
             print(msg)
@@ -78,11 +77,10 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
             print(f"Skipping trade {trade_id}: entry time {entry_time} is after final market data time")
             continue
         
-        # Track stop loss state
         counter = -1                # this makes it easier to look up roi from roi_list
         next_sample_time = None     # Track when to take next sample
         
-        # Iterate through market data starting from entry point
+        # Iterate through market data starting from entry time
         for i in range(start_index, len(market_df)):
             counter += 1
             
@@ -429,16 +427,16 @@ def Load_Test_Values():
 - basically do the same as when I found the roi predictions, but don't look ahead, instead just spit out the prediction
 - I need it to be grouped by ticker: ticker, timestamp, prediction
 - roi dictionary: {trade_id: [roi values], ...}
+- mode: string for what the roi target is. either the model prediction or set 'max' values. used for comparisons
 '''
-def Full_Test_Model_Over_Trade_Data(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes):
+def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes, mode):
+    max_values = {'HOOD': 3.0, 'IONQ': 3.5, 'MARA': 3.0, 'RDDT': 2.7, 'SMCI': 2.5, 'SOXL': 3.0, 'TSLA': 1.8} # NOTE: only used if mode = 'max values
     skip_dates = []
     results = [] # [[ticker, timestamp, prediction], ...] this is so I can check any value on what on the actual charts
-    sums = {}
 
-    for _, row in bulk_df.iterrows():
+    for idx, row in bulk_df.iterrows():
         date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
         ticker = row['Ticker']
-
         if (date in skip_dates):
             continue
 
@@ -447,77 +445,102 @@ def Full_Test_Model_Over_Trade_Data(model, scaler, smearing_factor, bulk_df, mar
             print(f"No market data found for date {date}")
             skip_dates.append(date)
             continue  
-            
         if ticker not in market_data_dict_by_ticker[date]:
             msg = f"No market data found for ticker {ticker} on date {date}"
             print(msg)
             raise ValueError(msg)
 
-        entry_time = row['Entry Time']  # hour:minute:second
-        trade_id = row['Trade Id']
+        trade_id = str(row['Trade Id'])
         market_df = market_data_dict_by_ticker[date][ticker].copy()  # market data df for this ticker and date
+        start_index = trade_start_indexes[trade_id]
         
-        for i in range(len(market_df)):
-            market_time = market_df.iloc[i]['Time']
-            if market_time >= entry_time:
-                start_index = i
-                trade_start_indexes[trade_id] = i
-                break
-        
-        next_sample_time = -99      # Track when to take next sample
+        trade_start_minutes_since_open = market_df.iloc[start_index]['Time Since Market Open']
         counter = -1
         
         # Iterate through market data starting from entry point
         for i in range(start_index, len(market_df)):
             counter += 1
-            current_time = market_df.iloc[i]['Time']
-            current_price = market_df.iloc[i]['Price']
-            current_volatility = market_df.iloc[i]['Volatility Percent']
+            curr_time = market_df.iloc[i]['Time']
+            curr_volatility = market_df.iloc[i]['Volatility Percent']
             time_since_market_open = market_df.iloc[i]['Time Since Market Open']
             curr_roi = roi_dictionary[trade_id][counter]
+            trade_duration = time_since_market_open - trade_start_minutes_since_open
 
             # Take sample every 10 minutes
-            if time_since_market_open >= next_sample_time:
-                next_sample_time += 10
-                
-                # Unbiased back-transform with Duan smearing
-                roi_prediction = Predict_Max_ROI(model, scaler, time_since_market_open, current_volatility, smearing_factor)
-                results.append([ticker, current_time, roi_prediction])
+            if (mode == 'model values'):
+                if trade_duration % 10 == 0:                
+                    # Unbiased back-transform with Duan smearing
+                    roi_target = Predict_Max_ROI(model, scaler, time_since_market_open, curr_volatility, smearing_factor)
+            elif (mode == 'max values'):
+                roi_target = max_values[ticker]
+            else:
+                raise ValueError(f"bad mode value: {mode}")
             
             # check if we're at our roi prediction target
-            if (curr_roi >= roi_prediction):
-                # end the trade
-                if (sums.get(ticker) == None):
-                    sums[ticker] = curr_roi
-                else:
-                    sums[ticker] += curr_roi
+            if (curr_roi >= roi_target):
+                results.append([ticker, date, curr_time, roi_target, 'roi hit'])
                 break
 
             # Check if trade is done
-            if current_time == trade_end_timestamps[trade_id]:
-                # Trade is complete
-                if (sums.get(ticker) == None):
-                    sums[ticker] = curr_roi
-                else:
-                    sums[ticker] += curr_roi
+            if curr_time == trade_end_timestamps[trade_id]:
+                results.append([ticker, date, curr_time, curr_roi, 'roi not hit'])
                 break
+
+    # find sums
+    ticker_date_sums = {}
+    overall_date_sums = {}
+    for result in results:
+        ticker, date, time, roi, status = result
+        if (date not in ticker_date_sums):
+            ticker_date_sums[date] = {}
+            overall_date_sums[date] = 0
+
+        if (ticker not in ticker_date_sums[date]):
+            ticker_date_sums[date][ticker] = 0
+
+        ticker_date_sums[date][ticker] += roi
+        overall_date_sums[date] += roi
 
     # Write results to text file
     with open(f'Holder_Strat/Parameter_Tuning/model_files_and_data/roi_prediction_model_trade_results_{version}.txt', 'w') as f:
-        f.write('sums by ticker\n')
-        for ticker in sums:
-            f.write(f'{ticker} = {round(sums[ticker], 2)}\n')
+        f.write(f"MODE = {mode}\n")
+        for date in ticker_date_sums.keys():
+            f.write(f"Date = {date}\n")
+            
+            for ticker, value in ticker_date_sums[date].items():
+                f.write(f'{ticker} = {round(value, 2)}\n')
         
-        overall = sum(sums.values())
-        f.write(f'overall = {round(overall, 2)}\n\n')
+            f.write(f"overall = {round(overall_date_sums[date], 2)}\n\n")
         
-        f.write('Specific Results\n')
-        results.sort(key=lambda x: x[0]) # sort by ticker
-        for result in results:
-            f.write(f'{result[0]}, {result[1]}, {round(result[2], 2)}\n')
+        # now write the total sums across all days for each ticker and the overall sum for all days
+        f.write("Totals Across All Dates:\n")
+        ticker_totals = {}
+        for date_totals in ticker_date_sums.values():
+            for ticker, value in date_totals.items():
+                ticker_totals[ticker] = ticker_totals.get(ticker, 0) + value
+        for ticker, total in ticker_totals.items():
+            f.write(f"{ticker} = {round(total, 2)}\n")
 
-    return results
+        overall_total = sum(overall_date_sums.values())
+        f.write(f"Overall Total = {round(overall_total, 2)}\n")
+        days_count = len(overall_date_sums.keys())
+        f.write(f"days = {days_count}\n")
+        overall_avg_per_day = round(overall_total / days_count, 2)
+        f.write(f"Overall avg / day = {overall_avg_per_day}\n")
+        f.write(f"divided by 6 = {round(overall_avg_per_day / 6, 2)}\n")
 
+        # get red/green data data
+        red_data = []
+        green_data = []
+        for date, value in overall_date_sums.items():
+            if (value < 0):
+                red_data.append(value)
+            else: # including 0
+                green_data.append(value)
+
+        f.write(f"red days: {len(red_data)}/{days_count}\n")
+        f.write(f"avg red day: {round(np.average(red_data), 2)}\n")
+        f.write(f"avg green day: {round(np.average(green_data), 2)}\n")
 
 # keep: this is useful for assessing what optimizations we can do next. it's the distribution of y values
 def Summarize_Response_Distribution(all_roi_samples_y, save_hist: bool = True, show_plot: bool = False):
@@ -858,7 +881,7 @@ def Main():
     columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
     bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
     market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
-    
+    '''
     roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, -0.4)
     
     all_data_samples_x, all_roi_samples_y = Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes)
@@ -866,19 +889,19 @@ def Main():
     
     model, x_scaled, scaler, smearing_factor = Train_Model(all_data_samples_x, all_roi_samples_y)
     Save_Model(model, scaler, smearing_factor)
-    
-    #roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
-    #all_data_samples_x, all_roi_samples_y = Load_Test_Values()
-    #model, scaler, smearing_factor = Load_Model()
+    '''
+    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
+    all_data_samples_x, all_roi_samples_y = Load_Test_Values()
+    model, scaler, smearing_factor = Load_Model()
 
     # Print the number of negative values in all_roi_samples_y
-    negative_count = sum(1 for roi_dict in all_roi_samples_y for value in roi_dict.values() if value < 0)
-    print(f"Number of negative values in all_roi_samples_y: {negative_count}") # 14
+    #negative_count = sum(1 for roi_dict in all_roi_samples_y for value in roi_dict.values() if value < 0)
+    #print(f"Number of negative values in all_roi_samples_y: {negative_count}") # 14
 
-    Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
+    #Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
 
-    #Full_Test_Model_Over_Trade_Data(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes)
-    
+    #Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes, mode='model values')    
+    Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes, mode='max values')
 
 
 if __name__ == "__main__":

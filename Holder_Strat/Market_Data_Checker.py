@@ -669,7 +669,7 @@ def Check_Required_Market_Values(file_path, market_data_file):
 # also checks if the data has a valid start time (at least 20 timestamps between 6:30:00 and 6:31:00)
 def Check_Timestamp_Gaps(market_file_path, market_file):
     try:
-        gap_size = 6 # seconds
+        gap_size = 7 # seconds
         
         def time_to_seconds(time_str):
             # Convert HH:MM:SS to total seconds

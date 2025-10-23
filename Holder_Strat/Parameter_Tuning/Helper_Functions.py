@@ -161,7 +161,7 @@ price is lower).
 
 goal: create a list for each trade that has second by second roi
 '''
-def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, largest_sl_value):
+def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, largest_sl_value, holding_value=0.6, holding_sl_value=0):
     trade_start_indexes = {}
     trade_end_timestamps = {}
     roi_dictionary = {}
@@ -242,11 +242,11 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
                     roi_list.append(roi)
                     break
 
-                elif roi >= 0.6 and stop_loss_updated == False:
+                elif roi >= holding_value and stop_loss_updated == False:
                     stop_loss_updated = True
                     roi_list.append(roi)
 
-                elif stop_loss_updated == True and roi <= 0:
+                elif stop_loss_updated == True and roi <= holding_sl_value:
                     stop_loss_triggered = True
                     roi_list.append(roi)
                     break
@@ -261,7 +261,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
         roi_dictionary[trade_id] = roi_list
     
     # Save ROI dictionary and related data to file
-    roi_file_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved.json"
+    roi_file_path = f"Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved_holder={holding_value},holderSL={holding_sl_value},startingSL={largest_sl_value}.json"
     
     # Combine all trade data into one dictionary
     trade_data = {
