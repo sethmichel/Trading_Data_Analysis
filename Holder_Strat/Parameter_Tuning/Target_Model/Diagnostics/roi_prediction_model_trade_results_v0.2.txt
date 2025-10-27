@@ -1,0 +1,150 @@
+MODE = model values
+Date = 06-24-2025
+SOXL = 1.92
+SMCI = 1.11
+HOOD = 2.77
+MARA = 1.76
+IONQ = -1.11
+TSLA = -0.51
+RDDT = -0.11
+overall = 5.84
+
+Date = 07-30-2025
+SMCI = -0.43
+SOXL = -1.44
+RDDT = -0.51
+TSLA = 0.26
+MARA = -0.06
+IONQ = -0.89
+HOOD = -0.63
+overall = -3.7
+
+Date = 08-04-2025
+SMCI = -1.63
+IONQ = 0.61
+RDDT = 0.99
+TSLA = 0.12
+SOXL = -1.2
+HOOD = 1.07
+MARA = -0.45
+overall = -0.49
+
+Date = 10-01-2025
+HOOD = -0.13
+SOXL = -0.03
+TSLA = 0.55
+MARA = 3.21
+IONQ = 1.12
+RDDT = -0.46
+SMCI = -0.43
+overall = 3.83
+
+Date = 10-02-2025
+RDDT = 1.01
+HOOD = -0.22
+MARA = 0.75
+SOXL = 0.3
+SMCI = -0.93
+TSLA = -0.43
+IONQ = -0.53
+overall = -0.04
+
+Date = 10-03-2025
+IONQ = 1.22
+HOOD = 0.82
+TSLA = -0.85
+MARA = -0.49
+RDDT = -0.23
+SOXL = -1.22
+SMCI = 1.28
+overall = 0.53
+
+Date = 10-08-2025
+SOXL = 0.26
+MARA = -1.62
+IONQ = -0.62
+SMCI = -0.86
+HOOD = -0.97
+TSLA = -0.81
+RDDT = -1.36
+overall = -5.99
+
+Date = 10-09-2025
+TSLA = -2.09
+SMCI = -3.42
+MARA = -1.79
+SOXL = -0.82
+IONQ = -2.32
+HOOD = -2.08
+RDDT = 0.5
+overall = -12.02
+
+Date = 10-13-2025
+IONQ = 1.47
+SOXL = 0.63
+HOOD = 2.73
+TSLA = -1.24
+SMCI = 1.18
+MARA = -1.28
+RDDT = -0.87
+overall = 2.62
+
+Date = 10-17-2025
+HOOD = 0.61
+SOXL = 0.73
+MARA = 0.02
+TSLA = 0.95
+SMCI = 1.27
+IONQ = 0.9
+RDDT = -0.82
+overall = 3.65
+
+Date = 10-20-2025
+RDDT = -0.82
+HOOD = 0.51
+TSLA = 0.81
+MARA = 4.7
+SOXL = -0.84
+SMCI = 1.72
+IONQ = -0.4
+overall = 5.69
+
+Date = 10-21-2025
+IONQ = 0.67
+MARA = -0.93
+TSLA = -1.26
+SOXL = -0.05
+SMCI = -1.7
+RDDT = -0.92
+HOOD = -0.47
+overall = -4.66
+
+Date = 10-24-2025
+TSLA = 0.86
+MARA = 1.96
+HOOD = -1.66
+IONQ = -1.8
+SOXL = -0.46
+SMCI = -0.8
+RDDT = -1.36
+overall = -3.26
+
+Totals Across All Dates:
+SOXL = -2.22
+SMCI = -3.64
+HOOD = 2.36
+MARA = 5.79
+IONQ = -1.68
+TSLA = -3.64
+RDDT = -4.97
+
+Trades: 301
+Overall Total = -8.01
+days = 13
+Overall avg / trade = -0.0266
+**divided by 6 = -0.0044
+Overall avg / day (BAD METRIC) = -0.62
+divided by 6 (BAD METRIC) = -0.1
+red days: 7/13
+avg red day: -0.72
+avg green day: 0.62

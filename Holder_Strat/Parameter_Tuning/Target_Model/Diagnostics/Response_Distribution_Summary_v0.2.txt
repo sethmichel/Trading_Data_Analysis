@@ -1,0 +1,18 @@
+Response (Y) Distribution Summary - Best Future ROI
+===============================================
+Count: 847
+Min: -0.2800%
+P1/P5/P10: 0.1000% / 0.5100% / 0.6600%
+P25/P50/P75: 1.0400% / 2.3200% / 3.9000%
+P90/P95/P99: 6.6400% / 8.3400% / 13.1300%
+Max: 13.1300%
+Mean: 3.0536%
+Median: 2.3200%
+Std Dev: 2.8566
+Skewness: 1.8893
+Excess Kurtosis: 3.7665
+
+Shares of interest:
+  < 0%: 0.47%
+  >= 0.6% (target): 92.21%
+  [0%, 0.1%): 0.47%

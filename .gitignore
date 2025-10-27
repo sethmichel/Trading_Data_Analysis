@@ -19,9 +19,15 @@ Holder_Strat/Holder_Strat_Trade_Logs/
 Holder_Strat/Summary_Csvs/
 Holder_Strat/Summary_Text_Files/
 Holder_Strat/Approved_Checked_Market_Data/
-Holder_Strat/Parameter_Tuning/trained_roi_predictor_model.pkl
-Holder_Strat/Parameter_Tuning/trained_sl_predictor_model
-Holder_Strat/Parameter_Tuning/model_files_and_data
+Holder_Strat/Parameter_Tuning/Sl_Model/Data
+Holder_Strat/Parameter_Tuning/Sl_Model/Diagnostics
+Holder_Strat/Parameter_Tuning/Target_Model_Model/Data
+Holder_Strat/Parameter_Tuning/Target_Model_Model/Diagnostics
+Holder_Strat/Parameter_Tuning/Holding_Model/Data
+Holder_Strat/Parameter_Tuning/Holding_Model/Diagnostics
+Holder_Strat/Parameter_Tuning/Success_Prob_Model/Data
+Holder_Strat/Parameter_Tuning/Success_Prob_Model/Diagnostics
+
 
 catboost_info
 
