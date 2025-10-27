@@ -433,8 +433,20 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
     max_values = {'HOOD': 3.0, 'IONQ': 3.5, 'MARA': 3.0, 'RDDT': 2.7, 'SMCI': 2.5, 'SOXL': 3.0, 'TSLA': 1.8} # NOTE: only used if mode = 'max values
     skip_dates = []
     results = [] # [[ticker, timestamp, prediction], ...] this is so I can check any value on what on the actual charts
+    trades = 0   # needed because some trades are skipped for various reasons
 
+    # these are restictions on trades. They say "only test trades meeting these restrictions"
+    test_restrictions = False # enables testing things like vol%, ratio, and time
+    vol_percent_restriction = 0.5 # greater than or equal to this
+    include_all_trades_before_this_time = '06:40:00'
+    
     for idx, row in bulk_df.iterrows():
+        if (test_restrictions == True):
+            #if (row['Entry Time'] < include_all_trades_before_this_time):
+            #    pass
+            if row['Entry Volatility Percent'] < vol_percent_restriction:
+                continue
+
         date = Helper_Functions.bulk_csv_date_converter(row['Date'])  # 08-09-2025
         ticker = row['Ticker']
         if (date in skip_dates):
@@ -450,12 +462,14 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
             print(msg)
             raise ValueError(msg)
 
-        trade_id = str(row['Trade Id'])
+        trade_id = row['Trade Id']
         market_df = market_data_dict_by_ticker[date][ticker].copy()  # market data df for this ticker and date
         start_index = trade_start_indexes[trade_id]
         
         trade_start_minutes_since_open = market_df.iloc[start_index]['Time Since Market Open']
+        next_sample_time = 0
         counter = -1
+        trades += 1
         
         # Iterate through market data starting from entry point
         for i in range(start_index, len(market_df)):
@@ -464,11 +478,12 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
             curr_volatility = market_df.iloc[i]['Volatility Percent']
             time_since_market_open = market_df.iloc[i]['Time Since Market Open']
             curr_roi = roi_dictionary[trade_id][counter]
-            trade_duration = time_since_market_open - trade_start_minutes_since_open
+            trade_duration = time_since_market_open - trade_start_minutes_since_open # starts at 0 and iterates each minute
 
-            # Take sample every 10 minutes
+            # Take sample every x minutes
             if (mode == 'model values'):
-                if trade_duration % 10 == 0:                
+                if trade_duration % 5 == 0 and next_sample_time == trade_duration:
+                    next_sample_time += 5
                     # Unbiased back-transform with Duan smearing
                     roi_target = Predict_Max_ROI(model, scaler, time_since_market_open, curr_volatility, smearing_factor)
             elif (mode == 'max values'):
@@ -521,13 +536,20 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
         for ticker, total in ticker_totals.items():
             f.write(f"{ticker} = {round(total, 2)}\n")
 
-        overall_total = sum(overall_date_sums.values())
-        f.write(f"Overall Total = {round(overall_total, 2)}\n")
         days_count = len(overall_date_sums.keys())
+        overall_sum = sum(overall_date_sums.values())
+        overall_avg_per_day = round(overall_sum / days_count, 2)
+        overall_avg_per_trade = round(overall_sum / len(bulk_df), 4)
+        red_days_avg = 0
+        green_days_avg = 0
+
+        f.write(f"\nTrades: {trades}\n")
+        f.write(f"Overall Total = {round(overall_sum, 2)}\n")
         f.write(f"days = {days_count}\n")
-        overall_avg_per_day = round(overall_total / days_count, 2)
-        f.write(f"Overall avg / day = {overall_avg_per_day}\n")
-        f.write(f"divided by 6 = {round(overall_avg_per_day / 6, 2)}\n")
+        f.write(f"Overall avg / trade = {overall_avg_per_trade}\n")
+        f.write(f"**divided by 6 = {round(overall_avg_per_trade / 6, 4)}\n")
+        f.write(f"Overall avg / day (BAD METRIC) = {overall_avg_per_day}\n")
+        f.write(f"divided by 6 (BAD METRIC) = {round(overall_avg_per_day / 6, 2)}\n")
 
         # get red/green data data
         red_data = []
@@ -537,10 +559,19 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
                 red_data.append(value)
             else: # including 0
                 green_data.append(value)
+        
+        if (len(red_data) + len(green_data) != days_count):
+            raise ValueError(f"red data and green data are both empty. this means there's a bug. length of df (for vol%): {len(bulk_df)}")
+
+        if (len(red_data) != 0):
+            red_days_avg = round(np.average(red_data) / 6, 2)
+        if (len(green_data) != 0):
+            green_days_avg = round(np.average(green_data) / 6, 2)
 
         f.write(f"red days: {len(red_data)}/{days_count}\n")
-        f.write(f"avg red day: {round(np.average(red_data), 2)}\n")
-        f.write(f"avg green day: {round(np.average(green_data), 2)}\n")
+        f.write(f"avg red day: {red_days_avg}\n")
+        f.write(f"avg green day: {green_days_avg}\n")
+
 
 # keep: this is useful for assessing what optimizations we can do next. it's the distribution of y values
 def Summarize_Response_Distribution(all_roi_samples_y, save_hist: bool = True, show_plot: bool = False):
@@ -636,6 +667,7 @@ def Summarize_Response_Distribution(all_roi_samples_y, save_hist: bool = True, s
             plt.close()
         print('Histogram saved to:')
         print(plot_path)
+
 
 # all_data_samples_x: [{trade_id: [minutes_since_open, volatility_percent]} ...]
 # all_roi_samples_y: [{trade_id: roi}, ...]
@@ -877,22 +909,50 @@ def Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, tr
     print(f"\nPlot saved to: Holder_Strat/Parameter_Tuning/model_files_and_data/Residual_Plot_Mean_Sample_{version}.png")
 
 
+# purpose: give the model a bunch of test inputs and write out the y values. compare visually to see if it sucks
+def Get_Model_Test_Values(model, scaler, smearing_factor):
+    test_vol_percents = [0.19,0.31,0.3,0.36,0.63,0.52]
+    test_minutes_since_entry = [1,8,8,9,51,61]
+
+    if (len(test_vol_percents) != len(test_minutes_since_entry)):
+        raise ValueError("lengths of lists aren't the same")
+
+    print("\n")
+    for i in range(0, len(test_vol_percents)):
+        roi_target = Predict_Max_ROI(model, scaler, test_minutes_since_entry[i], test_vol_percents[i], smearing_factor)
+        print(f"vol%: {test_vol_percents[i]}, minutes: {test_minutes_since_entry[i]}, y = {round(roi_target, 2)}")
+    print("\n")
+
 def Main():
-    columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
-    bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
+    columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", 'Entry Volatility Ratio', "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
+    bulk_df_original = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
+
+    # remove all rows who have 1) trade duration of less than x minutes, 2) hit the -0.4% stop loss
+    # this removes like 60% of data
+    #bulk_df['Time in Trade'] = pd.to_timedelta(bulk_df['Time in Trade'])
+    #bulk_df = bulk_df[bulk_df['Time in Trade'] > pd.Timedelta('0:02:00')]
+    bulk_df = bulk_df_original[bulk_df_original['Original Percent Change'] > -0.3]
+
     market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
-    '''
-    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, -0.4)
     
+    #roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Create_Roi_Dictionary_For_Trades(
+    #    bulk_df_original, market_data_dict_by_ticker, largest_sl_value=-0.4, holding_value=0.6) # largest_sl_value, holding_value=0.6, holding_sl_value=0
+    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
+
+    # train model / create data --------
     all_data_samples_x, all_roi_samples_y = Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes)
     Save_Test_Values(all_data_samples_x, all_roi_samples_y)
     
     model, x_scaled, scaler, smearing_factor = Train_Model(all_data_samples_x, all_roi_samples_y)
     Save_Model(model, scaler, smearing_factor)
+    # ----------------------------------
+
     '''
-    roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values()
+    # load model & data ---
     all_data_samples_x, all_roi_samples_y = Load_Test_Values()
     model, scaler, smearing_factor = Load_Model()
+    # ---------------------
+    '''
 
     # Print the number of negative values in all_roi_samples_y
     #negative_count = sum(1 for roi_dict in all_roi_samples_y for value in roi_dict.values() if value < 0)
@@ -900,9 +960,12 @@ def Main():
 
     #Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
 
-    #Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes, mode='model values')    
-    Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes, mode='max values')
+    #Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df_original, market_data_dict_by_ticker, 
+    #                                         roi_dictionary, trade_end_timestamps, trade_start_indexes, mode='model values')    
+    #Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
+    #                                         rade_end_timestamps, trade_start_indexes, mode='max values')
 
+    Get_Model_Test_Values(model, scaler, smearing_factor)
 
 if __name__ == "__main__":
     Main()

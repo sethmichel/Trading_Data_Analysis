@@ -280,8 +280,8 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
 
 
 # return (roi_dictionary, trade_end_timestamps, trade_start_indexes)
-def Load_Roi_Dictionary_And_Values():
-    roi_file_path = "Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved.json"
+def Load_Roi_Dictionary_And_Values(holding_Value=0.6):
+    roi_file_path = f"Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved_holder={holding_Value},holderSL=0,startingSL=-0.4.json"
     
     try:
         with open(roi_file_path, 'r') as f:
@@ -293,6 +293,11 @@ def Load_Roi_Dictionary_And_Values():
         
         print(f"Successfully loaded trade data from {roi_file_path}")
         print(f"Loaded {len(roi_dictionary)} trades")
+
+        # loading these changes all the trade_id's to strings. they're ints when the dictionary is created
+        roi_dictionary = {int(k): v for k, v in roi_dictionary.items()}
+        trade_end_timestamps = {int(k): v for k, v in trade_end_timestamps.items()}
+        trade_start_indexes = {int(k): v for k, v in trade_start_indexes.items()}
         
         return roi_dictionary, trade_end_timestamps, trade_start_indexes
         
