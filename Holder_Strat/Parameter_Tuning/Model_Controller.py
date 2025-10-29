@@ -16,6 +16,7 @@ for 14 minutes. after 14 minutes the warmupfix column is nan. thus it's best to 
 
 '''
 
+
 target_model_version = 'v0.2'
 sl_model_version = 'v0.2'
 success_prob_model_version = 'v0.1'
@@ -195,10 +196,10 @@ def Load_Success_Prob_Model_And_Data():
     roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values(roi_dictionary_path)
 
     # load model and training data
-    results_df, neither_count, trade_count = Success_Prob_Model_Training.Load_Test_Data()
-    model, scaler = Success_Prob_Model_Training.Load_Model_Data(holding_value, holding_sl_value, largest_sl_value)
+    results_df, neither_count, trade_count = Success_Prob_Model_Training.Load_Training_Data()
+    model, scaler, x_scaled = Success_Prob_Model_Training.Load_Model_Data(holding_value, holding_sl_value, largest_sl_value)
 
-    return roi_dictionary, trade_end_timestamps, trade_start_indexes, results_df, neither_count, trade_count, model, scaler
+    return roi_dictionary, trade_end_timestamps, trade_start_indexes, results_df, neither_count, trade_count, model, scaler, x_scaled
 
 
 def Train_Success_Prob_Model():
@@ -225,22 +226,23 @@ def Train_Success_Prob_Model():
         Success_Prob_Model_Training.Save_Training_Data(results_df, neither_count, trade_count)
 
         print("="*30)
-        print(f"SUCCESS PROBABILITY MODEL MODEL TRAINING SUMMARY {target_model_version}\n")
+        print(f"SUCCESS PROBABILITY MODEL MODEL TRAINING SUMMARY {success_prob_model_version}\n")
+        print(f"neither count: {neither_count}")
+        print(f"data size (w/o neither trades): {len(bulk_df_all_values)}\n")
 
         # train model
-        model, x_scaled, scaler = Success_Prob_Model_Training.Train_Model(all_data_samples_x, all_roi_samples_y)
+        model, scaler, x_scaled = Success_Prob_Model_Training.Train_Model(results_df)
 
         # save model data
-        Success_Prob_Model_Training.Save_Model_Data(model, scaler, holding_value, holding_sl_value, largest_sl_value)
+        Success_Prob_Model_Training.Save_Model_Data(model, scaler, x_scaled, holding_value, holding_sl_value, largest_sl_value)
 
-        print(f"Model: {trade_count} training samples")
         print("="*30)
 
 
 def Success_Prob_Model_Run_Diagnostics():
     # load data/model
     roi_dictionary, trade_end_timestamps, trade_start_indexes, \
-    results_df, neither_count, trade_count, model, scaler = Load_Target_Model_And_Data()
+    results_df, neither_count, trade_count, model, scaler, x_scaled = Load_Target_Model_And_Data()
     # NOTE: remember target model is trained on only winning trades. so depending on the test you may need to filter bulk_df_all_values
 
     # actual diagnostics
@@ -258,3 +260,5 @@ def Success_Prob_Model_Run_Diagnostics():
 
 #Train_Target_Model()
 #Target_Model_Run_Diagnostics()
+
+Train_Success_Prob_Model()
