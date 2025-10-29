@@ -16,10 +16,10 @@ def Set_Version(passed_version):
     version = passed_version
 
 
-def Save_Training_Data(trades_processed, trades_dropped_neither, neither_trades_detected):
+def Save_Training_Data(trades_processed, neither_trades_detected):
     file_path = f"{sl_dir}/Data/Training_Data.txt"
     with open(file_path, 'wb') as f:
-        pickle.dump({'trades_processed': trades_processed, 'trades_dropped_neither': trades_dropped_neither, 
+        pickle.dump({'trades_processed': trades_processed, 
                      'neither_trades_detected': neither_trades_detected}, f)
 
     print(f"Training data saved to: {file_path}")
@@ -33,11 +33,11 @@ def Load_Training_data():
 
     print(f"Training data loaded from: {file_path}")
 
-    return data['results_df'], data['trades_processed'], data['trades_dropped_neither'], data['neither_trades_detected']
+    return data['results_df'], data['trades_processed'], data['neither_trades_detected']
 
 
-def Save_Model_Data(model, scaler, result_df):
-    file_path = f"{sl_dir}/Data/trained_sl_predictor_model.pkl"
+def Save_Model_Data(model, scaler, result_df, holding_value, holding_sl_value, largest_sl_value):
+    file_path = f"{sl_dir}/Data/trained_sl_predictor_model_{version}_holding_value_{holding_value}_holding_sl_value_{holding_sl_value}_largest_sl_value_{largest_sl_value}.pkl"
     
     with open(file_path, 'wb') as f:
         pickle.dump({'model': model, 'scaler': scaler, 'result_df': result_df}, f)
@@ -45,8 +45,8 @@ def Save_Model_Data(model, scaler, result_df):
     print(f"Model and scaler saved to: {file_path}")
 
 
-def Load_Model_data():
-    file_path = f"{sl_dir}/Data/trained_sl_predictor_model.pkl"
+def Load_Model_data(holding_value, holding_sl_value, largest_sl_value):
+    file_path = f"{sl_dir}/Data/trained_sl_predictor_model_{version}_holding_value_{holding_value}_holding_sl_value_{holding_sl_value}_largest_sl_value_{largest_sl_value}.pkl"
     
     with open(file_path, 'r') as f:
         data = json.load(f)
@@ -103,19 +103,14 @@ def Format_Optimal_SL_Data(results_df):
     return results_df
 
 
-def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes, drop_neither_trades=True):
+def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_start_indexes):
     """
     For each trade, find the optimal stop loss that maximizes success probability.
     
-    Args:
-        drop_neither_trades: If True, exclude trades that reach neither stop loss nor target.
-                           If False, treat them as failures (original behavior).
-    
     Returns:
-        tuple: (result_df, trades_processed, trades_dropped_neither, neither_trades_detected)
+        tuple: (result_df, trades_processed, neither_trades_detected)
         - result_df: DataFrame with columns: ['trade id', 'minutes since market open', 'volatility percent', 'optimal_stop_loss']
         - trades_processed: Number of trades successfully processed
-        - trades_dropped_neither: Number of trades dropped due to 'neither' outcomes
         - neither_trades_detected: Total number of trades that had 'neither' outcomes (regardless of drop setting)
     """
     skip_dates = []
@@ -123,20 +118,23 @@ def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
     holding_percent = 0.6
     
     trades_processed = 0
-    trades_dropped_neither = 0
-    neither_trades_detected = 0  # Track total 'neither' trades found
+    neither_trades_detected = 0
     
     print(f"Finding optimal stop loss for each trade using SL candidates: {sl_list}")
-    print(f"Drop 'neither' trades: {drop_neither_trades}")
     
+    ''' how this works
+    - a trade can reach holding (success, 1) or sl (failure, 0), or neither (dropped)
+    - sl_list is ordered largest to smallest (tightest to loosest). If we hit NEITHER,
+      all following sl values will also be NEITHER, so we can stop evaluating this trade.
+    - since we want the highest possible sl value that succeeds, the first sl that gets SUCCESS per trade
+      is the optimal one for that trade.
+    - if no sl is successful, then we use the tightest sl to minimize loss.
+    '''
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
         entry_time = row['Entry Time']               # hour:minute:second
         date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
-        market_df = market_data_dict_by_ticker[date][ticker]
         trade_id = row['Trade Id']
-        final_timestamp = datetime.strptime(market_df.at[-1, 'Time'], '%H:%M:%S').time()
-        final_seconds = final_timestamp.hour * 3600 + final_timestamp.minute * 60 + final_timestamp.second
         
         # if we don't have market data for this date
         if (date in skip_dates):
@@ -151,6 +149,13 @@ def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
             msg = f"No market data found for ticker {ticker} on date {date}"
             print(msg)
             raise ValueError(msg)
+
+        market_df = market_data_dict_by_ticker[date][ticker]
+        if len(market_df) == 0:
+            print(f"Skipping trade {trade_id}: no market data rows for {ticker} on {date}")
+            continue
+        final_timestamp = datetime.strptime(market_df.iloc[-1]['Time'], '%H:%M:%S').time()
+        final_seconds = final_timestamp.hour * 3600 + final_timestamp.minute * 60 + final_timestamp.second
         # if we don't have market data for this trade
         entry_time_obj = datetime.strptime(entry_time, '%H:%M:%S').time()
         entry_seconds = entry_time_obj.hour * 3600 + entry_time_obj.minute * 60 + entry_time_obj.second
@@ -162,66 +167,59 @@ def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
         start_index = trade_start_indexes[trade_id]
 
         # Test each stop loss and find the optimal one for this trade
-        sl_results = {}  # {stop_loss: success(1) or failure(0)}
+        optimal_sl = None
         has_neither_outcome = False
         
         for sl in sl_list:
             counter = -1
             
-            # Simulate this stop loss on the trade
+            # loop from start index to failure/end of data
             for i in range(start_index, len(market_df)):
                 counter += 1
                 if counter >= len(roi_list):
-                    # Ran out of ROI data - this is a "neither" case
-                    if drop_neither_trades:
-                        has_neither_outcome = True
-                        break
-                    else:
-                        sl_results[sl] = 0  # Consider as failure (original behavior)
-                        break
-                    
+                    # Ran out of ROI data - this is a "neither" case. trade is done
+                    has_neither_outcome = True
+                    break
                 curr_roi = roi_list[counter]
 
                 if (curr_roi <= sl):
-                    # Stop loss hit - failure
-                    sl_results[sl] = 0
+                    # Stop loss hit - fail, keep checking sl values
                     break
+
                 elif (curr_roi >= holding_percent):
-                    # Target reached - success
-                    sl_results[sl] = 1
+                    # Target reached - success, trade is done
+                    optimal_sl = sl
                     break
             else:
-                # Neither stop loss nor target hit - this is a "neither" case
-                if drop_neither_trades:
-                    has_neither_outcome = True
-                else:
-                    sl_results[sl] = 0  # Consider as failure (original behavior)
+                # loop done - neither stop loss nor target hit - this is a "neither" case
+                has_neither_outcome = True
             
+            # end of market data for loop
+
             # If we found a "neither" case and we're dropping them, skip this entire trade
-            if has_neither_outcome and drop_neither_trades:
+            # if sl list is organized smallest to largest, then all the following sl tests will also get neither
+            # results already has the result of the smaller sl which didn't hit neither. if this is the smallest
+            #    sl, then the trade just isn't used at all in results
+            if has_neither_outcome:
+                neither_trades_detected += 1
                 break
+                
+            if (optimal_sl != None):
+                # we found a valid sl, so trade is done
+                break
+
+        # end of sl list for loop
 
         # Track 'neither' trades detected (regardless of drop setting)
         if has_neither_outcome:
-            neither_trades_detected += 1
-            
-        # Skip this trade if it has "neither" outcomes and we're dropping them
-        if has_neither_outcome and drop_neither_trades:
-            trades_dropped_neither += 1
             continue
-            
+
+        # "neither" trades aren't counted in this
         trades_processed += 1
 
-        # Find the optimal stop loss: the loosest SL that still allows success
-        # Priority: 1) Must reach target, 2) Prefer looser stop loss for better risk/reward
-        successful_sls = [sl for sl, success in sl_results.items() if success == 1]
-        
-        if successful_sls:
-            # Choose the loosest (least negative) stop loss that still succeeds
-            optimal_sl = max(successful_sls)  # max of [-0.3, -0.4, -0.5] = -0.3 (loosest)
-        else:
-            # No stop loss worked, choose the loosest one anyway (best risk/reward)
-            optimal_sl = max(sl_list)  # Most conservative choice
+        if (optimal_sl == None):
+            # trade never worked, so use the tighest sl
+            optimal_sl = max(sl_list)
         
         # Add one row per trade with its optimal stop loss
         new_row = {
@@ -232,16 +230,11 @@ def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
         }
         result_df = result_df._append(new_row, ignore_index=True)
 
+    # end of trades (bulk_df) for loop
+
     print(f"\nTraining Data Creation Results:")
     print(f"  Trades processed: {trades_processed}")
-    print(f"  'Neither' trades detected: {neither_trades_detected}")
-    if drop_neither_trades:
-        total_trades = trades_processed + trades_dropped_neither
-        drop_rate = (trades_dropped_neither / total_trades) * 100 if total_trades > 0 else 0
-        print(f"  Trades dropped ('neither'): {trades_dropped_neither}")
-        print(f"  Drop rate: {drop_rate:.1f}%")
-    else:
-        print(f"  'Neither' trades treated as failures: {neither_trades_detected}")
+    print(f"  'Neither' trades detected (dropped): {neither_trades_detected}")
     
     # Show distribution of optimal stop losses
     if len(result_df) > 0:
@@ -251,7 +244,7 @@ def Collect_data(sl_list, bulk_df, market_data_dict_by_ticker, roi_dictionary, t
             pct = count / len(result_df) * 100
             print(f"  {sl:>6.1f}%: {count:>4} trades ({pct:>5.1f}%)")
     
-    return result_df, trades_processed, trades_dropped_neither, neither_trades_detected
+    return result_df, trades_processed, neither_trades_detected
 
 
 def Train_Model(results_df):
@@ -293,7 +286,7 @@ def Train_Model(results_df):
     train_pool = Pool(x_train, y_train, feature_names=x_cols)
     val_pool = Pool(x_val, y_val, feature_names=x_cols)
 
-    # Train CatBoost Regressor (not Classifier!)
+    # Train CatBoost Regressor
     model = CatBoostRegressor(
         iterations=600,              # total trees
         depth=4,                     # shallower for regression

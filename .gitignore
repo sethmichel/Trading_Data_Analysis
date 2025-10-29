@@ -21,15 +21,14 @@ Holder_Strat/Summary_Text_Files/
 Holder_Strat/Approved_Checked_Market_Data/
 Holder_Strat/Parameter_Tuning/Sl_Model/Data
 Holder_Strat/Parameter_Tuning/Sl_Model/Diagnostics
-Holder_Strat/Parameter_Tuning/Target_Model_Model/Data
-Holder_Strat/Parameter_Tuning/Target_Model_Model/Diagnostics
+Holder_Strat/Parameter_Tuning/Sl_Model/Data/catboost_info
+Holder_Strat/Parameter_Tuning/catboost_info
+Holder_Strat/Parameter_Tuning/Target_Model/Data
+Holder_Strat/Parameter_Tuning/Target_Model/Diagnostics
 Holder_Strat/Parameter_Tuning/Holding_Model/Data
 Holder_Strat/Parameter_Tuning/Holding_Model/Diagnostics
 Holder_Strat/Parameter_Tuning/Success_Prob_Model/Data
 Holder_Strat/Parameter_Tuning/Success_Prob_Model/Diagnostics
-
-
-catboost_info
 
 Old_Code/Grid_Search/Analysis_Results.txt
 Old_Code/Grid_Search/grid_search_notes.txt

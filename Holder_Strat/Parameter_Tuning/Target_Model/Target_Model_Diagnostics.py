@@ -309,22 +309,27 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
     trades = 0   # needed because some trades are skipped for various reasons
 
     # these are restictions on trades. They say "only test trades meeting these restrictions"
-    test_restrictions = False # enables testing things like vol%, ratio, and time
+    test_restrictions = True # enables testing things like vol%, ratio, and time
     vol_percent_restriction = 0.5 # greater than or equal to this
     include_all_trades_before_this_time = '06:40:00'
     
     for idx, row in bulk_df.iterrows():
         if (test_restrictions == True):
-            #if (row['Entry Time'] < include_all_trades_before_this_time):
-            #    pass
-            if row['Entry Volatility Percent'] < vol_percent_restriction:
+            if (row['Entry Time'] < include_all_trades_before_this_time):    # 1) include all trades before this timestamp (follow if's should be elifs so they're skipped)
+                pass
+
+            # NOTE: change the following conditionals to if/elif depending on timestamp filter
+            elif row['Entry Volatility Percent'] < vol_percent_restriction:  # 2) only do trades greater than 0.5% vol%
                 continue
+
+            else:
+                pass
 
         date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
         ticker = row['Ticker']
+
         if (date in skip_dates):
             continue
-
         # Check if we have market data for this date and ticker
         if date not in market_data_dict_by_ticker:
             print(f"No market data found for date {date}")
@@ -413,7 +418,7 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
         days_count = len(overall_date_sums.keys())
         overall_sum = sum(overall_date_sums.values())
         overall_avg_per_day = round(overall_sum / days_count, 2)
-        overall_avg_per_trade = round(overall_sum / len(bulk_df), 4)
+        overall_avg_per_trade = round(overall_sum / trades, 4)
         red_days_avg = 0
         green_days_avg = 0
 

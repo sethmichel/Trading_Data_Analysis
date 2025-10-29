@@ -66,7 +66,47 @@ def Confirm_No_Market_Data_Time_Gaps(market_df, file_path):
     return True
 
 
-def Load_Market_Data_Dictionary(bulk_df):
+def Load_Saved_Market_Data_Json(saved_market_data_path, nested_market_data_dict):
+    # Load saved market data from JSON
+    if os.path.exists(saved_market_data_path):
+        with open(saved_market_data_path, 'r') as f:
+            data = json.load(f)
+        for date, tickers in data.items():
+            nested_market_data_dict[date] = {}
+            for ticker, records in tickers.items():
+                nested_market_data_dict[date][ticker] = pd.DataFrame(records)
+
+        return nested_market_data_dict
+    else:
+        print(f"No saved market data found at {saved_market_data_path}. Aborting...")
+        return None
+
+
+def Save_Market_Data_To_Json(saved_market_data_path, nested_market_data_dict):
+    try:
+        to_save = {}
+        for date, tickers in nested_market_data_dict.items():
+            to_save[date] = {}
+            for ticker, df in tickers.items():
+                to_save[date][ticker] = df.to_dict(orient='records')
+
+        os.makedirs(os.path.dirname(saved_market_data_path), exist_ok=True)
+        with open(saved_market_data_path, 'w') as f:
+            json.dump(to_save, f)
+            
+        print(f"Saved market data to {saved_market_data_path}")
+
+        return True
+
+    except Exception as e:
+        print(f"***ERROR: {str(e)}")
+        return False
+
+
+# issues to make check on every code change:
+#   - dates are same format
+#   - dates have 0 padding (08/09/2025 vs 8/9/2025)
+def Load_Market_Data_Dictionary(bulk_df, LOAD_SAVED_MARKET_DATA):
     """
     Load market data CSV files into a dictionary where key is date and value is dataframe.
     then drop unneeded columns
@@ -76,16 +116,20 @@ def Load_Market_Data_Dictionary(bulk_df):
         {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
     """
     market_data_dir = "Holder_Strat/Approved_Checked_Market_Data"
+    saved_market_data_path = "Holder_Strat/Parameter_Tuning/Target_Model/Data/Saved_Market_Data.json"
     market_data_dict = {}   # dictionary to store market data
+    nested_market_data_dict = {}
+    unique_dates = bulk_df['Date'].unique()
 
-    # Extract unique dates from the 'Date' column
-    unique_dates = bulk_df['Date'].unique().tolist()
     # date needs to be mm-dd-yyyy format
     for i in range (len(unique_dates)):
         unique_dates[i] = bulk_csv_date_converter(unique_dates[i])
-
     print(f"Found {len(unique_dates)} unique dates in bulk_summaries.csv")
-    
+
+    # option to load saved market data
+    if (LOAD_SAVED_MARKET_DATA == True):
+        return Load_Saved_Market_Data_Json(saved_market_data_path, nested_market_data_dict)
+                
     # Step 1: Get list of market data files
     market_data_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]    
     
@@ -101,16 +145,15 @@ def Load_Market_Data_Dictionary(bulk_df):
 
             # Load the market data CSV
             market_df = pd.read_csv(file_path)
-            #if (Confirm_No_Market_Data_Time_Gaps(market_df, file_path) == True):
-            # Keep only the specified columns
+
+            # Overwrite 'Volatility Percent' with 'Early Morning Atr Warmup Fix' until time reaches 06:44:00
+            mask = market_df['Time'] < '06:44:00'
+            market_df.loc[mask, 'Volatility Percent'] = market_df.loc[mask, 'Early Morning Atr Warmup Fix']
+
             required_columns = ['Ticker', 'Price', 'Volatility Percent', 'Time']
             market_df = market_df[required_columns]
             market_data_dict[date_from_filename] = market_df
             print(f"Loaded market data for {date_from_filename}")
-            '''else:
-                msg = f"time gap in {file_path}, crashing..."
-                print(msg)
-                raise ValueError(msg)'''
 
         else:
             print(f"Skipping {filename} - date {date_from_filename} not in bulk_summaries.csv")
@@ -118,8 +161,6 @@ def Load_Market_Data_Dictionary(bulk_df):
     print(f"\nSuccessfully loaded {len(market_data_dict)} market data files")
 
     # step 3) go through the dictionary of df's and split by ticker
-    nested_market_data_dict = {}
-    
     for date, df in market_data_dict.items():
         # Get unique tickers for this date
         unique_tickers = df['Ticker'].unique()
@@ -148,6 +189,10 @@ def Load_Market_Data_Dictionary(bulk_df):
             
         print(f"Split {date} data into {len(unique_tickers)} tickers: {list(unique_tickers)}")
 
+    # Save market data to JSON before returning
+    if (Save_Market_Data_To_Json(saved_market_data_path, nested_market_data_dict) == False):
+        return None
+    
     return nested_market_data_dict
 
 
@@ -161,11 +206,23 @@ price is lower).
 
 goal: create a list for each trade that has second by second roi
 '''
-def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, largest_sl_value, holding_value=0.6, holding_sl_value=0):
+def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, model_folder, holding_value, holding_sl_value, largest_sl_value):
     trade_start_indexes = {}
     trade_end_timestamps = {}
     roi_dictionary = {}
     skip_dates = []
+    roi_dictionary_path = f"Holder_Strat/Parameter_Tuning/{model_folder}/Data/roi_dictionary_saved_holder={holding_value},holderSL={holding_sl_value},startingSL={largest_sl_value}.json"
+
+    # Check if ROI dictionary file already exists
+    if os.path.exists(roi_dictionary_path):
+        while True:
+            user_choice = input(f"\nROI dictionary file already exists at {roi_dictionary_path}. Do you want to 'load' the existing file or 'create new'? (load/create new): ").strip().lower()
+            if user_choice == 'load': # return loaded data
+                return Load_Roi_Dictionary_And_Values(roi_dictionary_path)
+            elif user_choice == 'create new':
+                break # continue this function
+            else:
+                print("Please enter either 'load' or 'create new'")
 
     print("\nmaking roi dictionary...")
 
@@ -186,7 +243,6 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
             print(f"No market data found for date {date}")
             skip_dates.append(date)
             continue  
-            
         if ticker not in market_data_dict_by_ticker[date]:
             msg = f"No market data found for ticker {ticker} on date {date}"
             print(msg)
@@ -210,7 +266,7 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
                 entry_found = True
                 trade_start_indexes[trade_id] = i
                 break
-        
+
         if not entry_found:
             msg = f"Entry time {entry_time} not found in market data for trade {trade_id}"
             print(msg)
@@ -260,9 +316,6 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
         trade_end_timestamps[trade_id] = current_time
         roi_dictionary[trade_id] = roi_list
     
-    # Save ROI dictionary and related data to file
-    roi_file_path = f"Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved_holder={holding_value},holderSL={holding_sl_value},startingSL={largest_sl_value}.json"
-    
     # Combine all trade data into one dictionary
     trade_data = {
         "roi_dictionary": roi_dictionary,
@@ -270,9 +323,9 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
         "trade_start_indexes": trade_start_indexes
     }
     
-    with open(roi_file_path, 'w') as f:
+    with open(roi_dictionary_path, 'w') as f:
         json.dump(trade_data, f, indent=2)
-    print(f"Trade data (ROI dictionary, end timestamps, start indexes) saved to {roi_file_path}")
+    print(f"Trade data (ROI dictionary, end timestamps, start indexes) saved to {roi_dictionary_path}")
     
     print(f"roi dictionary done. Total trades processed: {len(roi_dictionary)}")
 
@@ -280,32 +333,22 @@ def Create_Roi_Dictionary_For_Trades(bulk_df, market_data_dict_by_ticker, larges
 
 
 # return (roi_dictionary, trade_end_timestamps, trade_start_indexes)
-def Load_Roi_Dictionary_And_Values(holding_Value=0.6):
-    roi_file_path = f"Holder_Strat/Parameter_Tuning/model_files_and_data/roi_dictionary_saved_holder={holding_Value},holderSL=0,startingSL=-0.4.json"
+def Load_Roi_Dictionary_And_Values(roi_dictionary_file_path):    
+    with open(roi_dictionary_file_path, 'r') as f:
+        trade_data = json.load(f)
     
-    try:
-        with open(roi_file_path, 'r') as f:
-            trade_data = json.load(f)
-        
-        roi_dictionary = trade_data["roi_dictionary"]
-        trade_end_timestamps = trade_data["trade_end_timestamps"]
-        trade_start_indexes = trade_data["trade_start_indexes"]
-        
-        print(f"Successfully loaded trade data from {roi_file_path}")
-        print(f"Loaded {len(roi_dictionary)} trades")
+    roi_dictionary = trade_data["roi_dictionary"]
+    trade_end_timestamps = trade_data["trade_end_timestamps"]
+    trade_start_indexes = trade_data["trade_start_indexes"]
+    
+    print(f"Successfully loaded trade data from {roi_dictionary_file_path}")
+    print(f"Loaded {len(roi_dictionary)} trades\n")
 
-        # loading these changes all the trade_id's to strings. they're ints when the dictionary is created
-        roi_dictionary = {int(k): v for k, v in roi_dictionary.items()}
-        trade_end_timestamps = {int(k): v for k, v in trade_end_timestamps.items()}
-        trade_start_indexes = {int(k): v for k, v in trade_start_indexes.items()}
+    # loading these changes all the trade_id's to strings. they're ints when the dictionary is created
+    roi_dictionary = {int(k): v for k, v in roi_dictionary.items()}
+    trade_end_timestamps = {int(k): v for k, v in trade_end_timestamps.items()}
+    trade_start_indexes = {int(k): v for k, v in trade_start_indexes.items()}
+    
+    return roi_dictionary, trade_end_timestamps, trade_start_indexes
         
-        return roi_dictionary, trade_end_timestamps, trade_start_indexes
-        
-    except FileNotFoundError:
-        print(f"Error: File {roi_file_path} not found")
-    except KeyError as e:
-        print(f"Error: Missing key {e} in the saved data file")
-    except json.JSONDecodeError as e:
-        print(f"Error: Invalid JSON in file {roi_file_path}: {e}")
-
 

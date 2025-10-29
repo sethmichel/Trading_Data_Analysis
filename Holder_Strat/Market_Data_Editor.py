@@ -47,8 +47,15 @@ def Custom_Fix_1(csv_path):
     print(f"Successfully applied Custom_Fix_1 to {csv_path}")
 
 
-# make a new column for the first x minutes of a new volaulity percent since atr14 needs time to warmup
-def Fix_Morning_Atr_Issue():
+
+
+# DEPRECATED - incorrect algorithm
+''' NOTE: this is wrong, it's using start price vs end price instead of high vs low
+-ultimatly this equation doesn't well. it super overreacts when teh minute changes, meaning the value gets larger with 'seconds' then drops at each new minute
+-it's going to be better to just offset the actual vol% value. 
+
+'''
+def OLD_Fix_Morning_Atr_Issue():
     '''
     notes about how this works. 
     -candle_percent_change_list isn't multiplied by 100 because we later need the average of the list to go to price units instead of
@@ -158,7 +165,6 @@ csv_dir = "Csv_Files/raw_Market_Data/market_data_to_check"
 csv_path = f"{csv_dir}/Raw_Market_Data_10-22-2025.csv"
 
 #Custom_Fix_1(csv_path)
-Fix_Morning_Atr_Issue()
 
 
 

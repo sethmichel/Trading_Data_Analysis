@@ -878,6 +878,46 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
 
 
+def Fix_Morning_Atr_Issue(file_path):
+    try:
+        df = pd.read_csv(file_path)
+
+        if ('Early Morning Atr Warmup Fix' not in df.columns or isinstance(df.at[10, 'Early Morning Atr Warmup Fix'], float)):
+            df['Early Morning Atr Warmup Fix'] = float('nan')  # Prepare new column with NaNs
+
+            for idx, row in df.iterrows():
+                row_vol_percent = row['Volatility Percent']
+                row_time = row['Time']
+
+                # get minutes since open
+                time_obj = datetime.strptime(row_time, '%H:%M:%S').time()
+                current_minutes = time_obj.hour * 60 + time_obj.minute
+                minutes_since_open = round(current_minutes - (6*60+30)) # 6:30 am
+
+                # change value based on time
+                if (minutes_since_open < 9):
+                    df.at[idx, 'Early Morning Atr Warmup Fix'] = round(row_vol_percent * 1.8, 2)
+                elif (minutes_since_open >= 9 and minutes_since_open < 12):
+                    df.at[idx, 'Early Morning Atr Warmup Fix'] = round(row_vol_percent * 1.6, 2)
+                elif (minutes_since_open >= 12 and minutes_since_open < 14):
+                    df.at[idx, 'Early Morning Atr Warmup Fix'] = round(row_vol_percent * 1.2, 2)
+                else:
+                    break
+            
+            # Place the new column immediately after 'Volatility Percent'
+            df = df[["Ticker","Price","Val","Avg","Atr14","Atr28","Rsi","Volume","Adx28","Adx14","Adx7","Volatility Percent","Early Morning Atr Warmup Fix","Volatility Ratio","Time"]]
+
+            df.to_csv(file_path, index=False)
+            print(f"Saved warmup fix to: {file_path}")
+            return True
+        else:
+            return True
+
+    except Exception as e:
+        print(f"***ERROR: problem with fixing the early monring volatility percent. file: {file_path}, error: {str(e)}")
+        return False
+
+
 # controller to handle all validity checks of csv files
 def Authenticator_Freeway():
     try:
@@ -922,6 +962,14 @@ def Authenticator_Freeway():
             file_path = f"{market_data_dir}/{market_data_file}"
             if (Check_File_Name(file_path, market_data_file) == False):
                 return False
+        
+        # 6) fix the atr14 warmup period issue (volatility percent)
+        print("\nchecking if files have the early morning volatility percent fix. if not then it's created and saved here")
+        for market_data_file in market_data_csv_files:
+            file_path = f"{market_data_dir}/{market_data_file}"
+            if (Fix_Morning_Atr_Issue(file_path) != True):
+                return False
+        print("voaltility percent is valid for these files")
 
         print("\nFiles are valid")
 

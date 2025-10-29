@@ -42,21 +42,22 @@ Exactly how v0.2 works
         actual_prediction = smear * np.exp(gam.predict(x_scaled))[0] - 1.0
 '''
 
-def Save_Model_Data(model, scaler, smearing_factor):
+def Save_Model_Data(model, scaler, smearing_factor, holding_value, holding_sl_value, largest_sl_value):
+    file_path = f'{target_dir}/Data/trained_roi_predictor_model_{version}_holding_value_{holding_value}_holding_sl_value_{holding_sl_value}_largest_sl_value_{largest_sl_value}.pkl'
+
     model_data = {
         'model': model,
         'scaler': scaler,
         'smearing_factor': float(smearing_factor)
     }
 
-    file_path = f'{target_dir}/trained_roi_predictor_model_{version}.pkl'
     with open(file_path, 'wb') as f:
         pickle.dump(model_data, f)
     print(f"Saved model, scaler, and smearing_factor to {file_path}")
 
 
-def Load_Model_Data():
-    file_path = f'{target_dir}/trained_roi_predictor_model_{version}.pkl'
+def Load_Model_Data(holding_value, holding_sl_value, largest_sl_value):
+    file_path = f'{target_dir}/Data/trained_roi_predictor_model_{version}_holding_value_{holding_value}_holding_sl_value_{holding_sl_value}_largest_sl_value_{largest_sl_value}.pkl'
     
     with open(file_path, 'rb') as f:
         model_data = pickle.load(f)
@@ -144,14 +145,33 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
     skip_dates = []
     all_data_samples_x = []   # [{trade_id: [time since market open, volatility %]}, ...]
     all_roi_samples_y = []    # [{trade_id: roi, trade_id: roi, ...]
+    target_percent = -0.1 # we're going to keep all trades who reach this threshhold
+    trade_count = 0
 
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
         entry_time = row['Entry Time']               # hour:minute:second
+        trade_id = row['Trade Id']
+        roi_list = roi_dictionary[trade_id]
         date = bulk_csv_date_converter(row['Date'])  # 08-09-2025
         market_df = market_data_dict_by_ticker[date][ticker]  # market data df for this ticker and date
-        final_timestamp = datetime.strptime(market_df.at[-1, 'Time'], '%H:%M:%S').time()
+        if (len(market_df) == 0):
+            raise ValueError(f"market_df is blank. should never happend. trade: {row}")
+        final_timestamp = datetime.strptime(market_df.iloc[-1]['Time'], '%H:%M:%S').time()
         final_seconds = final_timestamp.hour * 3600 + final_timestamp.minute * 60 + final_timestamp.second
+
+        # PARAMETERS START ----------------------
+
+        # this skips all trades who don't have a max roi of x%+
+        if (max(roi_list) < target_percent): 
+            continue
+
+        # this only does trades that reach holding
+        #if (max(roi_list) < 0.6):
+        #    continue
+
+
+        # PARAMETERS END ------------------------
 
         # if we don't have data for this date
         if (date in skip_dates):
@@ -174,11 +194,10 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
             print(msg)
             continue
         
-        trade_id = row['Trade Id']
-        roi_list = roi_dictionary[trade_id]
         start_index = trade_start_indexes[trade_id]
         counter = -1                # this makes it easier to look up roi from roi_list
         next_sample_time = None     # Track when to take next sample
+        trade_count += 1
         
         # Iterate through market data starting from entry time
         for i in range(start_index, len(market_df)):
@@ -220,7 +239,7 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
                 # Trade is complete
                 break
             
-    return all_data_samples_x, all_roi_samples_y
+    return all_data_samples_x, all_roi_samples_y, trade_count
 
 
 '''
