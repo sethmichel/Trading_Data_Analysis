@@ -37,8 +37,9 @@ Exactly how v0.2 works
 	5. With the best lam, we can train the actual linearGAM model and fit it using the weights
 	6. Now, with the trained model we finally compute the actual duan smearing factor for the full training set. We use this 
     smearing factor to correct predictions when we use the model on live data
-	7. Run
-		x_scaled = scaler.transform([[minutes_since_open, volatility_percent]])
+7. Run
+		x_pre = [[minutes_since_open/60.0, np.log1p(volatility_percent)]]
+        x_scaled = scaler.transform(x_pre)
         actual_prediction = smear * np.exp(gam.predict(x_scaled))[0] - 1.0
 '''
 
@@ -72,7 +73,7 @@ def Load_Model_Data(holding_value, holding_sl_value, largest_sl_value):
 
 
 # Save all_data_samples_x and all_roi_samples_y to a local txt file
-def Save_Training_Data(all_data_samples_x, all_roi_samples_y):
+def Save_Training_Data(all_data_samples_x, all_roi_samples_y, trade_count):
     # Convert pandas/numpy types to Python native types for JSON serialization
     # Convert all_data_samples_x (list of dicts with trade_id: [time, volatility])
     converted_x = []
@@ -93,7 +94,8 @@ def Save_Training_Data(all_data_samples_x, all_roi_samples_y):
     # Create the data structure to save
     data_to_save = {
         'all_data_samples_x': converted_x,
-        'all_roi_samples_y': converted_y
+        'all_roi_samples_y': converted_y,
+        'trade_count': trade_count
     }
     
     # Save to txt file
@@ -109,7 +111,7 @@ def Save_Training_Data(all_data_samples_x, all_roi_samples_y):
 - Load all_data_samples_x and all_roi_samples_y from the local txt file.
 - Returns data in the new format: [{trade_id: [time, volatility]}, ...] and [{trade_id: roi}, ...]
 '''
-def Load_Test_Data():
+def Load_Training_Data():
     file_path = f'{target_dir}/Data/target_runing_regression_numbers.txt'
     
     with open(file_path, 'r') as f:
@@ -117,10 +119,11 @@ def Load_Test_Data():
     
     all_data_samples_x = data['all_data_samples_x']
     all_roi_samples_y = data['all_roi_samples_y']
+    trade_count = data['trade_count']
     
     print(f"Loaded {len(all_data_samples_x)} data samples from {file_path}")
     
-    return all_data_samples_x, all_roi_samples_y
+    return all_data_samples_x, all_roi_samples_y, trade_count
 
 
 def bulk_csv_date_converter(date):
@@ -141,12 +144,12 @@ def bulk_csv_date_converter(date):
 - Continue each trade until the stop loss is reached or we run out of market data
 - x = [{trade_id: [time since market open, volatility %]}, ...], y = [{trade_id: roi, trade_id: roi, ...]
 '''
-def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes):
+def Collect_Training_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes):
     skip_dates = []
     all_data_samples_x = []   # [{trade_id: [time since market open, volatility %]}, ...]
     all_roi_samples_y = []    # [{trade_id: roi, trade_id: roi, ...]
-    target_percent = -0.1 # we're going to keep all trades who reach this threshhold
     trade_count = 0
+    min_roi = 0.3
 
     for idx, row in bulk_df.iterrows():
         ticker = row['Ticker']
@@ -162,14 +165,9 @@ def Collect_Data(bulk_df, market_data_dict_by_ticker, roi_dictionary, trade_end_
 
         # PARAMETERS START ----------------------
 
-        # this skips all trades who don't have a max roi of x%+
-        if (max(roi_list) < target_percent): 
+        # this only does trades that reach this amount
+        if (max(roi_list) < min_roi):
             continue
-
-        # this only does trades that reach holding
-        #if (max(roi_list) < 0.6):
-        #    continue
-
 
         # PARAMETERS END ------------------------
 
@@ -268,22 +266,27 @@ def Train_Model(all_data_samples_x, all_roi_samples_y):
     # 2) Prepare X and y values
     # Note: We will fit a global scaler for the final model, but inside CV we will fit
     # a scaler per-fold to avoid data leakage.
-    X_raw = np.asarray(raw_x, dtype=float)
+    # scale the x features, we don't descale them later, so there's no bias
+    scaled_x = []
+    for value in raw_x:
+        scaled_x.append([value[0] / 60.0, np.log1p(value[1])])
+
+    X_scaled_raw = np.asarray(scaled_x, dtype=float)
     scaler = StandardScaler()
-    X_scaled = scaler.fit_transform(X_raw)  # used for final fit only
+    X_scaled = scaler.fit_transform(X_scaled_raw)  # used for final fit only
     # scale y values. log-transformed target to stabilize variance and reduce outlier influence
     y_arr = np.asarray(raw_y, dtype=float)
     y_trans = np.log1p(y_arr)
 
     # 4) weigh samples: per-sample weights so each trade contributes ~equally (group-weighted)
-    # weight_i = 1 / (#samples in same trade)
+    # weight_i = 1 / (samples in same trade)
     unique, counts = np.unique(np.asarray(groups), return_counts=True)
     group_to_count = {g: c for g, c in zip(unique, counts)}
     sample_weights = np.asarray([1.0 / group_to_count[g] for g in groups], dtype=float)
 
     # 5) Use StratifiedGroupKFold to select smoothing parameter with grouped, stratified CV
     # IMPORTANT: pass raw X; scaling will be learned per-fold to prevent leakage.
-    best_lam, cv_report = Select_Best_Lambda_StratifGroupCV(X_raw, y_trans, y_arr, np.asarray(groups), sample_weights)
+    best_lam, cv_report = Select_Best_Lambda_StratifGroupCV(X_scaled_raw, y_trans, y_arr, np.asarray(groups), sample_weights)
 
     # 6) Fit final model on all scaled data with cluster weights
     model = LinearGAM(te(0,1), lam=best_lam)

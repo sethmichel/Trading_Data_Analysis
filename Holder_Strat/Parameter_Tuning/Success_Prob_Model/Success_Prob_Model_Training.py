@@ -325,7 +325,6 @@ def Train_Model(results_df):
     return final_model, final_scaler, X_scaled_full
 
 
-
 '''
 issue #1. 4 different runtime warnings during training. line: gam.fit(X_train, y_train, weights=sample_weights).
 come from LogisticGAM’s IRLS steps driving the linear predictor to extreme values so that mu ≈ 0 or 1. The logit 
@@ -340,5 +339,4 @@ changes:
 -changed lam space to 10 ** np.linspace(-2, 5, 8) from 10**np.linspace(-4, 4, 13)
 -changed sample weights to sample_weights = sample_weights / sample_weights.mean()
 -changed Standardscaler to robust scaler (outliers)
-
 '''

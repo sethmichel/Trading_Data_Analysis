@@ -1,132 +1,131 @@
 MODE = model values
 Date = 06-24-2025
-SOXL = 0.4
-SMCI = 0.57
-HOOD = 0.47
-MARA = 0.53
-IONQ = -0.38
-RDDT = -0.1
-overall = 1.49
+SOXL = 0.79
+SMCI = 0.94
+HOOD = 0.89
+MARA = 0.96
+IONQ = -0.43
+overall = 3.15
 
 Date = 07-30-2025
 SMCI = -0.43
 SOXL = -0.43
-RDDT = 0.53
-TSLA = 0.39
+RDDT = 0.0
+TSLA = -0.4
 MARA = -0.06
-overall = -0.0
+overall = -1.32
 
 Date = 08-04-2025
-SMCI = 0.42
-IONQ = 0.69
-RDDT = 0.67
+SMCI = -0.4
+IONQ = 0.97
+RDDT = 1.05
 TSLA = -0.41
-SOXL = 0.64
-HOOD = 0.24
-overall = 2.25
+SOXL = 0.93
+overall = 2.14
 
 Date = 10-01-2025
-HOOD = -0.01
-SOXL = 0.42
+HOOD = 0.41
+SOXL = 0.0
 TSLA = -0.4
-MARA = 1.29
-IONQ = 0.58
+MARA = 0.96
+IONQ = 1.01
 RDDT = -0.46
-overall = 1.42
+overall = 1.52
 
 Date = 10-02-2025
-RDDT = 0.55
+RDDT = -0.01
 HOOD = -0.4
-MARA = 0.43
-SOXL = 0.56
+MARA = 0.96
+SOXL = 0.9
 SMCI = -0.53
-IONQ = 0.16
-overall = 0.76
+overall = 0.92
 
 Date = 10-03-2025
-IONQ = 0.98
+IONQ = -0.83
 HOOD = -0.42
-TSLA = 0.55
-MARA = 0.84
-RDDT = 1.45
-overall = 3.4
+TSLA = 0.0
+overall = -1.25
 
 Date = 10-08-2025
-SOXL = 0.05
-MARA = 0.59
-IONQ = 2.01
+SOXL = 0.36
+MARA = 0.04
+IONQ = -0.62
 SMCI = -0.45
-RDDT = -0.46
-overall = 1.74
+overall = -0.67
 
 Date = 10-09-2025
 TSLA = -0.44
 SMCI = -0.43
-MARA = 0.64
-SOXL = 0.18
-IONQ = 0.6
-overall = 0.55
+MARA = -0.04
+SOXL = 0.55
+IONQ = -0.4
+overall = -0.76
 
 Date = 10-13-2025
-IONQ = 0.65
-SOXL = 0.65
-HOOD = 1.29
+IONQ = 1.78
+SOXL = 0.9
+HOOD = 0.86
 TSLA = -0.4
-SMCI = 0.57
+SMCI = -0.05
 MARA = -0.87
-overall = 1.89
+overall = 2.22
 
 Date = 10-17-2025
-HOOD = 1.21
-SOXL = 0.11
-MARA = 0.44
-IONQ = 0.56
-overall = 2.32
+HOOD = 0.97
+SOXL = -0.08
+MARA = 0.6
+IONQ = 0.89
+overall = 2.38
 
 Date = 10-20-2025
 RDDT = -0.42
 HOOD = -0.49
 TSLA = -0.45
-MARA = 1.5
-SMCI = 0.64
-IONQ = -0.4
-overall = 0.38
+MARA = 1.08
+overall = -0.28
 
 Date = 10-21-2025
-IONQ = 0.25
-MARA = -0.86
+IONQ = 0.65
+MARA = -0.84
 TSLA = -0.46
-SOXL = 0.48
+SOXL = 0.0
 SMCI = -0.4
-RDDT = -0.5
-overall = -1.49
+overall = -1.05
 
 Date = 10-24-2025
-TSLA = 0.44
-MARA = -0.23
+TSLA = 0.97
+MARA = 0.46
 HOOD = -0.44
 IONQ = -1.34
-SOXL = 0.53
-SMCI = 0.47
+SOXL = 0.8
+SMCI = 0.0
 RDDT = -0.49
-overall = -1.06
+overall = -0.04
 
 Totals Across All Dates:
-SOXL = 3.59
-SMCI = 0.43
-HOOD = 1.45
-MARA = 4.24
-IONQ = 4.36
-RDDT = 0.77
-TSLA = -1.18
+SOXL = 4.72
+SMCI = -1.75
+HOOD = 1.38
+MARA = 3.25
+IONQ = 1.68
+RDDT = -0.33
+TSLA = -1.99
 
-Trades: 117
-Overall Total = 13.65
+Trades: 86
+Overall Total = 6.96
 days = 13
-Overall avg / trade = 0.1167
-**divided by 6 = 0.0194
-Overall avg / day (BAD METRIC) = 1.05
-divided by 6 (BAD METRIC) = 0.18
-red days: 3/13
-avg red day: -0.14
-avg green day: 0.27
+Overall avg / trade = 0.0809
+**divided by 6 = 0.0135
+Overall avg / day (BAD METRIC) = 0.54
+divided by 6 (BAD METRIC) = 0.09
+red days: 7/13
+avg red day: -0.13
+avg green day: 0.34
+
+6:30:00-6:40:00 = 6.02%
+6:40:00-6:50:00 = 1.84%
+6:50:00-7:0:00 = 0.03%
+7:0:00-7:10:00 = -0.91%
+7:10:00-7:20:00 = 0.0%
+7:20:00-7:30:00 = -0.02%
+added 86 trades out of 86

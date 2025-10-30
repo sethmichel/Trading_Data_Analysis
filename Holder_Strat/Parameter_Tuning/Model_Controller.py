@@ -46,10 +46,10 @@ def Load_Target_Model_And_Data():
     roi_dictionary, trade_end_timestamps, trade_start_indexes = Helper_Functions.Load_Roi_Dictionary_And_Values(roi_dictionary_path)
 
     # load model and training data
-    all_data_samples_x, all_roi_samples_y = Target_Model_Training.Load_Test_Data()
+    all_data_samples_x, all_roi_samples_y, trade_count = Target_Model_Training.Load_Training_Data()
     model, scaler, smearing_factor = Target_Model_Training.Load_Model_Data(holding_value, holding_sl_value, largest_sl_value)
 
-    return roi_dictionary, trade_end_timestamps, trade_start_indexes, all_data_samples_x, all_roi_samples_y, model, scaler, smearing_factor
+    return roi_dictionary, trade_end_timestamps, trade_start_indexes, all_data_samples_x, all_roi_samples_y, trade_count, model, scaler, smearing_factor
 
 
 def Train_Target_Model():
@@ -69,11 +69,12 @@ def Train_Target_Model():
                 largest_sl_value=largest_sl_value)
 
         # collect data
-        all_data_samples_x, all_roi_samples_y, trade_count = Target_Model_Training.Collect_Data(
-                bulk_df_all_values, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes)
+        all_data_samples_x, all_roi_samples_y, trade_count = Target_Model_Training.Load_Training_Data()
+        #all_data_samples_x, all_roi_samples_y, trade_count = Target_Model_Training.Collect_Training_Data(
+        #        bulk_df_all_values, market_data_dict_by_ticker, roi_dictionary, trade_end_timestamps, trade_start_indexes)
 
         # save that data
-        Target_Model_Training.Save_Training_Data(all_data_samples_x, all_roi_samples_y)
+        Target_Model_Training.Save_Training_Data(all_data_samples_x, all_roi_samples_y, trade_count)
 
         print("="*30)
         print(f"TARGET MODEL MODEL TRAINING SUMMARY {target_model_version}\n")
@@ -91,19 +92,19 @@ def Train_Target_Model():
 def Target_Model_Run_Diagnostics():
     # load data/model
     roi_dictionary, trade_end_timestamps, trade_start_indexes, \
-    all_data_samples_x, all_roi_samples_y, model, scaler, \
-    smearing_factor = Load_Target_Model_And_Data()
+    all_data_samples_x, all_roi_samples_y, trade_count, model, \
+    scaler, smearing_factor = Load_Target_Model_And_Data()
     # NOTE: remember target model is trained on only winning trades. so depending on the test you may need to filter bulk_df_all_values
 
     # actual diagnostics
-    #Target_Model_Diagnostics.Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
+    Target_Model_Diagnostics.Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
 
     # run model over trade history
     mode = 'model values' # 'model values' means use model, 'max values' means use hard coded max values
     Target_Model_Diagnostics.Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df_all_values, market_data_dict_by_ticker, 
                                              roi_dictionary, trade_end_timestamps, trade_start_indexes, mode)    
 
-    #Target_Model_Diagnostics.Get_Model_Test_Values(model, scaler, smearing_factor)
+    Target_Model_Diagnostics.Get_Model_Test_Values(bulk_df_all_values, model, scaler, smearing_factor)
 
 # ---------------------------------------------------------
 
@@ -180,6 +181,7 @@ def Sl_Model_Run_Diagnostics():
     Sl_Model_Diagnostics.Model_Diagnostics(model, results_df, scaler)
 
     Sl_Model_Diagnostics.Give_Model_Test_Input(model, scaler)
+
 # ---------------------------------------------------------
 
 
@@ -259,6 +261,6 @@ def Success_Prob_Model_Run_Diagnostics():
 
 
 #Train_Target_Model()
-#Target_Model_Run_Diagnostics()
+Target_Model_Run_Diagnostics()
 
-Train_Success_Prob_Model()
+#Train_Success_Prob_Model()
