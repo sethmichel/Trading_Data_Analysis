@@ -1,41 +1,33 @@
 ### Python ###
 
 # my stuff to ignore
-Csv_Files/tos_Raw_Trades/Edited_All_Trades_Data/
-Csv_Files/tos_Raw_Trades/trade_Data/
-Csv_Files/tos_Raw_Trades/Unedited_All_Trades_Data/
-Csv_Files/raw_Market_Data/Market_Data/
-Csv_Files/raw_Market_Data/
-Csv_Files/3_Final_Trade_Csvs/
-Csv_Files/Final_Trade_Csvs/
+Data_Files/Automated_Trade_Logs/Approved_Cleaned_All_Trades_Data/
+Data_Files/Automated_Trade_Logs/Untouched_Raw_All_Trades_Data/
 
-Old_Code/XG_Boost/Output/1_overview
-Old_Code/XG_Boost/Output/2_interactions_and_ranges
-Old_Code/XG_Boost/Output/3_correlations
-Old_Code/XG_Boost/Output/4_datapoint_analysis
-Old_Code/XG_Boost/Data.csv
+Data_Files/Manual_Trade_Logs/Approved_Cleaned_Manual_Trade_Data/
+Data_Files/Manual_Trade_Logs/Erroneous_Manual_Trade_Logs/
+Data_Files/Manual_Trade_Logs/Unvalidated_Manual_Trade_Logs/
+Data_Files/Manual_Trade_Logs/Manual_Trade_Log_Status.csv
 
-Holder_Strat/Holder_Strat_Trade_Logs/
-Holder_Strat/Summary_Csvs/
-Holder_Strat/Summary_Text_Files/
-Holder_Strat/Approved_Checked_Market_Data/
-Holder_Strat/Parameter_Tuning/Sl_Model/Data
-Holder_Strat/Parameter_Tuning/Sl_Model/Diagnostics
-Holder_Strat/Parameter_Tuning/Sl_Model/Data/catboost_info
-Holder_Strat/Parameter_Tuning/catboost_info
-Holder_Strat/Parameter_Tuning/Target_Model/Data
-Holder_Strat/Parameter_Tuning/Target_Model/Diagnostics
-Holder_Strat/Parameter_Tuning/Holding_Model/Data
-Holder_Strat/Parameter_Tuning/Holding_Model/Diagnostics
-Holder_Strat/Parameter_Tuning/Success_Prob_Model/Data
-Holder_Strat/Parameter_Tuning/Success_Prob_Model/Diagnostics
+Data_Files/Market_Data/Approved_Cleaned_Market_Data/
+Data_Files/Market_Data/Erroneous_Market_Data/
+Data_Files/Market_Data/Unvalidated_Raw_Market_Data/
+Data_Files/Market_Data/Market_Data_Tracking.csv
 
-Old_Code/Grid_Search/Analysis_Results.txt
-Old_Code/Grid_Search/grid_search_notes.txt
+Data_Files/Trade_Summaries/Summary_Csv_Files/
+Data_Files/Trade_Summaries/Summary_Text_Files/
+
+XG_Boost_Feature_Analysis/Output/1_Overview/
+XG_Boost_Feature_Analysis/Output/2_interactions_and_ranges/
+XG_Boost_Feature_Analysis/Output/3_correlations/
+XG_Boost_Feature_Analysis/Output/4_datapoint_analysis/
+XG_Boost_Feature_Analysis/Output/ClassificationReport.txt
+XG_Boost_Feature_Analysis/Output/trained_model.json
+XG_Boost_Feature_Analysis/Data.csv
+
+Grid_Search_Parameter_Tuning/Analysis_Results.txt
 
 Logs.txt
-TESTING.csv
-testing.csv
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

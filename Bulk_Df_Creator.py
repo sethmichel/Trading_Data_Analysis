@@ -292,9 +292,9 @@ def Create_Summary_Df(raw_df):
                             'Entry Adx14': None,
                             'Entry Adx7': None,
                             #'Price Movement': None,
-                            'Original Holding Reached': None,
-                            'Original Best Exit Percent': None,
-                            'Original Percent Change': round(percent_change, 2),
+                            'Trade Holding Reached': None,
+                            'Trade Best Exit Percent': None,
+                            'Trade Percent Change': round(percent_change, 2),
                         })
                         break
 
@@ -315,7 +315,7 @@ def Add_Running_Percents(df):
 
         for i, row in df.iterrows():
             ticker = row['Ticker']
-            percent_change = row['Original Percent Change']
+            percent_change = row['Trade Percent Change']
 
             if (tickers_percent_sum.get(ticker) == None):
                 tickers_percent_sum[ticker] = 0.0
@@ -418,7 +418,7 @@ def Add_Best_Worst_Info(ticker_df, starting_row, entry_price, direction, exit_ti
         
         return {
             'Best Exit Price': round(best_price, 4),
-            'Original Best Exit Percent': round(best_percent_change, 2),
+            'Trade Best Exit Percent': round(best_percent_change, 2),
             'Best Exit Time In Trade': best_time_in_trade,
             'Worst Exit Price': round(worst_price, 4),
             'Worst Exit Percent': round(worst_percent_change, 2),
@@ -533,17 +533,17 @@ def Add_Market_Data(df, market_data_path):
                     return None
 
                 df.at[idx, 'Best Exit Price'] = best_worst_info['Best Exit Price']
-                df.at[idx, 'Original Best Exit Percent'] = best_worst_info['Original Best Exit Percent']
+                df.at[idx, 'Trade Best Exit Percent'] = best_worst_info['Trade Best Exit Percent']
                 df.at[idx, 'Best Exit Time In Trade'] = seconds_to_hms(best_worst_info['Best Exit Time In Trade'])
                 df.at[idx, 'Worst Exit Price'] = best_worst_info['Worst Exit Price']
                 df.at[idx, 'Worst Exit Percent'] = best_worst_info['Worst Exit Percent']
                 df.at[idx, 'Worst Exit Time In Trade'] = seconds_to_hms(best_worst_info['Worst Exit Time In Trade'])
                 #df.at[idx, 'Best Sl'] = Find_Best_Sl(ticker_df, starting_row, direction) # returns x% or 'not found'
 
-                if (best_worst_info['Original Best Exit Percent'] >= 0.6):
-                    df.at[idx, 'Original Holding Reached'] = True
+                if (best_worst_info['Trade Best Exit Percent'] >= 0.6):
+                    df.at[idx, 'Trade Holding Reached'] = True
                 else:
-                    df.at[idx, 'Original Holding Reached'] = False
+                    df.at[idx, 'Trade Holding Reached'] = False
 
                 #price_movement_list = Add_Price_Movement(ticker_df, entry_price, starting_row, exit_seconds, direction)
                 #df.at[idx, 'Price Movement'] = str(price_movement_list) if price_movement_list is not None else None
@@ -612,14 +612,14 @@ def Create_Overall_Summary_Info_Txt(bulk_df):
         filename = f'Overall_Summary.txt'
         file_path = os.path.join(output_dir, filename)
         
-        total_percent_change = round(bulk_df['Original Percent Change'].sum(), 2)
+        total_percent_change = round(bulk_df['Trade Percent Change'].sum(), 2)
         total_dollar_change = round(bulk_df['Dollar Change'].sum(), 2)
-        trades_at_holding = bulk_df[bulk_df['Original Best Exit Percent'] > 0.6]
+        trades_at_holding = bulk_df[bulk_df['Trade Best Exit Percent'] > 0.6]
         num_trades_at_holding = len(trades_at_holding)
-        sum_trades_at_holding = round(trades_at_holding['Original Percent Change'].sum(), 2)
-        trades_failed = bulk_df[bulk_df['Original Percent Change'] < -0.3]
+        sum_trades_at_holding = round(trades_at_holding['Trade Percent Change'].sum(), 2)
+        trades_failed = bulk_df[bulk_df['Trade Percent Change'] < -0.3]
         num_trades_failed = len(trades_failed)
-        sum_trades_failed = round(trades_failed['Original Percent Change'].sum(), 2)
+        sum_trades_failed = round(trades_failed['Trade Percent Change'].sum(), 2)
         num_of_days = bulk_df['Date'].nunique()
         
         content = []
@@ -641,14 +641,14 @@ def Create_Overall_Summary_Info_Txt(bulk_df):
         for ticker in unique_tickers:
             ticker_df = bulk_df[bulk_df['Ticker'] == ticker]
             
-            ticker_total_percent = round(ticker_df['Original Percent Change'].sum(), 2)
+            ticker_total_percent = round(ticker_df['Trade Percent Change'].sum(), 2)
             ticker_total_dollar = round(ticker_df['Dollar Change'].sum(), 2)
-            ticker_trades_at_holding = ticker_df[ticker_df['Original Best Exit Percent'] > 0.6]
+            ticker_trades_at_holding = ticker_df[ticker_df['Trade Best Exit Percent'] > 0.6]
             ticker_num_trades_at_holding = len(ticker_trades_at_holding)
-            ticker_sum_percent_at_holding = round(ticker_trades_at_holding['Original Percent Change'].sum(), 2)
-            ticker_trades_failed = ticker_df[ticker_df['Original Percent Change'] < -0.3]
+            ticker_sum_percent_at_holding = round(ticker_trades_at_holding['Trade Percent Change'].sum(), 2)
+            ticker_trades_failed = ticker_df[ticker_df['Trade Percent Change'] < -0.3]
             ticker_num_trades_failed = len(ticker_trades_failed)
-            ticker_sum_percent_failed = round(ticker_trades_failed['Original Percent Change'].sum(), 2)
+            ticker_sum_percent_failed = round(ticker_trades_failed['Trade Percent Change'].sum(), 2)
             
             content.append(f"\n{ticker}:")
             content.append(f"  Total % Change: {ticker_total_percent:.2f}%")
@@ -691,14 +691,14 @@ def Create_Summarized_Info_txt(df, date):
         filename = f'Summary_{date}.txt'
         file_path = os.path.join(output_dir, filename)
         
-        total_percent_change = df['Original Percent Change'].sum()
+        total_percent_change = df['Trade Percent Change'].sum()
         total_dollar_change = df['Dollar Change'].sum()
-        trades_at_holding = df[df['Original Best Exit Percent'] > 0.6]
+        trades_at_holding = df[df['Trade Best Exit Percent'] > 0.6]
         num_trades_at_holding = len(trades_at_holding)
-        sum_trades_at_holding = trades_at_holding['Original Percent Change'].sum()
-        trades_failed = df[df['Original Percent Change'] < -0.3]
+        sum_trades_at_holding = trades_at_holding['Trade Percent Change'].sum()
+        trades_failed = df[df['Trade Percent Change'] < -0.3]
         num_trades_failed = len(trades_failed)
-        sum_trades_failed = trades_failed['Original Percent Change'].sum()
+        sum_trades_failed = trades_failed['Trade Percent Change'].sum()
         
         content = []
         content.append(f"=== SUMMARY FOR {date} ===\n")
@@ -716,14 +716,14 @@ def Create_Summarized_Info_txt(df, date):
         for ticker in unique_tickers:
             ticker_df = df[df['Ticker'] == ticker]
             
-            ticker_total_percent = ticker_df['Original Percent Change'].sum()
+            ticker_total_percent = ticker_df['Trade Percent Change'].sum()
             ticker_total_dollar = ticker_df['Dollar Change'].sum()
-            ticker_trades_at_holding = ticker_df[ticker_df['Original Best Exit Percent'] > 0.6]
+            ticker_trades_at_holding = ticker_df[ticker_df['Trade Best Exit Percent'] > 0.6]
             ticker_num_trades_at_holding = len(ticker_trades_at_holding)
-            ticker_sum_percent_at_holding = ticker_trades_at_holding['Original Percent Change'].sum()
-            ticker_trades_failed = ticker_df[ticker_df['Original Percent Change'] < -0.3]
+            ticker_sum_percent_at_holding = ticker_trades_at_holding['Trade Percent Change'].sum()
+            ticker_trades_failed = ticker_df[ticker_df['Trade Percent Change'] < -0.3]
             ticker_num_trades_failed = len(ticker_trades_failed)
-            ticker_sum_percent_failed = ticker_trades_failed['Original Percent Change'].sum()
+            ticker_sum_percent_failed = ticker_trades_failed['Trade Percent Change'].sum()
             
             content.append(f"\n{ticker}:")
             content.append(f"  Total % Change: {ticker_total_percent:.2f}%")
@@ -751,8 +751,8 @@ def Create_Estimate_Columns(df, idx, ticker_df, exit_seconds):
         # Get the trade row from the dataframe at the given index
         trade = df.iloc[idx]
         
-        # step 1) skip trade if it's not a holder trade. A holder trade is one who's 'Original Best Exit Percent' value is at least 0.6
-        best_exit_percent = trade['Original Best Exit Percent']
+        # step 1) skip trade if it's not a holder trade. A holder trade is one who's 'Trade Best Exit Percent' value is at least 0.6
+        best_exit_percent = trade['Trade Best Exit Percent']
         if best_exit_percent is None or best_exit_percent < 0.6:
             return df  # Not a holder trade, skip analysis but return df
         

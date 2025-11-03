@@ -588,27 +588,55 @@ def Make_New_Csv_At_X_Line():
 #------------------------------------------------------------------------------------------
 
 # validate the file name is right and the date is correct format
-def Check_File_Name(file_path, market_data_file):
+# name should be {2 digit month}-{2 digit date}-{4 digit year}_Raw_Market_Data.csv
+# returns True if nothing changed, 'changed' if the filename changed, or False if it's super broken
+def Check_File_Name(market_data_file):
     try:
+        formatted_date = None
+
         parts = market_data_file.split("_")
         parts[-1] = parts[-1][:-4]  # cut off '.csv' from the end (we already know it's there)
 
-        if parts[:3] != ["Raw", "Market", "Data"]:
-            print(f"BAD: bad filename: {market_data_file}")
-            return False
-        
-        if len(parts) > 4:
-            if (parts[4:6] != ['On', 'Demand']):
+        if (len(parts[0]) != 10): # date
+            # find where date is
+            for i in range(len(parts)):
+                try:
+                    date_parts = parts[i].split('-')
+
+                    # verify the date format
+                    if (len(date_parts[0]) == 1):
+                        date_parts[0] = f'0{date_parts[0]}'
+                    if (len(date_parts[1]) == 1):
+                        date_parts[1] = f'0{date_parts[1]}'
+                    if (len(date_parts[2]) == 2):
+                        date_parts[2] = f'20{date_parts[2]}'
+
+                    if (len(date_parts[0]) > 2 or len(date_parts[1]) > 2 or len(date_parts[2]) > 4):
+                        print(f"BAD: bad filename: {market_data_file}")
+                        return False, market_data_file
+
+                    formatted_date = "-".join(date_parts)
+                    new_market_data_file = f"{formatted_date}_Raw_Market_Data.csv"
+                    print(f"Filename valid and changed to {new_market_data_file} from {market_data_file}")
+                    return 'changed', new_market_data_file
+
+                except:
+                    # it wasn't that part
+                    continue
+
+            if (formatted_date == None):
                 print(f"BAD: bad filename: {market_data_file}")
-                return False
-        
-        month, day, year = parts[3].split("-")
-        if (len(month) != 2 or len(day) != 2 or len(year) != 4):
-            print(f"BAD: bad filename: {market_data_file}")
-            return False
-        
-        print(f"Filename valid: {market_data_file}")
-        return True
+                return False, market_data_file
+
+        # if here then the date is parts[0]
+        test_filename = f"{parts[0]}_Raw_Market_Data.csv"
+        if (test_filename != market_data_file):
+            print(f"Filename valid and changed to {test_filename} from {market_data_file}")
+            return 'changed', test_filename
+
+        else:
+            print(f"Filename valid: {market_data_file}")
+            return True, market_data_file
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -715,16 +743,16 @@ def Check_Timestamp_Gaps(market_file_path, market_file):
             elif (market_file == 'Raw_Market_Data_07-15-2025.csv'):
                 print(f"   OK: market data starts at 06:34:52, and there currently aren't any trades for this. it should be noted where "
                       f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
-            elif (market_file == 'Raw_Market_Data_07-16-2025.csv'):
+            elif (market_file == 'Raw_Market_Data_07-16-2025.csv\n'):
                 print(f"   OK: market data starts at 06:33:18, and there currently aren't any trades for this. it should be noted where "
                       f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
-            elif (market_file == 'Raw_Market_Data_07-17-2025.csv'):
+            elif (market_file == 'Raw_Market_Data_07-17-2025.csv\n'):
                 print(f"   OK: market data starts at 06:31:22, and there currently aren't any trades for this. it should be noted where "
                       f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
-            elif (market_file == 'Raw_Market_Data_09-02-2025.csv'):
+            elif (market_file == 'Raw_Market_Data_09-02-2025.csv\n'):
                 print(f"   OK: market data starts at 06:32:22, and there currently aren't any trades for this. it should be noted where "
                       f"ever I keep track of this. Since it's in the morning I can't get reliable on demand data to fill it\n")
-            elif (market_file == 'Raw_Market_Data_10-09-2025.csv'):
+            elif (market_file == 'Raw_Market_Data_10-09-2025.csv\n'):
                 print(f"   OK: market data starts at 06:34:19, but I didn't take a trade during that time so it's fine. Since it's in "
                       f"the morning I can't get reliable on demand data to fill it\n")
             else:
@@ -772,7 +800,7 @@ def Check_Timestamp_Gaps(market_file_path, market_file):
             print(f"    Found {valid_start_timestamps} timestamps between 6:30:00-6:31:00")
             return True
         else:
-            raise ValueError()
+            return False
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -800,18 +828,18 @@ def Check_Ticker_Counts_Consistancy(market_file_path, market_file):
                 print(f"  ✗ BAD: Ticker count inconsistency detected in {market_file}")
                 print(f"    Difference ({difference}) >= 5")
                 if (min_count == 16302 and difference == 79):
-                    print("you know about this one, it's 5-20-2025, tesla, 79 difference. I don't really care so I'm skipping it")
+                    print("you know about this one, it's 5-20-2025, tesla, 79 difference. I don't really care so I'm skipping it\n")
                     return True
                 if (market_file == 'Raw_Market_Data_09-02-2025.csv'):
-                    print("you don't know what caused this, but you don't really care so you're skipping it")
+                    print("you don't know what caused this, but you don't really care so you're skipping it\n")
                     return True
                 return False
             else:
                 print(f"  ✓ GOOD: Ticker counts are consistent in {market_file}")
-                print(f"    Difference ({difference}) < 5")
+                print(f"    Difference ({difference}) < 5\n")
                 return True
         else:
-            print(f"  ✗ BAD: No tickers found in {market_file}")
+            print(f"  ✗ BAD: No tickers found in {market_file}\n")
             return False
 
     except Exception as e:
@@ -823,13 +851,16 @@ def Check_Market_Data_Column_Order(market_file_path, market_file):
     try:
         expected_headers = ["Ticker", "Price", "Val", "Avg", "Atr14", "Atr28", "Rsi", "Volume", "Adx28", 
                             "Adx14", "Adx7", "Volatility Percent", "Volatility Ratio", "Time"]
+        other_expected_headers = ["Ticker", "Price", "Val", "Avg", "Atr14", "Atr28", "Rsi", "Volume", "Adx28", 
+                            "Adx14", "Adx7", "Volatility Percent", 'Early Morning Atr Warmup Fix', "Volatility Ratio", 
+                            "Time"]
         
         df = pd.read_csv(market_file_path)
         actual_headers = list(df.columns)
         
-        if actual_headers != expected_headers:
+        if (actual_headers != expected_headers and actual_headers != other_expected_headers):
             print(f"✗ BAD: Header order mismatch in {market_file}")
-            print(f"  Expected: {expected_headers}")
+            print(f"  Expected: {expected_headers} (we also checked these headers + Early Morning Atr Warmup Fix)")
             print(f"  Actual:   {actual_headers}")
 
             if ('Macd Z-Score' in actual_headers):
@@ -918,73 +949,151 @@ def Fix_Morning_Atr_Issue(file_path):
         return False
 
 
+def Append_to_Df(market_data_state_tracker, filename, filepath, status, error_info=''):
+    date = datetime.now().strftime('%Y-%m-%d')
+
+    # if the file is already in here, it means it failed more than 2 check. just update the error info in this case
+    files = market_data_state_tracker['filename'].dropna()
+    if (filename in files):
+        market_data_state_tracker.at[files.index(filename), 'error_info'] += f", {error_info}"
+        market_data_state_tracker.at[files.index(filename), 'date checked'] = date
+        
+    else:
+        market_data_state_tracker.loc[len(market_data_state_tracker)] = {
+            'filename': filename,
+            'filepath': filepath,
+            'status': status,
+            'error_info': error_info,
+            'date checked': date
+        }
+
+    return market_data_state_tracker
+
+
+def Delete_From_DF(market_data_state_tracker, old_filename):
+    files = market_data_state_tracker['filename'].dropna()
+    if (old_filename in files):
+        row_index = files.index[files == old_filename][0]
+        market_data_state_tracker = market_data_state_tracker.drop(row_index)
+    else:
+        # if here it probably has never been validated and isn't in the df yet
+        pass
+    
+    return market_data_state_tracker 
+
+
 # controller to handle all validity checks of csv files
-def Authenticator_Freeway():
+# market_data_state_tracker is the df tracking if the files has been validated
+def Authenticator_Freeway(market_data_dir, filenames_to_validate, market_data_state_tracker):
     try:
-        market_data_dir = "Csv_Files/raw_Market_Data/market_data_to_check"
-        #market_data_dir = 'Holder_Strat/Approved_Checked_Market_Data'
-        market_data_csv_files = [f for f in os.listdir(market_data_dir) if f.endswith('.csv')]
+        files_with_errors = []
 
-        # the reason I split it into for loops and not 1 big for loop is so the results are organized
+        if not filenames_to_validate:
+            print("No new market data files to validate.")
+            return market_data_state_tracker, files_with_errors, filenames_to_validate 
 
-        # 1) check market order header is correct and there's not duplicate headers
-        for market_data_file in market_data_csv_files:
+        # 0) if it's on demand market data, classify it as erroneous
+        for filename in filenames_to_validate:
+            file_path = f"{market_data_dir}/{filename}"
+            if ('On_Demand' in filename):
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, file_path, 'failed validation', 'on demand data (invalid)')
+            
+        # 1) make sure the file name is correct and date is correct format
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
+            file_path = f"{market_data_dir}/{market_data_file}"
+
+            result, filename = Check_File_Name(market_data_file)
+            if (isinstance(result, bool) and result == False):
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad filename')
+            
+            elif (isinstance(result, str) and result == 'changed'):
+                # put the fixed filename everywhere
+                original_filename = market_data_file
+                filenames_to_validate[filenames_to_validate.index(market_data_file)] = filename
+                new_file_path = f"{market_data_dir}/{filename}"
+                # delete the entry for the old filename if it's there. it'll get added correctly later
+                market_data_state_tracker = Delete_From_DF(market_data_state_tracker, original_filename)
+                # rename the actual file
+                os.rename(file_path, new_file_path)
+
+        # 2) check market order header is correct and there's not duplicate headers
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
             file_path = f"{market_data_dir}/{market_data_file}"
             result = Check_Market_Data_Column_Order(file_path, market_data_file)
+            
             if result == "RECHECK":
-                # Re-run the check for this file after modification
                 print(f"Re-checking {market_data_file} after modification...")
                 result = Check_Market_Data_Column_Order(file_path, market_data_file)
-            if result == False or result == 'RECHECK':
-                return False
-        
-        # 2) check counts of tickers for each file. this'll tell if a ticker stopped being recorded for some reason
-        for market_data_file in market_data_csv_files:
-            file_path = f"{market_data_dir}/{market_data_file}"
-            if (Check_Ticker_Counts_Consistancy(file_path, market_data_file) == False):
-                return False
-        
-        # 3) check time gaps (if there's a big gap in recording)
-        for market_data_file in market_data_csv_files:
-            file_path = f"{market_data_dir}/{market_data_file}"
-            if (Check_Timestamp_Gaps(file_path, market_data_file) == False):
-                return False
-            
-        # 4) check required row values: every row has Ticker,Price,Val,Avg,Atr14,Atr28,Rsi,Volume,Adx28,Adx14,Adx7,Volatility Percent,Volatility Ratio,Time
-        for market_data_file in market_data_csv_files:
-            file_path = f"{market_data_dir}/{market_data_file}"
-            if (Check_Required_Market_Values(file_path, market_data_file) == False):
-                return False
-        print("\n")
 
-        # 5) make sure the file name is correct and date is correct format
-        for market_data_file in market_data_csv_files:
+            if result == False or result == 'RECHECK':
+                # Add a new row for failed header validation
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad headers')
+
+        # 3) check counts of tickers for each file. this'll tell if a ticker stopped being recorded for some reason
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
             file_path = f"{market_data_dir}/{market_data_file}"
-            if (Check_File_Name(file_path, market_data_file) == False):
-                return False
-        
+
+            if (Check_Ticker_Counts_Consistancy(file_path, market_data_file) == False):
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad ticker counts')
+
+        # 4) check time gaps (if there's a big gap in recording)
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
+            file_path = f"{market_data_dir}/{market_data_file}"
+
+            if (Check_Timestamp_Gaps(file_path, market_data_file) == False):
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad time gaps')
+
+        # 5) check required row values
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
+            file_path = f"{market_data_dir}/{market_data_file}"
+
+            if (Check_Required_Market_Values(file_path, market_data_file) == False):
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'row values')
+
         # 6) fix the atr14 warmup period issue (volatility percent)
         print("\nchecking if files have the early morning volatility percent fix. if not then it's created and saved here")
-        for market_data_file in market_data_csv_files:
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
             file_path = f"{market_data_dir}/{market_data_file}"
-            if (Fix_Morning_Atr_Issue(file_path) != True):
-                return False
-        print("voaltility percent is valid for these files")
 
-        print("\nFiles are valid")
+            if (Fix_Morning_Atr_Issue(file_path) != True):
+                files_with_errors.append(market_data_file)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'unable to fix morning atr14 issue')
+
+        print("volatility percent is valid for these files")
+
+        # now update the valid files status
+        for market_data_file in filenames_to_validate:
+            if ('On_Demand' in market_data_file):
+                continue
+            if (market_data_file not in files_with_errors):
+                file_path = f"{market_data_dir}/{market_data_file}"
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'validated-cleaned')
+
+        print("\nFiles have been checked. invalid files: \n")
+        for filename in files_with_errors:
+            print(f"    {filename}")
+
+        return market_data_state_tracker, files_with_errors, filenames_to_validate
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
     
-
-#Authenticator_Freeway()
-
-
-Authenticator_Freeway()
-
-#Re_Order_Columns()
-#Round_Whole_Column_Values("Csv_Files/raw_Market_Data/Raw_Market_Data_09-12-2025.csv", ['Volatility Percent', 'Volatility Ratio'], 2)
-
-
-
 

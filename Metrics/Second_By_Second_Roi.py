@@ -531,7 +531,7 @@ def Analyze_Optimal_Exit_Thresholds(roi_dictionary, tickers, thresholds=None):
 
 def Main():
     columns_to_keep = ["Date","Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", 
-                       "Entry Volatility Percent", "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
+                       "Entry Volatility Percent", "Trade Holding Reached", "Trade Best Exit Percent", "Trade Percent Change"]
     bulk_df = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
     
     market_data_dict_by_ticker = Load_Market_Data_Dictionary(bulk_df) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
