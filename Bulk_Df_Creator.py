@@ -37,29 +37,6 @@ def seconds_to_hms(seconds):
     return f"{hours:02d}:{minutes:02d}:{secs:02d}"
 
 
-def Check_Dirs(dir_list):
-    try:
-        print("Step 1: Checking if directories exist...")
-        
-        for directory in dir_list:
-            if not os.path.exists(directory):
-                os.makedirs(directory, exist_ok=True)
-                print(f"Created directory: {directory}")
-            else:
-                print(f"Directory already exists: {directory}")
-
-        for filename in os.listdir(dir_list[2]):
-            os.remove(f"{dir_list[2]}/{filename}")
-            print(f"Deleted: {filename}")
-
-        print("Step 1 completed: All directories verified/created. Old summary csv's deleted\n")
-        return True
-
-    except Exception as e:
-        Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
-        return False
-
-
 def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
     try:
         all_trade_dates = []
@@ -84,9 +61,7 @@ def Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days):
         # now look at market data, if we have a file for the trade date add that date to a list of valid dates
         for file in os.listdir(market_data_dir):
             if file.endswith('.csv'):
-                date = (file.split('_'))[3]  # month, day, year
-                if ".csv" in date:
-                    date = date[:-4] # live data goes ...date.csv
+                date = file.split('_')[0]
                 all_market_data_dates.append(date)
                 all_market_data_paths.append(f"{market_data_dir}/{file}")
         
@@ -903,9 +878,8 @@ def Create_Estimate_Columns(df, idx, ticker_df, exit_seconds):
         return None
 
 
-def Get_All_Trade_Log_Date():
+def Get_All_Trade_Log_Date(trade_log_dir):
     dates = []
-    trade_log_dir = "Holder_Strat/Holder_Strat_Trade_Logs"
 
     for file in os.listdir(trade_log_dir):
         if file.endswith('.csv'):
@@ -1017,30 +991,20 @@ def Create_Bulk_Summaries(summary_dir):
         return None, None
 
 
-def Controller(do_all_trade_logs):
-    # Get the directory where this script is located
-    script_dir = os.path.dirname(os.path.abspath(__file__))
-    
-    source_log_dir = os.path.join(script_dir, 'Holder_Strat_Trade_Logs')   # where the trade log csv's are
-    market_data_dir = "Holder_Strat/Approved_Checked_Market_Data"
-    summary_dir = os.path.join(script_dir, 'Summary_Csvs')
+def Controller(do_all_trade_logs):    
+    trade_log_dir = "Data_Files/Manual_Trade_Logs/Approved_Cleaned_Manual_Trade_Data"
+    market_data_dir = "Data_Files/Market_Data/Approved_Cleaned_Market_Data"
+    summary_dir = "Data_Files/Trade_Summaries"
 
-    # step 1) check directories/files, remove everything from the summary dir
-    # make the output csv, check the trade logs and market data dir exist
-    result = Check_Dirs([source_log_dir, market_data_dir, summary_dir])
-    if (result == False):
-        print("bad check directories")
-        return
-
-    # step 2) find all the valid trade days with their market data days. we skip days w/o market days
+    # step 1) only process days which have BOTH a trade log and a market data
     # [[trade file path, market data file path], ...]
     if (do_all_trade_logs == 'no'):
         do_set_days = ['06-24-2025'] # 'month-day-year'
     elif (do_all_trade_logs == 'yes'):
-        do_set_days = Get_All_Trade_Log_Date()
+        do_set_days = Get_All_Trade_Log_Date(trade_log_dir)
     else:
         return
-    file_pairs = Find_Valid_Files(market_data_dir, source_log_dir, do_set_days)
+    file_pairs = Find_Valid_Files(market_data_dir, trade_log_dir, do_set_days)
     if (file_pairs == []):
         print(f"no fail pairs found for date")
         return
@@ -1091,6 +1055,3 @@ def Controller(do_all_trade_logs):
         Create_Overall_Summary_Info_Txt(bulk_df)
     else:
         print("Failed to create bulk summaries CSV")
-
-
-Controller(do_all_trade_logs='yes')

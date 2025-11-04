@@ -17,7 +17,7 @@ fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
 
 def Append_to_Df(manual_trade_state_df, filename, filepath, status, error_info=''):
-    date = datetime.now().strftime('%Y-%m-%d')
+    date = datetime.now().strftime('%m-%d-%Y')
 
     # if the file is already in here, it means it failed more than 2 check. just update the error info in this case
     files = manual_trade_state_df['filename'].dropna()
@@ -153,7 +153,7 @@ def Check_File_Name(filename, unvalidated_manual_trade_logs_dir):
     return False, filename
 
 
-def Check_File_Content_Format(filename, path, manual_trade_state_df):
+def Check_File_Content_Format(filename, path):
     ''' this is the format they're in straight from tos. note: trades are sorted by time latest to earliest
     Today's Trade Activity for  (Virtual Account) on 9/22/25 07:34:24
 
@@ -172,6 +172,7 @@ def Check_File_Content_Format(filename, path, manual_trade_state_df):
     [random stuff we don't care about]
     '''
     # we want to delete everything before the column titles and everything after the last trade line. so basically make it into a formatted csv file
+    # we also want the date to be in format month-day-year. it comes as 10/7/25 by default
     
     # Read the file
     with open(path, 'r') as f:
@@ -235,13 +236,23 @@ def Check_File_Content_Format(filename, path, manual_trade_state_df):
         return False, message
     
     # Parse the datetime and sort by time (newest to oldest)
-    df['parsed_time'] = pd.to_datetime(df['Exec Time'], format='%m/%d/%y %H:%M:%S')
+    try:
+        df['parsed_time'] = pd.to_datetime(df['Exec Time'], format='%m/%d/%y %H:%M:%S')
+    except:
+        df['parsed_time'] = pd.to_datetime(df['Exec Time'], format='%m-%d-%Y %H:%M:%S')
     
     # Check if already sorted (newest to oldest. descending)
     if not df['parsed_time'].equals(df['parsed_time'].sort_values(ascending=False).reset_index(drop=True)):
         # Sort if not already sorted
         df = df.sort_values('parsed_time', ascending=False).reset_index(drop=True)
     
+    # Reformat Exec Time to MM-DD-YYYY with 4-digit year
+    try:
+        df['Exec Time'] = df['parsed_time'].dt.strftime('%m-%d-%Y %H:%M:%S')
+    except:
+        # if here it means the date was in the correct format already
+        pass
+
     # Drop the helper column
     df = df.drop(columns=['parsed_time'])
     
@@ -281,11 +292,11 @@ def Authenticator_Freeway(unvalidated_manual_trade_logs_dir, filenames_to_valida
         # 2) redo file format
         for filename in filenames_to_validate:
             path = f"{unvalidated_manual_trade_logs_dir}/{filename}"
-            result, message = Check_File_Content_Format(path)
+            result, message = Check_File_Content_Format(filename, path)
             if result == False:
                 manual_trade_state_df = Append_to_Df(manual_trade_state_df, filename, path, 'failed validation', error_info=message)
                 files_with_errors.append(filename)
-   
+
         # now update the valid files status
         for filename in filenames_to_validate:
             if (filename not in files_with_errors):
@@ -296,7 +307,7 @@ def Authenticator_Freeway(unvalidated_manual_trade_logs_dir, filenames_to_valida
         for filename in files_with_errors:
             print(f"    {filename}")
 
-        return manual_trade_state_df, files_with_errors, filenames_to_validate
+        return manual_trade_state_df, filenames_to_validate, files_with_errors
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)

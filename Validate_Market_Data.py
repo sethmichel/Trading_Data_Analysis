@@ -590,12 +590,14 @@ def Make_New_Csv_At_X_Line():
 # validate the file name is right and the date is correct format
 # name should be {2 digit month}-{2 digit date}-{4 digit year}_Raw_Market_Data.csv
 # returns True if nothing changed, 'changed' if the filename changed, or False if it's super broken
-def Check_File_Name(market_data_file):
+def Check_File_Name(filename):
     try:
         formatted_date = None
 
-        parts = market_data_file.split("_")
+        parts = filename.split("_")
         parts[-1] = parts[-1][:-4]  # cut off '.csv' from the end (we already know it's there)
+
+        
 
         if (len(parts[0]) != 10): # date
             # find where date is
@@ -612,12 +614,12 @@ def Check_File_Name(market_data_file):
                         date_parts[2] = f'20{date_parts[2]}'
 
                     if (len(date_parts[0]) > 2 or len(date_parts[1]) > 2 or len(date_parts[2]) > 4):
-                        print(f"BAD: bad filename: {market_data_file}")
-                        return False, market_data_file
+                        print(f"BAD: bad filename: {filename}")
+                        return False, None
 
                     formatted_date = "-".join(date_parts)
-                    new_market_data_file = f"{formatted_date}_Raw_Market_Data.csv"
-                    print(f"Filename valid and changed to {new_market_data_file} from {market_data_file}")
+                    new_market_data_file = f"{formatted_date}-Raw_Market_Data.csv"
+                    print(f"Filename valid and changed to {new_market_data_file} from {filename}")
                     return 'changed', new_market_data_file
 
                 except:
@@ -625,18 +627,18 @@ def Check_File_Name(market_data_file):
                     continue
 
             if (formatted_date == None):
-                print(f"BAD: bad filename: {market_data_file}")
-                return False, market_data_file
+                print(f"BAD: bad filename: {filename}")
+                return False, None
 
         # if here then the date is parts[0]
-        test_filename = f"{parts[0]}_Raw_Market_Data.csv"
-        if (test_filename != market_data_file):
-            print(f"Filename valid and changed to {test_filename} from {market_data_file}")
+        test_filename = f"{parts[0]}-Raw_Market_Data.csv"
+        if (test_filename != filename):
+            print(f"Filename valid and changed to {test_filename} from {filename}")
             return 'changed', test_filename
 
         else:
-            print(f"Filename valid: {market_data_file}")
-            return True, market_data_file
+            print(f"Filename valid: {filename}")
+            return True, filename
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
@@ -684,13 +686,14 @@ def Check_Required_Market_Values(file_path, market_data_file):
             if missing_row_numbers:
                 print(f"    First {len(missing_row_numbers)} row(s) with missing values (regardless of column): {missing_row_numbers}")
             
-            return False
+            return False, ''
         else:
             print(f"  ✓ GOOD: No missing values found in {market_data_file}")
-            return True
+            return True, ''
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)
+        return False, str(e)
     
 
 # checks market data file and returns false if a row has a gap of at least x seconds compared to the previous row
@@ -950,20 +953,25 @@ def Fix_Morning_Atr_Issue(file_path):
 
 
 def Append_to_Df(market_data_state_tracker, filename, filepath, status, error_info=''):
-    date = datetime.now().strftime('%Y-%m-%d')
+    date = datetime.now().strftime('%m-%d-%Y')
 
-    # if the file is already in here, it means it failed more than 2 check. just update the error info in this case
+    # if the file is already in here, it means it failed more than 2 checks
+    # also check that isn't not a duplicate file case
     files = market_data_state_tracker['filename'].dropna()
     if (filename in files):
-        market_data_state_tracker.at[files.index(filename), 'error_info'] += f", {error_info}"
-        market_data_state_tracker.at[files.index(filename), 'date checked'] = date
+        existing_error_info = market_data_state_tracker.at[files.index(filename), 'error_info']
+        if (error_info in existing_error_info):
+            return
+        else:
+            market_data_state_tracker.at[files.index(filename), 'error_info'] += f", {error_info}"
+            market_data_state_tracker.at[files.index(filename), 'date checked'] = date
         
     else:
         market_data_state_tracker.loc[len(market_data_state_tracker)] = {
             'filename': filename,
             'filepath': filepath,
             'status': status,
-            'error_info': error_info,
+            'error info': error_info,
             'date checked': date
         }
 
@@ -987,111 +995,108 @@ def Delete_From_DF(market_data_state_tracker, old_filename):
 def Authenticator_Freeway(market_data_dir, filenames_to_validate, market_data_state_tracker):
     try:
         files_with_errors = []
+        on_demand_files= []
 
-        if not filenames_to_validate:
+        if filenames_to_validate == []:
             print("No new market data files to validate.")
             return market_data_state_tracker, files_with_errors, filenames_to_validate 
 
         # 0) if it's on demand market data, classify it as erroneous
         for filename in filenames_to_validate:
-            file_path = f"{market_data_dir}/{filename}"
+            path = f"{market_data_dir}/{filename}"
             if ('On_Demand' in filename):
-                files_with_errors.append(filename)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, file_path, 'failed validation', 'on demand data (invalid)')
-            
-        # 1) make sure the file name is correct and date is correct format
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
+                on_demand_files.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'on demand data (invalid)')
+        # now remove any on demand files from files to validate
+        for filename in on_demand_files:
+            filenames_to_validate.pop(filenames_to_validate.index(filename))
 
-            result, filename = Check_File_Name(market_data_file)
+        # 1) make sure the file name is correct and date is correct format
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
+
+            result, new_filename = Check_File_Name(filename)
             if (isinstance(result, bool) and result == False):
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad filename')
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'bad filename')
             
             elif (isinstance(result, str) and result == 'changed'):
                 # put the fixed filename everywhere
-                original_filename = market_data_file
-                filenames_to_validate[filenames_to_validate.index(market_data_file)] = filename
-                new_file_path = f"{market_data_dir}/{filename}"
+                filenames_to_validate[filenames_to_validate.index(filename)] = new_filename
+                new_file_path = f"{market_data_dir}/{new_filename}"
                 # delete the entry for the old filename if it's there. it'll get added correctly later
-                market_data_state_tracker = Delete_From_DF(market_data_state_tracker, original_filename)
+                market_data_state_tracker = Delete_From_DF(market_data_state_tracker, filename)
                 # rename the actual file
-                os.rename(file_path, new_file_path)
+                os.rename(path, new_file_path)
 
         # 2) check market order header is correct and there's not duplicate headers
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
-            result = Check_Market_Data_Column_Order(file_path, market_data_file)
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
+            result = Check_Market_Data_Column_Order(path, filename)
             
             if result == "RECHECK":
-                print(f"Re-checking {market_data_file} after modification...")
-                result = Check_Market_Data_Column_Order(file_path, market_data_file)
+                print(f"Re-checking {filename} after modification...")
+                result = Check_Market_Data_Column_Order(path, filename)
 
             if result == False or result == 'RECHECK':
                 # Add a new row for failed header validation
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad headers')
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'bad headers')
 
         # 3) check counts of tickers for each file. this'll tell if a ticker stopped being recorded for some reason
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
 
-            if (Check_Ticker_Counts_Consistancy(file_path, market_data_file) == False):
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad ticker counts')
+            if (Check_Ticker_Counts_Consistancy(path, filename) == False):
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'bad ticker counts')
 
         # 4) check time gaps (if there's a big gap in recording)
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
 
-            if (Check_Timestamp_Gaps(file_path, market_data_file) == False):
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'bad time gaps')
+            if (Check_Timestamp_Gaps(path, filename) == False):
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'bad time gaps')
 
         # 5) check required row values
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
 
-            if (Check_Required_Market_Values(file_path, market_data_file) == False):
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'row values')
+            result, message = Check_Required_Market_Values(path, filename)
+            if (result == False):
+                files_with_errors.append(filename)
+                if (message == ''):
+                    message = 'row values'
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', message)
 
         # 6) fix the atr14 warmup period issue (volatility percent)
         print("\nchecking if files have the early morning volatility percent fix. if not then it's created and saved here")
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            file_path = f"{market_data_dir}/{market_data_file}"
+        for filename in filenames_to_validate:
+            path = f"{market_data_dir}/{filename}"
 
-            if (Fix_Morning_Atr_Issue(file_path) != True):
-                files_with_errors.append(market_data_file)
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'failed validation', 'unable to fix morning atr14 issue')
+            if (Fix_Morning_Atr_Issue(path) != True):
+                files_with_errors.append(filename)
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'failed validation', 'unable to fix morning atr14 issue')
 
         print("volatility percent is valid for these files")
 
         # now update the valid files status
-        for market_data_file in filenames_to_validate:
-            if ('On_Demand' in market_data_file):
-                continue
-            if (market_data_file not in files_with_errors):
-                file_path = f"{market_data_dir}/{market_data_file}"
-                market_data_state_tracker = Append_to_Df(market_data_state_tracker, market_data_file, file_path, 'validated-cleaned')
+        for filename in filenames_to_validate:
+            if (filename not in files_with_errors):
+                path = f"{market_data_dir}/{filename}"
+                market_data_state_tracker = Append_to_Df(market_data_state_tracker, filename, path, 'validated-cleaned')
+        
+        # now we need to re-add the on demand files to filesnames to validate because it'll causes inconsistancies and list problems later
+        # filenames to validate critically has the changed filenames
+        for filename in on_demand_files:
+            filenames_to_validate.append(filename)
 
-        print("\nFiles have been checked. invalid files: \n")
+        print("\nFiles have been checked. invalid files:")
         for filename in files_with_errors:
             print(f"    {filename}")
 
-        return market_data_state_tracker, files_with_errors, filenames_to_validate
+        return market_data_state_tracker, filenames_to_validate, files_with_errors, on_demand_files
 
     except Exception as e:
         Main_Globals.ErrorHandler(fileName, inspect.currentframe().f_code.co_name, str(e), sys.exc_info()[2].tb_lineno)

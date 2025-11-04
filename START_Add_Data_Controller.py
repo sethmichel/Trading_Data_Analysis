@@ -7,6 +7,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 import Main_Globals
 import Validate_Market_Data as VMD
 import Validate_Trade_Logs as VTL
+import Bulk_Df_Creator as BDC
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
@@ -47,15 +48,15 @@ def Find_Market_Data_Files_To_Be_Checked(market_data_state_df, all_filenames_in_
     return filenames_to_validate
 
 
-
 # moves both market data and manual trade logs
-def Move_Files(files_with_errors, all_filenames_in_original_dir, unvalidated_files_dir, 
-               erroneous_files_dir, approved_cleaned_files_dir):
-    # move each file based on whether it has errors; raise if duplicate exists at destination
-    for filename in all_filenames_in_original_dir:
+# filenames_to_validate has changed filenames, files with errors, and on demand (error) files
+def Move_Files(filenames_to_validate, files_with_errors, on_demand_files, unvalidated_files_dir, 
+                erroneous_files_dir, approved_cleaned_files_dir):
+    # move each file based on whether it has errors
+    for filename in filenames_to_validate:
         src_path = os.path.join(unvalidated_files_dir, filename)
 
-        if filename in files_with_errors:
+        if filename in files_with_errors or filename in on_demand_files:
             dest_dir = erroneous_files_dir
         else:
             dest_dir = approved_cleaned_files_dir
@@ -71,14 +72,19 @@ def Move_Files(files_with_errors, all_filenames_in_original_dir, unvalidated_fil
 # checks if all required files and directories exist. Creates them if they don't.
 # csv files are created with headers: filename, filepath, status, error info, date checked
 def Check_Files_And_Directories_Exist(*args):
-    directories = list(args)
+    csv_columns = ['filename', 'filepath', 'status', 'error info', 'date checked']
+    targets = list(args)
     
-    # Create directories if they don't exist
-    for directory in directories:
-        if not os.path.exists(directory):
-            os.makedirs(directory, exist_ok=True)
-            print(f"Created directory: {directory}")
-    
+    # Create directories/files if they don't exist
+    for target in targets:
+        if target.endswith('.csv'):
+            if not os.path.exists(target):
+                # create empty CSV with headers
+                pd.DataFrame(columns=csv_columns).to_csv(target, index=False)
+        else:
+            if not os.path.exists(target):
+                os.makedirs(target, exist_ok=True)    
+
 
 def Market_Data_Controller(recheck_failed_files):
     unvalidated_market_data_dir = "Data_Files/Market_Data/Unvalidated_Raw_Market_Data"
@@ -86,7 +92,8 @@ def Market_Data_Controller(recheck_failed_files):
     approved_cleaned_market_data_dir = "Data_Files/Market_Data/Approved_Cleaned_Market_Data"
     market_data_csv_state_manager_path = "Data_Files/Market_Data/Market_Data_Tracking.csv"
 
-    Check_Files_And_Directories_Exist(unvalidated_market_data_dir, erroneous_market_data_dir, approved_cleaned_market_data_dir)
+    Check_Files_And_Directories_Exist(unvalidated_market_data_dir, erroneous_market_data_dir, approved_cleaned_market_data_dir,
+                                      market_data_csv_state_manager_path)
     
     # 1) check the txt file for any new market data files, call market data checker file on them
     # columns: filename, filepath, status, error info, date checked
@@ -101,26 +108,26 @@ def Market_Data_Controller(recheck_failed_files):
 
     # run authenticator/validator using only files not already tracked
     # market_filenames_to_validate can change if we changed a filename format
-    market_data_state_df, files_with_errors, market_filenames_to_validate = VMD.Authenticator_Freeway(unvalidated_market_data_dir, 
-                            market_filenames_to_validate, market_data_state_df)
+    market_data_state_df, filenames_to_validate, files_with_errors, on_demand_files = VMD.Authenticator_Freeway(
+                            unvalidated_market_data_dir, market_filenames_to_validate, market_data_state_df)
 
     # move market files to reflect their validation status
-    Move_Files(files_with_errors, all_market_filenames_in_dir, unvalidated_market_data_dir, 
+    Move_Files(filenames_to_validate, files_with_errors, on_demand_files, unvalidated_market_data_dir, 
                 erroneous_market_data_dir, approved_cleaned_market_data_dir)
 
     # 2) record the date and file name of each validated/erroneous market file in the csv file
-    market_data_state_df.to_csv(market_data_csv_state_manager_path)
+    market_data_state_df.to_csv(market_data_csv_state_manager_path, index=False)
                                     
 
 def Manual_Trade_Controller(recheck_failed_files):
     approved_cleaned_manual_trade_logs_dir = "Data_Files/Manual_Trade_Logs/Approved_Cleaned_Manual_Trade_Data"
-    unvalidated_manual_trade_logs_dir = "Data_Files/Manual_Trade_Logs/Unvalidated_Manual_Trade_Data"
-    erroneous_manual_trade_logs_dir = "Data_Files/Manual_Trade_Logs/Erroneous_Manual_Trade_Data"
+    unvalidated_manual_trade_logs_dir = "Data_Files/Manual_Trade_Logs/Unvalidated_Manual_Trade_Logs"
+    erroneous_manual_trade_logs_dir = "Data_Files/Manual_Trade_Logs/Erroneous_Manual_Trade_Logs"
     manual_trade_csv_state_manager_path = "Data_Files/Manual_Trade_Logs/Manual_Trade_Log_Status.csv"
 
     # check folders/files exist or create them
     Check_Files_And_Directories_Exist(approved_cleaned_manual_trade_logs_dir, unvalidated_manual_trade_logs_dir, 
-                                      erroneous_manual_trade_logs_dir)
+                                      erroneous_manual_trade_logs_dir, manual_trade_csv_state_manager_path)
 
     # 3) check trade csv file for any new trade logs
     # columns: filename, filepath, status, error info, date checked
@@ -133,16 +140,15 @@ def Manual_Trade_Controller(recheck_failed_files):
         return
 
     # validate the trade logs
-    manual_trade_state_df, trade_files_with_errors, trade_filenames_to_validate = VTL.Authenticator_Freeway(
+    manual_trade_state_df, filenames_to_validate, trade_files_with_errors = VTL.Authenticator_Freeway(
                        unvalidated_manual_trade_logs_dir, trade_filenames_to_validate, manual_trade_state_df)
 
     # move trade files to reflect their validation status
-    Move_Files(trade_files_with_errors, all_trade_filenames_in_dir, unvalidated_manual_trade_logs_dir, 
+    Move_Files(filenames_to_validate, trade_files_with_errors, [], unvalidated_manual_trade_logs_dir, 
                 erroneous_manual_trade_logs_dir, approved_cleaned_manual_trade_logs_dir)
 
     # record the date and file name of each validated/erroneous market file in the csv file
-    manual_trade_state_df.to_csv(manual_trade_csv_state_manager_path)
-
+    manual_trade_state_df.to_csv(manual_trade_csv_state_manager_path, index=False)
 
 
 def Main():
@@ -164,11 +170,8 @@ def Main():
 
     Manual_Trade_Controller(recheck_failed_files)
 
-
-
-
-
-
+    # create summaries and save bulk df
+    BDC.Controller(do_all_trade_logs='yes')
 
 
 Main()
