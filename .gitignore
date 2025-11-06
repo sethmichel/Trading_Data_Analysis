@@ -27,6 +27,15 @@ XG_Boost_Feature_Analysis/Data.csv
 
 Grid_Search_Parameter_Tuning/Analysis_Results.txt
 
+Stat_Models/Holding_Model/Data/
+Stat_Models/Holding_Model/Diagnostics/
+Stat_Models/Sl_Model/Data/
+Stat_Models/Sl_Model/Diagnostics/
+Stat_Models/Success_Prob_Model/Data/
+Stat_Models/Success_Prob_Model/Diagnostics/
+Stat_Models/Target_Model/Data/
+Stat_Models/Target_Model/Diagnostics/
+
 Logs.txt
 
 # Byte-compiled / optimized / DLL files

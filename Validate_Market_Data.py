@@ -597,8 +597,6 @@ def Check_File_Name(filename):
         parts = filename.split("_")
         parts[-1] = parts[-1][:-4]  # cut off '.csv' from the end (we already know it's there)
 
-        
-
         if (len(parts[0]) != 10): # date
             # find where date is
             for i in range(len(parts)):

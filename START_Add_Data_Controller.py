@@ -8,6 +8,7 @@ import Main_Globals
 import Validate_Market_Data as VMD
 import Validate_Trade_Logs as VTL
 import Bulk_Df_Creator as BDC
+import PostGresSQL_Commands as Pg_Commands
 
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
@@ -97,7 +98,7 @@ def Market_Data_Controller(recheck_failed_files):
     
     # 1) check the txt file for any new market data files, call market data checker file on them
     # columns: filename, filepath, status, error info, date checked
-    market_data_state_df = pd.read_csv(market_data_csv_state_manager_path)
+    market_data_state_df = Pg_Commands.Download_Market_Data_Validation_Df()
 
     # collect all market data filenames from the unvalidated market data directory
     all_market_filenames_in_dir = os.listdir(unvalidated_market_data_dir)
@@ -116,7 +117,7 @@ def Market_Data_Controller(recheck_failed_files):
                 erroneous_market_data_dir, approved_cleaned_market_data_dir)
 
     # 2) record the date and file name of each validated/erroneous market file in the csv file
-    market_data_state_df.to_csv(market_data_csv_state_manager_path, index=False)
+    Pg_Commands.Upload_Market_Data_Validation_Df(market_data_state_df)
                                     
 
 def Manual_Trade_Controller(recheck_failed_files):
@@ -131,7 +132,7 @@ def Manual_Trade_Controller(recheck_failed_files):
 
     # 3) check trade csv file for any new trade logs
     # columns: filename, filepath, status, error info, date checked
-    manual_trade_state_df = pd.read_csv(manual_trade_csv_state_manager_path)
+    manual_trade_state_df = Pg_Commands.Download_Trade_Data_Validation_Df()
 
     all_trade_filenames_in_dir = os.listdir(unvalidated_manual_trade_logs_dir)
     trade_filenames_to_validate = Find_Market_Data_Files_To_Be_Checked(manual_trade_state_df, all_trade_filenames_in_dir,
@@ -147,14 +148,18 @@ def Manual_Trade_Controller(recheck_failed_files):
     Move_Files(filenames_to_validate, trade_files_with_errors, [], unvalidated_manual_trade_logs_dir, 
                 erroneous_manual_trade_logs_dir, approved_cleaned_manual_trade_logs_dir)
 
-    # record the date and file name of each validated/erroneous market file in the csv file
-    manual_trade_state_df.to_csv(manual_trade_csv_state_manager_path, index=False)
+    # record the date and file name of each validated/erroneous market file
+    Pg_Commands.Upload_Trade_Data_Validation_Df(manual_trade_state_df)
 
 
 def Main():
     trade_summaries_csv_dir = "Data_Files/Trade_Summaries/Summary_Csv_Files"
     trade_summaries_txt_dir = "Data_Files/Trade_Summaries/Summary_Text_Files"
-    
+
+    if (Pg_Commands.Connect_To_Db() == None):
+        # can't connect to database
+        return
+
     # check folders/files exist or create them
     Check_Files_And_Directories_Exist(trade_summaries_csv_dir, trade_summaries_txt_dir)
 
@@ -172,6 +177,7 @@ def Main():
 
     # create summaries and save bulk df
     BDC.Controller(do_all_trade_logs='yes')
+    Pg_Commands.Upload_Trade_Summaries_From_CSV()
 
 
 Main()
