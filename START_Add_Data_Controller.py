@@ -9,7 +9,9 @@ import Validate_Market_Data as VMD
 import Validate_Trade_Logs as VTL
 import Bulk_Df_Creator as BDC
 import PostGresSQL_Commands as Pg_Commands
-
+import Stat_Models.Model_Controller as Model_Controller
+import XG_Boost_Feature_Analysis.Train_Model as XG_Boost_Train_Model
+import Grid_Search_Parameter_Tuning.Grid_Search as Grid_Search
 fileName = os.path.basename(inspect.getfile(inspect.currentframe()))
 
 '''
@@ -179,5 +181,42 @@ def Main():
     BDC.Controller(do_all_trade_logs='yes')
     Pg_Commands.Upload_Trade_Summaries_From_CSV()
 
+    # retrain stat models (get new version id's first)
+    model_names = {'success probability', 'stop loss', 'target'}
+    new_version_ids = Pg_Commands.Find_New_Model_Versions(model_names)
 
+    success_prob_response_distribution_results, success_prob_diagnostics_results, success_prob_trade_diagnostic_results,\
+    sl_response_distribution_results, sl_diagnostics_results, sl_trade_diagnostic_results,\
+    target_response_distribution_results, target_diagnostics_results,\
+    target_trade_diagnostic_results = Model_Controller.Retrain_All_Stat_Models(model_names, new_version_ids)
+
+    Pg_Commands.Upload_Model_Diagnostics(new_version_ids, success_prob_response_distribution_results, 
+             success_prob_diagnostics_results, success_prob_trade_diagnostic_results,sl_response_distribution_results, 
+             sl_diagnostics_results, sl_trade_diagnostic_results,target_response_distribution_results, target_diagnostics_results,
+             target_trade_diagnostic_results)
+
+    # retrain xg boost model (if user wants to)
+    while True:
+        retrain_xgboost = input("Do you want to retrain the XGBoost feature importance model? (y/n): ").strip().lower()
+        if retrain_xgboost == 'y' or retrain_xgboost == 'n':
+            break
+    if (retrain_xgboost == 'y'):
+        # NOTE: this model outputs a ton of visuals. I don't save the metrics right now as the visuals are really all 
+        #       I care about
+        XG_Boost_Train_Model.Train_Model()
+
+    # Run Grid Search (if user wants to)
+    # WARNING: close everything else, this uses tons of ram and cpu
+    while True:
+        run_grid_search = input("Do you want to run grid search? (y/n): ").strip().lower()
+        if run_grid_search == 'y' or run_grid_search == 'n':
+            break
+    if (run_grid_search == 'y'):
+        while True:
+            confirmation = input("WARNING: close everything else, this uses tons of ram and cpu. do you really want to do this? (y/n): ").strip().lower()
+            if confirmation == 'y' or confirmation == 'n':
+                break
+        if (confirmation == 'y'):
+            Grid_Search.main()
+    
 Main()

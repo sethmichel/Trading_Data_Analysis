@@ -197,13 +197,18 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
         red_days_avg = 0
         green_days_avg = 0
 
-        f.write(f"\nTrades: {trades}\n")
-        f.write(f"Overall Total = {round(overall_sum, 2)}\n")
-        f.write(f"days = {days_count}\n")
-        f.write(f"Overall avg / trade = {overall_avg_per_trade}\n")
-        f.write(f"**divided by 6 = {round(overall_avg_per_trade / 6, 4)}\n")
-        f.write(f"Overall avg / day (BAD METRIC) = {overall_avg_per_day}\n")
-        f.write(f"divided by 6 (BAD METRIC) = {round(overall_avg_per_day / 6, 2)}\n")
+        diagnostic_results = {
+            'trades': trades, 'overall_roi_total': round(overall_sum, 2), 'days': days_count,
+            "avg_per_trade": overall_avg_per_trade, "avg_per_trade_divided_by_6": round(overall_avg_per_trade / 6, 4),
+            "overall_avg_per_day_BAD_METRIC": overall_avg_per_day, "overall_avg_per_day_divided_by_6_BAD_METRIC": round(overall_avg_per_day / 6, 2)
+        }
+        f.write(f"\nTrades: {diagnostic_results['trades']}\n")
+        f.write(f"Overall Total = {diagnostic_results['overall_roi_total']}\n")
+        f.write(f"days = {diagnostic_results['days']}\n")
+        f.write(f"Overall avg / trade = {diagnostic_results['avg_per_trade']}\n")
+        f.write(f"**divided by 6 = {diagnostic_results['avg_per_trade_divided_by_6']}\n")
+        f.write(f"Overall avg / day (BAD METRIC) = {diagnostic_results['overall_avg_per_day_BAD_METRIC']}\n")
+        f.write(f"divided by 6 (BAD METRIC) = {diagnostic_results['overall_avg_per_day_divided_by_6_BAD_METRIC']}\n")
 
         # get red/green data data
         red_data = []
@@ -222,9 +227,12 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
         if (len(green_data) != 0):
             green_days_avg = round(np.average(green_data) / 6, 2)
 
-        f.write(f"red days: {len(red_data)}/{days_count}\n")
-        f.write(f"avg red day: {red_days_avg}\n")
-        f.write(f"avg green day: {green_days_avg}\n")
+        diagnostic_results['red_days_count'] = f"{len(red_data)}/{days_count}"
+        diagnostic_results['avg_red_day'] = red_days_avg
+        diagnostic_results['avg_green_day'] = green_days_avg
+        f.write(f"red days: {diagnostic_results['red_days_count']}\n")
+        f.write(f"avg red day: {diagnostic_results['avg_red_day']}\n")
+        f.write(f"avg green day: {diagnostic_results['avg_green_day']}\n")
 
         # Compute ROI sums by x-minute entry time buckets between 06:30 and 07:30
         bucket_size_minutes = 10
@@ -272,6 +280,8 @@ def Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bul
 
         f.write(time_result_string)
 
+    return diagnostic_results
+
 
 # all_data_samples_x: [{trade_id: [minutes_since_open, volatility_percent]} ...]
 # all_roi_samples_y: [{trade_id: roi}, ...]
@@ -282,12 +292,14 @@ def Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, al
     """
     print("\nRunning model diagnostics...")
     # 0) Response variable distribution (Y)
-    Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot=False)
+    response_distribution_results = Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot=False)
     
     # Run residual plot analysis
-    Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
+    diagnostics_results = Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
     
     print("Diagnostics complete!")
+
+    return response_distribution_results, diagnostics_results
 
 
 def Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y):
@@ -305,6 +317,7 @@ def Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x,
     raw_x = []
     actual_y = []
     trade_ids = []
+    diagnostics_results = {'all_samples': {}, 'per_trade': {}}
     
     # Extract features and actual values
     for i, (x_dict, y_dict) in enumerate(zip(all_data_samples_x, all_roi_samples_y)):
@@ -377,27 +390,17 @@ def Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x,
     plt.savefig(plot_path, dpi=300, bbox_inches='tight')
     plt.show()
     
-    # Print diagnostic statistics
-    print(f"\nResidual Analysis Summary (All Samples):")
-    print(f"Number of data points: {len(residuals)}")
-    print(f"Number of unique trades: {len(unique_trade_ids)}")
-    print(f"Mean residual: {np.mean(residuals):.4f}")
-    print(f"Std deviation of residuals: {np.std(residuals):.4f}")
-    print(f"Min residual: {np.min(residuals):.4f}")
-    print(f"Max residual: {np.max(residuals):.4f}")
-    
-    # Check for patterns (basic statistical tests)
-    print(f"\nPattern Detection (All Samples):")
+    # Calculate diagnostic statistics
+    diagnostics_results['all_samples']['data_points_count'] = len(residuals)
+    diagnostics_results['all_samples']['unique_trades_count'] = len(unique_trade_ids)
+    diagnostics_results['all_samples']['mean_residual'] = np.mean(residuals)
+    diagnostics_results['all_samples']['std_deviation_of_residuals'] = np.std(residuals)
+    diagnostics_results['all_samples']['min_residual'] = np.min(residuals)
+    diagnostics_results['all_samples']['max_residual'] = np.max(residuals)
     
     # Calculate correlation between fitted values and residuals
     correlation = np.corrcoef(predictions, residuals)[0, 1]
-    print(f"Correlation between fitted values and residuals: {correlation:.4f}")
-    if abs(correlation) > 0.1:
-        print("  ⚠️  Warning: Moderate correlation detected - may indicate model issues")
-    elif abs(correlation) > 0.05:
-        print("  ⚠️  Slight correlation detected - monitor for patterns")
-    else:
-        print("  ✓ Low correlation - good sign")
+    diagnostics_results['all_samples']['correlation_btw_fitted_residuals'] = correlation
     
     # Check for heteroscedasticity (variance changes with fitted values)
     # Split data into low and high fitted value groups
@@ -409,9 +412,30 @@ def Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x,
         low_var = np.var(low_fitted_residuals)
         high_var = np.var(high_fitted_residuals)
         var_ratio = max(low_var, high_var) / min(low_var, high_var)
-        
-        print(f"Variance ratio (high/low fitted values): {var_ratio:.2f}")
-        if var_ratio > 2.0:
+        diagnostics_results['all_samples']['variance_ratio_high_low_fitted_values'] = var_ratio
+    
+    # Print diagnostic statistics
+    print(f"\nResidual Analysis Summary (All Samples):")
+    print(f"Number of data points: {diagnostics_results['all_samples']['data_points_count']}")
+    print(f"Number of unique trades: {diagnostics_results['all_samples']['unique_trades_count']}")
+    print(f"Mean residual: {diagnostics_results['all_samples']['mean_residual']:.4f}")
+    print(f"Std deviation of residuals: {diagnostics_results['all_samples']['std_deviation_of_residuals']:.4f}")
+    print(f"Min residual: {diagnostics_results['all_samples']['min_residual']:.4f}")
+    print(f"Max residual: {diagnostics_results['all_samples']['max_residual']:.4f}")
+    
+    # Check for patterns (basic statistical tests)
+    print(f"\nPattern Detection (All Samples):")
+    print(f"Correlation between fitted values and residuals: {diagnostics_results['all_samples']['correlation_btw_fitted_residuals']:.4f}")
+    if abs(diagnostics_results['all_samples']['correlation_btw_fitted_residuals']) > 0.1:
+        print("  ⚠️  Warning: Moderate correlation detected - may indicate model issues")
+    elif abs(diagnostics_results['all_samples']['correlation_btw_fitted_residuals']) > 0.05:
+        print("  ⚠️  Slight correlation detected - monitor for patterns")
+    else:
+        print("  ✓ Low correlation - good sign")
+    
+    if 'variance_ratio_high_low_fitted_values' in diagnostics_results['all_samples']:
+        print(f"Variance ratio (high/low fitted values): {diagnostics_results['all_samples']['variance_ratio_high_low_fitted_values']:.2f}")
+        if diagnostics_results['all_samples']['variance_ratio_high_low_fitted_values'] > 2.0:
             print("  ⚠️  Warning: Potential heteroscedasticity detected")
         else:
             print("  ✓ Variance appears relatively constant")
@@ -419,16 +443,18 @@ def Plot_Residuals_Vs_Fitted(model, scaler, smearing_factor, all_data_samples_x,
     print(f"\nPlot saved to: {plot_path}")
     
     # Now create the second plot with averaged data per trade
-    Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, trade_ids, unique_trade_ids)
+    diagnostics_results = Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, trade_ids, unique_trade_ids, diagnostics_results)
+
+    return diagnostics_results
 
 
-def Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, trade_ids, unique_trade_ids):
+def Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, trade_ids, unique_trade_ids, diagnostics_results):
     """
     Create a residual plot using the average residual and fitted value for each trade ID.
     This reduces each trade to a single data point.
     """
     print("\nCreating residual plot with mean values per trade...")
-    
+
     # Calculate mean fitted values and residuals for each trade
     mean_fitted_per_trade = []
     mean_residuals_per_trade = []
@@ -474,26 +500,16 @@ def Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, tr
     mean_fitted_array = np.array(mean_fitted_per_trade)
     mean_residuals_array = np.array(mean_residuals_per_trade)
     
-    print(f"\nResidual Analysis Summary (Mean per Trade):")
-    print(f"Number of trades: {len(mean_residuals_per_trade)}")
-    print(f"Mean residual: {np.mean(mean_residuals_array):.4f}")
-    print(f"Std deviation of residuals: {np.std(mean_residuals_array):.4f}")
-    print(f"Min residual: {np.min(mean_residuals_array):.4f}")
-    print(f"Max residual: {np.max(mean_residuals_array):.4f}")
-    
-    # Pattern detection for mean values
-    print(f"\nPattern Detection (Mean per Trade):")
+    diagnostics_results['per_trade']['trades_count'] = len(mean_residuals_per_trade)
+    diagnostics_results['per_trade']['mean_residual'] = np.mean(mean_residuals_array)
+    diagnostics_results['per_trade']['std_deviation_of_residuals'] = np.std(mean_residuals_array)
+    diagnostics_results['per_trade']['min_residual'] = np.min(mean_residuals_array)
+    diagnostics_results['per_trade']['max_residual'] = np.max(mean_residuals_array)
     
     # Calculate correlation between mean fitted values and mean residuals
     if len(mean_fitted_per_trade) > 1:
         correlation = np.corrcoef(mean_fitted_array, mean_residuals_array)[0, 1]
-        print(f"Correlation between fitted values and residuals: {correlation:.4f}")
-        if abs(correlation) > 0.1:
-            print("  ⚠️  Warning: Moderate correlation detected - may indicate model issues")
-        elif abs(correlation) > 0.05:
-            print("  ⚠️  Slight correlation detected - monitor for patterns")
-        else:
-            print("  ✓ Low correlation - good sign")
+        diagnostics_results['per_trade']['correlation_btw_fitted_residuals'] = correlation
         
         # Check for heteroscedasticity with mean values
         median_fitted = np.median(mean_fitted_array)
@@ -504,14 +520,38 @@ def Plot_Residuals_Vs_Fitted_Mean_Per_Trade(predictions, residuals, actual_y, tr
             low_var = np.var(low_fitted_residuals)
             high_var = np.var(high_fitted_residuals)
             var_ratio = max(low_var, high_var) / min(low_var, high_var) if min(low_var, high_var) > 0 else float('inf')
-            
-            print(f"Variance ratio (high/low fitted values): {var_ratio:.2f}")
-            if var_ratio > 2.0:
+            diagnostics_results['per_trade']['variance_ratio_high_low_fitted_values'] = var_ratio
+    
+    # Print diagnostic statistics for mean values
+    print(f"\nResidual Analysis Summary (Mean per Trade):")
+    print(f"Number of trades: {diagnostics_results['per_trade']['trades_count']}")
+    print(f"Mean residual: {diagnostics_results['per_trade']['mean_residual']:.4f}")
+    print(f"Std deviation of residuals: {diagnostics_results['per_trade']['std_deviation_of_residuals']:.4f}")
+    print(f"Min residual: {diagnostics_results['per_trade']['min_residual']:.4f}")
+    print(f"Max residual: {diagnostics_results['per_trade']['max_residual']:.4f}")
+    
+    # Pattern detection for mean values
+    print(f"\nPattern Detection (Mean per Trade):")
+    
+    if 'correlation_btw_fitted_residuals' in diagnostics_results['per_trade']:
+        print(f"Correlation between fitted values and residuals: {diagnostics_results['per_trade']['correlation_btw_fitted_residuals']:.4f}")
+        if abs(diagnostics_results['per_trade']['correlation_btw_fitted_residuals']) > 0.1:
+            print("  ⚠️  Warning: Moderate correlation detected - may indicate model issues")
+        elif abs(diagnostics_results['per_trade']['correlation_btw_fitted_residuals']) > 0.05:
+            print("  ⚠️  Slight correlation detected - monitor for patterns")
+        else:
+            print("  ✓ Low correlation - good sign")
+        
+        if 'variance_ratio_high_low_fitted_values' in diagnostics_results['per_trade']:
+            print(f"Variance ratio (high/low fitted values): {diagnostics_results['per_trade']['variance_ratio_high_low_fitted_values']:.2f}")
+            if diagnostics_results['per_trade']['variance_ratio_high_low_fitted_values'] > 2.0:
                 print("  ⚠️  Warning: Potential heteroscedasticity detected")
             else:
                 print("  ✓ Variance appears relatively constant")
     
     print(f"\nPlot saved to: {plot_path}")
+    
+    return diagnostics_results
 
 
 # keep: this is useful for assessing what optimizations we can do next. it's the distribution of y values
@@ -524,6 +564,8 @@ def Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot
     """
     # Extract response values preserving original scale (percent ROI)
     y_values = []
+    response_distribution_results = {}
+
     for roi_dict in all_roi_samples_y:
         _, roi_value = next(iter(roi_dict.items()))
         try:
@@ -537,52 +579,64 @@ def Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot
 
     y = np.array(y_values, dtype=float)
 
-    # Basic statistics
-    count = y.size
-    y_min = float(np.min(y))
-    y_max = float(np.max(y))
-    y_mean = float(np.mean(y))
-    y_median = float(np.median(y))
-    y_std = float(np.std(y))
+    # Calculate diagnostic statistics
+    response_distribution_results['count'] = y.size
+    response_distribution_results['min'] = float(np.min(y))
+    response_distribution_results['max'] = float(np.max(y))
+    response_distribution_results['mean'] = float(np.mean(y))
+    response_distribution_results['median'] = float(np.median(y))
+    response_distribution_results['std_dev'] = float(np.std(y))
 
     # Percentiles
     percentiles_list = [1, 5, 10, 25, 50, 75, 90, 95, 99]
     pct_vals = np.percentile(y, percentiles_list).tolist()
+    response_distribution_results['percentiles'] = {
+        'p1': pct_vals[0],
+        'p5': pct_vals[1],
+        'p10': pct_vals[2],
+        'p25': pct_vals[3],
+        'p50': pct_vals[4],
+        'p75': pct_vals[5],
+        'p90': pct_vals[6],
+        'p95': pct_vals[7],
+        'p99': pct_vals[8]
+    }
 
     # Skewness and kurtosis (excess) without SciPy
-    if y_std > 0:
-        centered = y - y_mean
-        skewness = float(np.mean(centered ** 3) / (y_std ** 3))
-        kurtosis_excess = float(np.mean(centered ** 4) / (y_std ** 4) - 3.0)
+    if response_distribution_results['std_dev'] > 0:
+        centered = y - response_distribution_results['mean']
+        y_std = response_distribution_results['std_dev']
+        response_distribution_results['skewness'] = float(np.mean(centered ** 3) / (y_std ** 3))
+        response_distribution_results['kurtosis_excess'] = float(np.mean(centered ** 4) / (y_std ** 4) - 3.0)
     else:
-        skewness = 0.0
-        kurtosis_excess = 0.0
+        response_distribution_results['skewness'] = 0.0
+        response_distribution_results['kurtosis_excess'] = 0.0
 
     # Useful thresholds for trading context
-    frac_lt_0 = float(np.mean(y < 0))
-    frac_ge_target = float(np.mean(y >= 0.6))  # >= original target
-    frac_between_0_0p1 = float(np.mean((y >= 0) & (y < 0.1)))
+    response_distribution_results['frac_lt_0'] = float(np.mean(y < 0))
+    response_distribution_results['frac_ge_target'] = float(np.mean(y >= 0.6))  # >= original target
+    response_distribution_results['frac_between_0_0p1'] = float(np.mean((y >= 0) & (y < 0.1)))
 
     # Write summary to file
     file_path = f'{target_dir}/Diagnostics/Response_Distribution_Summary_{version}.txt'
     with open(file_path, 'w') as f:
         f.write('Response (Y) Distribution Summary - Best Future ROI\n')
         f.write('===============================================\n')
-        f.write(f'Count: {count}\n')
-        f.write(f'Min: {y_min:.4f}%\n')
-        f.write(f'P1/P5/P10: {pct_vals[0]:.4f}% / {pct_vals[1]:.4f}% / {pct_vals[2]:.4f}%\n')
-        f.write(f'P25/P50/P75: {pct_vals[3]:.4f}% / {pct_vals[4]:.4f}% / {pct_vals[5]:.4f}%\n')
-        f.write(f'P90/P95/P99: {pct_vals[6]:.4f}% / {pct_vals[7]:.4f}% / {pct_vals[8]:.4f}%\n')
-        f.write(f'Max: {y_max:.4f}%\n')
-        f.write(f'Mean: {y_mean:.4f}%\n')
-        f.write(f'Median: {y_median:.4f}%\n')
-        f.write(f'Std Dev: {y_std:.4f}\n')
-        f.write(f'Skewness: {skewness:.4f}\n')
-        f.write(f'Excess Kurtosis: {kurtosis_excess:.4f}\n')
+        f.write(f'Count: {response_distribution_results["count"]}\n')
+        f.write(f'Min: {response_distribution_results["min"]:.4f}%\n')
+        f.write(f'P1/P5/P10: {response_distribution_results["percentiles"]["p1"]:.4f}% / {response_distribution_results["percentiles"]["p5"]:.4f}% / {response_distribution_results["percentiles"]["p10"]:.4f}%\n')
+        f.write(f'P25/P50/P75: {response_distribution_results["percentiles"]["p25"]:.4f}% / {response_distribution_results["percentiles"]["p50"]:.4f}% / {response_distribution_results["percentiles"]["p75"]:.4f}%\n')
+        f.write(f'P90/P95/P99: {response_distribution_results["percentiles"]["p90"]:.4f}% / {response_distribution_results["percentiles"]["p95"]:.4f}% / {response_distribution_results["percentiles"]["p99"]:.4f}%\n')
+        f.write(f'Max: {response_distribution_results["max"]:.4f}%\n')
+        f.write(f'Mean: {response_distribution_results["mean"]:.4f}%\n')
+        f.write(f'Median: {response_distribution_results["median"]:.4f}%\n')
+        f.write(f'Std Dev: {response_distribution_results["std_dev"]:.4f}\n')
+        f.write(f'Skewness: {response_distribution_results["skewness"]:.4f}\n')
+        f.write(f'Excess Kurtosis: {response_distribution_results["kurtosis_excess"]:.4f}\n')
         f.write('\nShares of interest:\n')
-        f.write(f'  < 0%: {frac_lt_0:>.2%}\n')
-        f.write(f'  >= 0.6% (target): {frac_ge_target:>.2%}\n')
-        f.write(f'  [0%, 0.1%): {frac_between_0_0p1:>.2%}\n')
+        f.write(f'  < 0%: {response_distribution_results["frac_lt_0"]:>.2%}\n')
+        f.write(f'  >= 0.6% (target): {response_distribution_results["frac_ge_target"]:>.2%}\n')
+        f.write(f'  [0%, 0.1%): {response_distribution_results["frac_between_0_0p1"]:>.2%}\n')
 
     print(f"\nResponse distribution summary written to: {file_path}")
 
@@ -591,7 +645,7 @@ def Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot
     if save_hist:
         plt.figure(figsize=(10, 6))
         # Use a simple rule for bin count for readability
-        num_bins = max(20, int(np.ceil(np.sqrt(count))))
+        num_bins = max(20, int(np.ceil(np.sqrt(response_distribution_results['count']))))
         plt.hist(y, bins=num_bins, color='steelblue', edgecolor='black', alpha=0.75)
         plt.axvline(0, color='red', linestyle='--', linewidth=1, alpha=0.7)
         plt.axvline(0.6, color='green', linestyle='--', linewidth=1, alpha=0.7)
@@ -606,3 +660,5 @@ def Summarize_Response_Distribution(all_roi_samples_y, save_hist=True, show_plot
         else:
             plt.close()
         print(f'Histogram saved to: {histogram_file_path}')
+    
+    return response_distribution_results

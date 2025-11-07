@@ -15,22 +15,29 @@ NOTE: market data has 'Volatility Percent' and 'Early Morning Atr Warmup Fix'. v
 for 14 minutes. after 14 minutes the warmupfix column is nan. thus it's best to overwrite vol% column with warmup fix column for first 14 minutes
 
 '''
-
-
-target_model_version = 'v0.2'
-sl_model_version = 'v0.2'
-success_prob_model_version = 'v0.1'
-Target_Model_Training.Set_Version(target_model_version)
-Target_Model_Diagnostics.Set_Version(target_model_version)
-Sl_Model_Training.Set_Version(sl_model_version)
-Sl_Model_Diagnostics.Set_Version(sl_model_version)
-Success_Prob_Model_Training.Set_Version(success_prob_model_version)
-Success_Prob_Model_Diagnostics.Set_Version(success_prob_model_version)
-
+target_model_version = None
+sl_model_version = None
+success_prob_version = None
 columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", 'Entry Volatility Ratio', "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
 bulk_df_all_values = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
 LOAD_SAVED_MARKET_DATA = True
 market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df_all_values, LOAD_SAVED_MARKET_DATA) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
+
+
+def Set_All_Model_Versions(new_version_ids):
+    global target_model_version, sl_model_version, success_prob_version
+
+    Target_Model_Training.Set_Version(new_version_ids['target'])
+    Target_Model_Diagnostics.Set_Version(new_version_ids['target'])
+    target_model_version = new_version_ids['target']
+
+    Sl_Model_Training.Set_Version(new_version_ids['stop loss'])
+    Sl_Model_Diagnostics.Set_Version(new_version_ids['stop loss'])
+    sl_model_version = new_version_ids['stop loss']
+    
+    Success_Prob_Model_Training.Set_Version(new_version_ids['success probability'])
+    Success_Prob_Model_Diagnostics.Set_Version(new_version_ids['success probability'])
+    success_prob_version = new_version_ids['success probability']
 
 
 # TARGET MODEL --------------------------------------------
@@ -97,14 +104,17 @@ def Target_Model_Run_Diagnostics():
     # NOTE: remember target model is trained on only winning trades. so depending on the test you may need to filter bulk_df_all_values
 
     # actual diagnostics
-    Target_Model_Diagnostics.Run_Model_Diagnostics(model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
+    response_distribution_results, diagnostics_results = Target_Model_Diagnostics.Run_Model_Diagnostics(
+                                model, scaler, smearing_factor, all_data_samples_x, all_roi_samples_y)
 
     # run model over trade history
     mode = 'model values' # 'model values' means use model, 'max values' means use hard coded max values
-    Target_Model_Diagnostics.Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df_all_values, market_data_dict_by_ticker, 
+    trade_diagnostic_results = Target_Model_Diagnostics.Run_Model_Performance_Over_Trade_History(model, scaler, smearing_factor, bulk_df_all_values, market_data_dict_by_ticker, 
                                              roi_dictionary, trade_end_timestamps, trade_start_indexes, mode)    
 
     Target_Model_Diagnostics.Get_Model_Test_Values(bulk_df_all_values, model, scaler, smearing_factor)
+
+    return response_distribution_results, diagnostics_results, trade_diagnostic_results
 
 # ---------------------------------------------------------
 
@@ -228,7 +238,7 @@ def Train_Success_Prob_Model():
         Success_Prob_Model_Training.Save_Training_Data(results_df, neither_count, trade_count)
 
         print("="*30)
-        print(f"SUCCESS PROBABILITY MODEL MODEL TRAINING SUMMARY {success_prob_model_version}\n")
+        print(f"SUCCESS PROBABILITY MODEL MODEL TRAINING SUMMARY {success_prob_version}\n")
         print(f"neither count: {neither_count}")
         print(f"data size (w/o neither trades): {len(bulk_df_all_values)}\n")
 
@@ -259,8 +269,18 @@ def Success_Prob_Model_Run_Diagnostics():
 
 # ---------------------------------------------------------
 
+def Retrain_All_Stat_Models(model_names, new_version_ids):
+    Set_All_Model_Versions(new_version_ids)
 
-#Train_Target_Model()
-Target_Model_Run_Diagnostics()
+    Train_Success_Prob_Model()
+    success_prob_response_distribution_results, success_prob_diagnostics_results, success_prob_trade_diagnostic_results = Success_Prob_Model_Run_Diagnostics()
 
-#Train_Success_Prob_Model()
+    Train_Sl_Model()
+    sl_response_distribution_results, sl_diagnostics_results, sl_trade_diagnostic_results = Sl_Model_Run_Diagnostics()
+
+    Train_Target_Model()
+    target_response_distribution_results, target_diagnostics_results, target_trade_diagnostic_results = Target_Model_Run_Diagnostics()
+
+    return success_prob_response_distribution_results, success_prob_diagnostics_results, success_prob_trade_diagnostic_results,\
+           sl_response_distribution_results, sl_diagnostics_results, sl_trade_diagnostic_results,\
+           target_response_distribution_results, target_diagnostics_results, target_trade_diagnostic_results

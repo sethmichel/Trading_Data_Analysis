@@ -496,7 +496,7 @@ def Create_2D_List_From_Df(df, target_1s, stop_loss_1s, target_3s, stop_loss_2s,
 how to estimate valid combos: each list length * the other lengths * 0.786 (removes the invalid combos)
 60 million used to take about 11 minutes
 
-current implementation 7/31/25
+Old implementation 7/31/25
 -finding 2 million combos: 5-7 seconds
 -processing: 13-22.7 seconds
     -finding filtered rows/filtered data: 12 seconds
@@ -505,7 +505,6 @@ current implementation 7/31/25
     -Parallel_Process_Helper(): 1 second
     -sublist creation for loop: 5.2 seconds
 test data time group by time with only: ['6:30:00', '6:40:00', '6:50:00']: 30 seconds
-real data: including time, if there's 291 million combos it takes 21 minutes on 250 data points
 '''
 def Grid_Search_Start(df):
     try:

@@ -577,6 +577,213 @@ def Download_Trade_Summaries_To_Dataframe():
         return None
 
 
+def Get_Model_Diagnostics_Column_Names():
+    """
+    Query the database to get all column names from model_diagnostics table,
+    excluding the metadata columns (model_name, version_id, created, features).
+    """
+    function_name = inspect.currentframe().f_code.co_name
+    
+    try:
+        cursor = conn.cursor()
+        
+        # Query to get column names from the table
+        query = """
+            SELECT column_name 
+            FROM information_schema.columns 
+            WHERE table_name = 'model_diagnostics' 
+            AND column_name NOT IN ('model_name', 'version_id', 'created', 'features')
+            ORDER BY ordinal_position
+        """
+        
+        cursor.execute(query)
+        results = cursor.fetchall()
+        cursor.close()
+        
+        # Extract column names from results
+        column_names = [row[0] for row in results]
+        
+        msg = f"Retrieved {len(column_names)} column names from model_diagnostics table"
+        Main_Globals.logger.info(f"{fileName} - {function_name}() - {msg}")
+        
+        return column_names
+        
+    except Exception as e:
+        msg = f"Error getting column names from model_diagnostics table: {e}"
+        Main_Globals.logger.error(f"{fileName} - {function_name}() - Line {sys.exc_info()[2].tb_lineno}: {msg}")
+        raise
+
+
+def Find_New_Model_Versions(model_names):
+    function_name = inspect.currentframe().f_code.co_name
+    cursor = conn.cursor()
+    
+    # Get current max version_id for each model
+    version_ids = {}
+    for model_key, model_name in model_names.items():
+        cursor.execute("""
+            SELECT MAX(version_id) 
+            FROM model_diagnostics 
+            WHERE model_name = %s
+        """, (model_name,))
+        
+        result = cursor.fetchone()
+        max_version = result[0] if result[0] is not None else 0.09
+        
+        # Increment by 0.01
+        new_version = round(max_version + 0.01, 2)
+        version_ids[model_key] = new_version
+        
+        msg = f"Model '{model_name}': previous version = {max_version}, new version = {new_version}"
+        Main_Globals.logger.info(f"{fileName} - {function_name}() - {msg}")
+        print(msg)
+    
+    cursor.close()
+    
+    msg = "Version IDs determined for all models"
+    Main_Globals.logger.info(f"{fileName} - {function_name}() - {msg}")
+    print(msg)
+
+    return version_ids
+
+
+def Upload_Model_Diagnostics(new_version_ids, success_prob_response_distribution_results, success_prob_diagnostics_results, 
+             success_prob_trade_diagnostic_results,sl_response_distribution_results, sl_diagnostics_results,
+             sl_trade_diagnostic_results,target_response_distribution_results, target_diagnostics_results,
+             target_trade_diagnostic_results):
+    """
+    Upload model diagnostics for all three models (success_prob, sl, target).
+    Automatically increments version_id by 0.01 for each model based on their current max version.
+    Each model gets its own row in the table.
+    """
+    try:
+        function_name = inspect.currentframe().f_code.co_name
+        today = datetime.now().date()
+        model_names = {
+            'success_prob': 'success probability',
+            'sl': 'stop loss',
+            'target': 'target'
+        }
+        model_features = {
+            'success probability': 2,
+            'stop loss': 2,
+            'target': 2
+        }
+        
+        all_columns = Get_Model_Diagnostics_Column_Names()
+        
+        # Organize all diagnostic data by model
+        model_data = {
+            'success_prob': {
+                'response_dist': success_prob_response_distribution_results,
+                'diagnostics': success_prob_diagnostics_results,
+                'trade_diagnostics': success_prob_trade_diagnostic_results
+            },
+            'sl': {
+                'response_dist': sl_response_distribution_results,
+                'diagnostics': sl_diagnostics_results,
+                'trade_diagnostics': sl_trade_diagnostic_results
+            },
+            'target': {
+                'response_dist': target_response_distribution_results,
+                'diagnostics': target_diagnostics_results,
+                'trade_diagnostics': target_trade_diagnostic_results
+            }
+        }
+        
+        cursor = conn.cursor()
+        rows_inserted = 0
+        
+        # Insert one row for each model
+        for model_key, model_full_name in model_names.items():
+            # Create a dictionary to hold all column values (initialized to None)
+            column_values = {col: None for col in all_columns}
+            
+            # Get data for this specific model
+            data = model_data[model_key]
+            
+            # 1. Process response distribution results
+            # Column names like: response_dist_count, response_dist_min, response_dist_p1, etc.
+            if data['response_dist']:
+                for key, value in data['response_dist'].items():
+                    if key == 'percentiles' and isinstance(value, dict):
+                        # Handle nested percentiles
+                        for percentile_key, percentile_value in value.items():
+                            column_name = f"response_dist_{percentile_key}"
+                            if column_name in column_values:
+                                column_values[column_name] = percentile_value
+                    else:
+                        column_name = f"response_dist_{key}"
+                        if column_name in column_values:
+                            column_values[column_name] = value
+            
+            # 2. Process diagnostics results (all_samples and per_trade)
+            # Column names like: all_samples_data_points_count, per_trade_trades_count, etc.
+            if data['diagnostics']:
+                if 'all_samples' in data['diagnostics']:
+                    for key, value in data['diagnostics']['all_samples'].items():
+                        column_name = f"all_samples_{key}"
+                        if column_name in column_values:
+                            column_values[column_name] = value
+                
+                if 'per_trade' in data['diagnostics']:
+                    for key, value in data['diagnostics']['per_trade'].items():
+                        column_name = f"per_trade_{key}"
+                        if column_name in column_values:
+                            column_values[column_name] = value
+            
+            # 3. Process trade diagnostic results
+            # Column names like: trade_test_overall_roi_total, etc.
+            if data['trade_diagnostics']:
+                for key, value in data['trade_diagnostics'].items():
+                    column_name = f"trade_test_{key}"
+                    if column_name in column_values:
+                        column_values[column_name] = value
+            
+            # Build the INSERT statement
+            # Columns: model_name, version_id, created, features, + all diagnostic columns
+            insert_columns = ['model_name', 'version_id', 'created', 'features'] + all_columns
+            placeholders = ', '.join(['%s'] * len(insert_columns))
+            columns_str = ', '.join(insert_columns)
+            
+            insert_query = f"""
+                INSERT INTO model_diagnostics ({columns_str})
+                VALUES ({placeholders})
+            """
+            
+            # Build the values tuple
+            values = [
+                model_full_name,
+                new_version_ids[model_key],
+                today,
+                model_features[model_full_name]
+            ] + [column_values[col] for col in all_columns]
+            
+            # Execute the insert
+            cursor.execute(insert_query, values)
+            rows_inserted += 1
+            
+            msg = f"Inserted diagnostics for model '{model_full_name}' version {new_version_ids[model_key]}"
+            Main_Globals.logger.info(f"{fileName} - {function_name}() - {msg}")
+            print(msg)
+        
+        conn.commit()
+        cursor.close()
+        
+        msg = f"Successfully uploaded diagnostics for {rows_inserted} models"
+        Main_Globals.logger.info(f"{fileName} - {function_name}() - {msg}")
+        print(msg)
+        
+        return True
+        
+    except Exception as e:
+        conn.rollback()
+        msg = f"Error uploading model diagnostics: {e}"
+        Main_Globals.logger.error(f"{fileName} - {function_name}() - Line {sys.exc_info()[2].tb_lineno}: {msg}")
+        print(msg)
+        return False
+
+
 # connect to and return a db connection, retrying x number of times
 def Connect_To_Db():
     global conn
