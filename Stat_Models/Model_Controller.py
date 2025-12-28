@@ -18,8 +18,9 @@ for 14 minutes. after 14 minutes the warmupfix column is nan. thus it's best to 
 target_model_version = None
 sl_model_version = None
 success_prob_version = None
-columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", 'Entry Volatility Ratio', "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"]
-bulk_df_all_values = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
+columns_to_keep = ["Date", "Trade Id", "Ticker", "Entry Time", "Time in Trade", "Entry Price", "Exit Price", "Trade Type", "Exit Price", "Entry Volatility Percent", 'Entry Volatility Ratio'] # "Original Holding Reached", "Original Best Exit Percent", "Original Percent Change"
+#bulk_df_all_values = pd.read_csv("Holder_Strat/Summary_Csvs/bulk_summaries.csv")[columns_to_keep]
+bulk_df_all_values = pd.read_csv("Stat_Models/bulk_summaries.csv")[columns_to_keep]
 LOAD_SAVED_MARKET_DATA = True
 market_data_dict_by_ticker = Helper_Functions.Load_Market_Data_Dictionary(bulk_df_all_values, LOAD_SAVED_MARKET_DATA) # {date: {ticker: dataframe, ticker2: dataframe, ...}, date: ...}
 
@@ -284,3 +285,5 @@ def Retrain_All_Stat_Models(model_names, new_version_ids):
     return success_prob_response_distribution_results, success_prob_diagnostics_results, success_prob_trade_diagnostic_results,\
            sl_response_distribution_results, sl_diagnostics_results, sl_trade_diagnostic_results,\
            target_response_distribution_results, target_diagnostics_results, target_trade_diagnostic_results
+
+Retrain_All_Stat_Models({'success probability', 'stop loss', 'target'}, {'success probability': 0.2, 'stop loss': 0.2, 'target': 0.2})

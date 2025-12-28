@@ -355,8 +355,3 @@ This algorithm is nearly impossible to speed up now without a total rewrite in a
 - **Logical Rules:**
    - Basic rules to skip logically invalid combinations
 
----
-
-#### Note
-
-If you look at the code you'll notice a LOT of AI-looking comments. AI is hopelessly incapable of writing any of this code. I used it to organize things and write comments everywhere as this is the most complex code I've ever written.

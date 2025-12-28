@@ -1,0 +1,14 @@
+○ Open cursor, in bottom left click the ><, select wsl via distro, ubuntu
+○ Open project /mnt/c/Users/sethm/OneDrive/Desktop/ALL_CODE/Trading_Data_Analysis
+○ In wsl terminal: mamba activate trading_gpu
+○ f1, select python interpreter, trading_gpu
+○ Run stuff
+○ mamba deactivate or close the ide
+    wsl stays open though and reserves some ram. run wsl --shutdown to kill it. then if we run nvidia-smi 
+    under processes it should be empty
+
+○ Extentions you want
+    § Python static type checking | anysphere cursor
+    § Python language support | ms-python microsoft
+    § Python debugging | ms-python microsoft
+    § Rainbow csv | mechatroner

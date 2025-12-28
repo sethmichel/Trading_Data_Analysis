@@ -1,6 +1,3 @@
-### Python ###
-
-# my stuff to ignore
 Data_Files/Automated_Trade_Logs/Approved_Cleaned_All_Trades_Data/
 Data_Files/Automated_Trade_Logs/Untouched_Raw_All_Trades_Data/
 
@@ -25,7 +22,14 @@ XG_Boost_Feature_Analysis/Output/ClassificationReport.txt
 XG_Boost_Feature_Analysis/Output/trained_model.json
 XG_Boost_Feature_Analysis/Data.csv
 
-Grid_Search_Parameter_Tuning/Analysis_Results.txt
+Grid_Search_Parameter_Tuning/all_trade_logs.csv
+Grid_Search_Parameter_Tuning/cleaned_and_verified_market_data/
+Grid_Search_Parameter_Tuning/cpu_implementation/Analysis_Results.txt
+Grid_Search_Parameter_Tuning/gpu_implementation/requirements.txt
+Grid_Search_Parameter_Tuning/gpu_implementation/data
+Grid_Search_Parameter_Tuning/gpu_implementation/cufile.log
+Grid_Search_Parameter_Tuning/gpu_implementation/rmm_log.txt
+Grid_Search_Parameter_Tuning/gpu_implementation/top_strategies.csv
 
 Stat_Models/Holding_Model/Data/
 Stat_Models/Holding_Model/Diagnostics/
@@ -35,6 +39,7 @@ Stat_Models/Success_Prob_Model/Data/
 Stat_Models/Success_Prob_Model/Diagnostics/
 Stat_Models/Target_Model/Data/
 Stat_Models/Target_Model/Diagnostics/
+Stat_Models/bulk_summaries.csv
 
 Logs.txt
 
