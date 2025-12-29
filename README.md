@@ -1,43 +1,38 @@
 # Trade Data Analysis Pipeline
 
-**This is the backend of the quant platform. it trains the models and validates the data.**
+**This is the backend of the quant platform. it trains the models, validates data, and processes strategy simulations**
 
 This repo pairs with the manual trading system, the auto trading system, and the data gathering system to form a miniture quant platform. The platform is meant to gather data locally and remotly, feed it into trading bots/or manual traders, and then give it to this backend to do longer processing.
 
-## ⚠️ WARNING
-
-The Grid search simulates **billions** of parameters in approximately **7 minutes** per billion, and has to organize it in complex string keys while doing extensive compute. It will max your CPU and your RAM. You **must close everything else** on your computer to give this as many resources as possible. The more you search, the more time your computer is maxed out and heating up.
-
-It did **1.3 billion combinations** of parameters in approximately **8 minutes** (last time I ran it). 
-
 **System Requirements:**
-- Tuned for: 16 GB RAM, Intel i5 14th gen desktop CPU (the more cores the better)
-- To re-tune: Change the batch size, pruning frequency, or slow it down if your CPU can't handle it
-- Alternative: Run it on a GPU (not yet implemented)
-- Note: It you tune it for a lot more ram than you have it can crash your computer (or you can code a check to stop this).
-
----
+- 16 GB RAM, 
+- Consumer grade gpu (8gb of gpu VRAM, decent size L2-cache)
 
 ## Summary
 
-You run this when you have new data to validate. The pipeline will move data around in CSV form, read/write to the database and record the status of the data.
+The main use of this program is ingesting new market data and user trade data daily into a processing pipeline
 
 **Pipeline Functions:**
 - Validate/clean the data
 - Generate detailed summaries of the trades
-- Retrain the 3 statistics models and run diagnostics on them
+- Retrain the statistics models and run diagnostics on them
 - Optionally retrain the XG feature importance model
 - Optionally rerun the grid search
+- Save metadata of everything
 
-
-**Example Useage**
+**Example Pipeline Useage**
 1) User will have a new day of market data and trade data in the database, and also in local csv files. The user starts this program.
-2) It will validate/clean the csv files and database data, then update the metadata tables which control what files can and can't be used in processing. Then it makes a builk summary file and uploades this to the database
+2) It will validate/clean the csv files and database data, then update the metadata tables which control what files can and can't be used in processing. Then it makes a bulk summary file and uploades this to the database
 3) Next, it retrains the statistics models, and saves their diagnostic results under an updated version id in the database
 4) Optionally, the user can run XG boost feature model and review feature importances visuals
 5) Optionally, the user can run grid search on the data
 
----
+**Key Features**
+- Grid search: Using market data and trade history, simulate billions of combinations of parameters to see what their ROI would have been over my trade history. The stress test shows this operates at about 5 trillion operations per second (5 TFLOPS). I estimate I can get 50% more performance out of this but I have no need to do so at the moment.
+
+- XG Boost Feature Importance: Ml model that outputs charts, graphs, txt files detailing relationships between data features and their impact on ROI
+
+- Statistic Models: See the models section, but these are models trained specifically for predicting ROI, stop loss, and success probability based on market conditions. They all run live with the trading system every 2 minutes.
 
 ## Validation/Cleaning
 
@@ -75,8 +70,6 @@ Examples of things checked:
   - And more...
 - Some data is corrected as it's validated (like the filename) but usually the user will have to fix it
 
----
-
 ## Generating Trade Summaries
 
 After validation, we combine the market data with the trade logs to generate an **extremely detailed summary** of each trade.
@@ -88,67 +81,33 @@ Beacuse we have the second by second market data:
 - Record ROI in intervals: Track ROI percent in 0.01 intervals as it goes up and down (record ROI changes in a list)
 - Can have hundreds of relevant columns using the market data
 
----
-
-## The Statistics Models
-
-**Notes:** 
-1. I go into so much detail for these models because I don't want to try to remember them in case I edit them again. Also, most of the logic used in the optimal exit point model can also be applied to the other models; You don't have to read all of them
-
-2. Because we have so much second-by-second market data, we can use whatever input features we want and can calculate things that the trade logs would never tell us.
-
-3. All these models use input features **volatility percent** and **minutes since market open**. These 2 variables are dependent on each other, so ideally use joint relationships for the model.
-
----
+## The Models
 
 ### Model 1: Optimal Exit Point Model
-> Model: LinearGAM/GammaGAM (overhauled to handle heteroscedasticity bias)
+> Model: LinearGAM and GammaGAM (overhauled to handle heteroscedasticity bias)
 
-#### How It Works
+Model assumes all trades are stable and gives ROI prediction assuming the trade succeeds
 
 Specifics
-   - X features: Minutes since market open, volatility percent (custom metric)
-   - Y feature: Max ROI of the trade until the trade falls to the exit point
-   - Note: Does NOT go until the user exited the trade, but rather until an exit point we define
-   - Sampling: Take a data sample every 10 minutes of a trade (with many adjustments to fix bias)
-   - Filtering: Only using 'good' trades (ones that fail quickly are removed)
-   - Purpose: Model assumes all trades are stable and gives ROI prediction assuming the trade succeeds
+- X features: Minutes since market open, volatility percent (custom metric)
+- Y feature: Max ROI of the trade until the trade falls to the exit point
+- Note: Does NOT go until the user exited the trade, but rather until an exit point we define
+- Sampling: Take a data sample every 10 minutes of a trade (with many adjustments to fix bias)
+- Filtering: Only using 'good' trades (ones that fail quickly are removed)
 
-1. x features are minutes since market open, and volatility percent (volatility percent is custom metric I use), y feature  is the max roi of the trade until the trade falls to the exit point. so it does NOT go until the user exited the trade, but rather until an exit point we define. We take a data sample every 10 minutes of a trade (we do a lot of adjustements to fix bias from this). Also, it's only using 'good' trades, so ones that fail quickly are removed. the model is meant to assume all trades are stable and give the roi prediction assuming the trade succeeds, including failed trades would lower the estimate.
-
-2. The raw data is extracted, both x features are scaled so they're the same approximate range before having StandardScaler applied to them (minutes can be 300 but volatility will never be over 2). Then the y data has a sevear skew bias we can fix with either a GammaGAM model instead of a linearGAM model, or a linearGAM model which scales the data with np.log1p. Gamma handles this interally, but np.log1p introduces a strong back transformation bias which we deal with a little later via duan smearing.
-
-2. Next we weigh the data to prevent longer trades (more data samples per trade) from dominating. The data is 'group    
-weighted'. (solves issue of 1 hour long trade vs 2 minute long trade)
- 
-3. (lam means lambda, and it's not a 1 it's a L) Next, because the y distribution of the data is right skewed and we ideally want all samples of the same trade grouped together we use StratifiedGroupKFold grouped by trade_id. This is used to select the smoothing parameters (lam) which is something like this for example: np.logspace(-3, 3, num=8). Original unscaled y values are separated into folds and we find the best MAE and RMSE values by comparing each fold against the validation set. We pick the lam that minimizes the MAE. The process of finding this lam is the raw x values of each fold are scaled and the scaled y values for this fold are obtained, then a model is trained on this folds scaled x, scaled y data, then (only if we used np.log1p as I mentioned earlier) we find the duan smearing factor to correct the back transformation bias we get from the scaled y values, we can use this smear variable to get non-back-transformation bias predictions from the model (prediction is on log scale, but smearing with exp(prediction) brings it to the normal scale). We then get the MAE and RMSE values by converting the prediction value back to the original scale (so we calculate these on the original scale, not log scale). After we do this for each fold we find the average MAE and RMSE across all folds. This results in the best lam and the best cv report
-	
-4. With the best lam, we can train the actual model and fit it using the weights
-
-5. Only if we used np.log1p: Now, with the trained model we finally compute the actual duan smearing factor for the full training set. We use this smearing factor to correct predictions when we use the model on live data
-
-6. save the scaler, smearing factor (if we used np.log1p), model, any relevant tradining data in json files.
-
-7. Run (multiply prediction by smear if we used np.log1p):
-		 x_scaled = scaler.transform([[scaled_minutes_since_open, scaled_volatility_percent]])
-         actual_prediction = np.exp(gam.predict(x_scaled))[0] - 1.0
 ---
 
 ### Model 2: Optimal Stop Loss Model (Emergency Exit Model)
 > Model: CatBoostRegressor
 
-#### Overview
-
 This model seeks to predict the best stop loss to use based on current market conditions, such that the trade has the highest chance possible to reach +0.6% ROI.
 
-#### How It Works
-
+Specifics
 - Data Gathering: Data is gathered from a grid search of various possible stop losses
 - Simulation: Stop losses are simulated over the trade history using market data and recorded as 1 or 0
 - Goal: Find the least risky stop loss to use for each trade
 - Input Values: Minutes since market open, and volatility percent (scaled relative to each other, then fed into StandardScaler)
 - Y Feature: Not scaled
-
 - Status: Has the least amount of work put into it because it actually predicts pretty much what my normal stop loss values are. I use 2 values for different situations and this model also predicts those values. Focused on other models until I had more data.
 
 ---
@@ -156,13 +115,9 @@ This model seeks to predict the best stop loss to use based on current market co
 ### Model 3: Success Probability Prediction Model
 > Model: LogisticGAM
 
-#### Overview
+Predict, based just on the current market conditions, the success probability of a trade. Success is defined as reaching an ROI of +0.6%. You can run this every 1 minute during a trade if you want, and you can pair it with a "survival model" for better results.
 
-Predict, based just on the current market conditions, the success probability of a trade. Success is defined as reaching an ROI of +0.6%.
-
-**Usage:** You can run this every 1 minute during a trade if you want, and you can pair it with a "survival model" for better results.
-
-#### How It Works
+Specifics
 
 1. **Preprocessing:**
    - Scale input features so they're relative to each other
@@ -201,14 +156,6 @@ Main diagnostics are saved in the database. It does different things for each mo
 
 ---
 
-### Main Bottleneck of These Models
-
-**Issue:** Trade data, not market data. I simply don't have enough raw trades to train these models better.
-
-**Possible Solution:** Use the auto trading bot to backtest trading on 100% of my market data from market open to market close. This would likely 3x my dataset at least and likely be silver quality data (as opposed to gold quality that human made trades are)
-
----
-
 ### How These Models Are Used
 
 Both the **auto trading bot** and the **manual trading system** use these models.
@@ -219,8 +166,6 @@ Both the **auto trading bot** and the **manual trading system** use these models
 - **Optimal Exit Model:** Runs every 2 minutes for a entrered trade to tells you the exit point based on current market conditions
 
 **Frequency:** All these models can run once or run each X minutes while in a trade. You ideally want them continuously running to handle changing market conditions.
-
----
 
 ## XG Boost Feature Importance
 
@@ -241,40 +186,84 @@ Results cover these categories
 
 - **21 visuals** and **4 txt files**
 Currently it outputs 21 visuals and 4 txt files. Changing what features are used for what visuals is easy, and you could generate over 100 visuals if you wanted to. For example, the waterfall visual is extremely information dense, and you can generate additional smaller shap waterfall plots for individual samples that seem interesting.
----
 
-## Grid Search
+## GPU Grid Search
 
 ### Summary
+
+Wrote initially for the CPU, later rewrote optimally on the GPU
 
 **Search Modes:**
 1. Using each parameter as a lower bound
 2. Using parameters as lower and upper bounds
 3. **(Most Important)** Doing 1 grid search per time range so you get different values for different times of the day
 
-### Performance
+Data
+- Trade logs: real logs for actual tests, machine generated logs for stress test
+- Market data: second-by-second, cleaned
+
+Tech stack
+- Python + cuPy
+    - python is used because of the data science tech stack it has access to
+    - cupy remplaces numpy. we'll use it for the meshgrids
+- Rapids suit
+   - cuDF
+      - for zero-copy to load a csv directly into my gpu
+   - rmm (rapids memory manager) 
+      - to make 1 memeory pool that numba and cupy share instead of fight over
+- dlpack
+    - let's me pass cuDF to numba kernal w/o copying the data (zero-copy)
+
+Hardware
+- RTX 4060 gpu (8gb vram, decent size L2-cache, ~3000 threads)
+- intel 14th gen cpu (8 cores, so 16 possible threads)
+- 16gb ram
+
+Basic Strategy
+- RMM optimzes the memory pool and stops tools from competing over it 
+- cuDF and dlPack make it so python won't re-copy data to vram
+- Market data can be optimized and fit inside the L2-cache
+- Keep data in optimized arrays with their array indexes lined up with each other (continuous memory)
+- Custom kernel written in Numba makes full use of these design choices, escpecially the L2-cache
+
+Technical Walk Through
+1. Setup: The Manager (RMM)
+   - We use rapids memory manager to operate the memory pool. Without this, when you hand data from cuDF to Numba, Python might try to copy it, double RAM usage, and crash. RMM creates one big pool that everyone shares.
+
+2. Data Ingest: The "Static" Load (Crucial Change)
+   - We don't batch trade data, we upload the csv at once.
+      - Market data is actually small. our 8gb vram is plenty, and the l2 cache is probably enough
+      - Load the entire history into the L2 cache as read-only. It never moves.
+
+3. The Bridge: DLPack
+   - cuDF batch goes to dlPack which sends it to custom numba kernel. this kernel keeps data in optimal arrays that are in continuous memory. so each index of array 1 links up with the same index of array 2, and so on. 
+   - Numba will have a pointer to the exact memory address where RAPIDS loaded the CSV. Zero copying occurred.
+
+4. The Kernel: Parallelism & The 1 Number Strategy Result
+   - Each thread will test the combination over the whole data sample space, only updating a single running_total per combination. At the end it'll write this final running_total to vram as part of a cuPy array. so each thread writes this 1 number representing 1 combination
+
+5. Pruning: The Parallel Sorting
+   - Use cupy.argpartition to use all threads to prune the results in parallel. So when we have 250,000 results we prune them in parallel until we have 10 results. this saves vram.
+
+6. The Loop: Streaming Strategies
+   - When that data batch is done, we send the next data batch
+      - Batch 1: Strategies 0 to 250k. (Run -> Prune -> Save Top 10).
+      - Batch 2: Strategies 250k to 500k. (Run -> Prune -> Save Top 10).
+      - ... Repeat until 10M strategies are done.
+      - Final Step: Compare the "Top 10" from all batches to find the absolute winner.
+
+### Depreceated CPU Version - What It Does (Basic)
 
 This algorithm is nearly impossible to speed up now without a total rewrite in an extremely customized design. It is **hyper optimized** for speed and **hyper optimized** for space.
-
-**Performance Comparison (1.3 billion checks):**
-- Base Python: **Well over 1 day**
-- Base C code: **Likely over 8 hours**
-- My Python → C → Machine code design (without hyper optimizations): **Over an hour**
-- **My optimized version: ~8.5 minutes**
-
-**Last Run:** Took about 8.5 minutes and searched 1.3 billion parameter combinations.
-
-### How It Works
+It has special preprocessing to covert a ton of the code from O(n) time to O(1). 
 
 **Basic Approach:**
-1. Written in Python (python is a slow language)
-2. Very particular pre-processing before algorithm starts
-3. Convert everything into numpy arrays (which are C)
-4. Use numpy broadcasting/vectorization to compute things astronomically faster than Python
-5. For extremely heavy sections, convert from C code (numpy) into machine code (numba Python library)
-6. Go through each section of the algorithm and get their times down as low as possible through things like SIMD optimizations
-
-### What It Does (Basic)
+- Written in Python (python is a slow language)
+- Very particular pre-processing before algorithm starts
+- Convert everything into numpy arrays (which are C)
+- Use numpy broadcasting/vectorization to compute things astronomically faster than Python
+- For extremely heavy sections, convert from C code (numpy) into machine code (numba Python library)
+- Go through each section of the algorithm and get their times down as low as possible through things like SIMD optimizations
 
 1. **User Chooses Promising Features:**
    - Select features from market data
@@ -302,56 +291,4 @@ This algorithm is nearly impossible to speed up now without a total rewrite in a
    - Takes **MUCH longer** but does 1 grid search per time range
    - **Critical:** You can find the optimal parameter combination for different periods of the day, which is much more useful
 
-### What It Does (Complex)
-
-#### 1. Data Preprocessing
-
-- Preprocess data to make a complex dictionary which breaks apart into many numpy arrays
-- These arrays contain indexes for all trades that each target and each stop loss value hits
-- **This converts TONS of compute areas from O(n) time to O(1) time**
-
-#### 2. Masks / MeshGrid
-
-- **Pre-process boolean masks** for all valid parameter combinations
-   - Lets me sometimes convert comparisons from O(n) to O(1) time, and lets me utilize numba for parallel processing, however is a bit slower in other places but worth it for memory savings
-   - Store and pass around boolean masks instead of lists (~2 KB instead of 8 Bytes). At this scale, it matters a lot
-   - Overall: Largest memory savings technique used and Simplifies things a lot
-
-#### 3. Parallelization - Will Max Out Your CPU
-
-- **Numba Configuration:**
-   - Set to use all available CPU cores
-   - @jit sets up compiler to handle parallel processing
-
-- **SIMD Usage:**
-   - Data is morphed such that I can take advantage of SIMD in my CPU
-   - If data is in continuous memory (like numpy arrays but not Python lists), it can do **8 operations at once** instead of 1
-
-- **NumPy Vectorization / Broadcasting:**
-   - So efficient that it's basically parallel. It processes the whole array "at once"
-
-#### 4. Batch Processing & Pruning - Will Max Out Your RAM
-
-- **Batch Processing & Pruning:**
-   - Only processes X many combinations per batch so we don't run out of RAM (2.5 million in my case)
-   - Each batch is processed and the top results are saved
-   - Keys for processed batches and data are still very large so we prune out the list every so often (when we reach 400,000 in my case)
-
-#### 5. Uses Numpy and Machine Code (Numba) Instead of Python
-
-- Numpy can do vectorization/broadcasting to do many computes at once (like a for loop but way faster than O(n) time)
-- Numba is made for parallelization and is in machine code
-
-#### 6. Misc Optimizations
-
-- **Avoid Slow Structures:**
-   - No slow structures like dictionaries or `np.where()` are ever used unless unavoidable
-   - This is why there are so many numpy and numba maps/arrays everywhere
-   - Small time saves in many places add up quickly
-   - **Example:** Removing `np.where()` in 1 spot can be 2 million fewer calls per batch and turn 19 second areas into 3 second areas. and there's 650 batches. That's 2.8 hours.
-   - At this scale, even function calls are time consuming
-   - Those are minimized
-
-- **Logical Rules:**
-   - Basic rules to skip logically invalid combinations
 

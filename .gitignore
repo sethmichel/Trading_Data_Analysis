@@ -25,6 +25,7 @@ XG_Boost_Feature_Analysis/Data.csv
 Grid_Search_Parameter_Tuning/all_trade_logs.csv
 Grid_Search_Parameter_Tuning/cleaned_and_verified_market_data/
 Grid_Search_Parameter_Tuning/cpu_implementation/Analysis_Results.txt
+Grid_Search_Parameter_Tuning/cpu_implementation/notes.txt
 Grid_Search_Parameter_Tuning/gpu_implementation/requirements.txt
 Grid_Search_Parameter_Tuning/gpu_implementation/data
 Grid_Search_Parameter_Tuning/gpu_implementation/cufile.log
@@ -39,6 +40,7 @@ Stat_Models/Success_Prob_Model/Data/
 Stat_Models/Success_Prob_Model/Diagnostics/
 Stat_Models/Target_Model/Data/
 Stat_Models/Target_Model/Diagnostics/
+Stat_Models/Target_Model/notes.txt
 Stat_Models/bulk_summaries.csv
 
 Logs.txt
